@@ -178,6 +178,9 @@ rule: "local" Event.OngoingGlobal {
         .unwrap();
     assert_eq!(variable.name, "__del_rule_local_0");
     assert!(variable.span.is_some() && variable.name_span.is_some());
+    let span = variable.span.unwrap();
+    assert_eq!((span.start.line, span.start.col), (3, 12));
+    assert_eq!((span.end.line, span.end.col), (3, 17));
     assert_eq!(variable.index, 0);
     let rule = program
         .rules
@@ -243,6 +246,9 @@ rule: "array" Event.OngoingGlobal {
         .get(workshop_rs::wir::GlobalVarId::from_index(0))
         .unwrap();
     assert_eq!(variable.name, "__del_rule_local_0");
+    let span = variable.span.unwrap();
+    assert_eq!((span.start.line, span.start.col), (3, 14));
+    assert_eq!((span.end.line, span.end.col), (3, 19));
     let rule = program
         .rules
         .iter()
@@ -346,10 +352,24 @@ rule: "foreach-local" Event.OngoingGlobal {
         program.global_variables.get(*local).unwrap().name,
         "__del_rule_local_0"
     );
+    let local_span = program.global_variables.get(*local).unwrap().span.unwrap();
+    assert_eq!((local_span.start.line, local_span.start.col), (3, 14));
+    assert_eq!((local_span.end.line, local_span.end.col), (3, 19));
     assert_eq!(
         program.global_variables.get(*collection_slot).unwrap().name,
         "__del_foreach_collection_2"
     );
+    let collection_span = program
+        .global_variables
+        .get(*collection_slot)
+        .unwrap()
+        .span
+        .unwrap();
+    assert_eq!(
+        (collection_span.start.line, collection_span.start.col),
+        (4, 30)
+    );
+    assert_eq!((collection_span.end.line, collection_span.end.col), (4, 35));
     assert!(matches!(
         program.values.get(*collection).unwrap().value,
         workshop_rs::wir::Value::GlobalVariable(id) if id == *local
@@ -366,6 +386,14 @@ rule: "foreach-local" Event.OngoingGlobal {
         program.global_variables.get(*index_slot).unwrap().name,
         "__del_foreach_index_3"
     );
+    let index_span = program
+        .global_variables
+        .get(*index_slot)
+        .unwrap()
+        .span
+        .unwrap();
+    assert_eq!((index_span.start.line, index_span.start.col), (4, 5));
+    assert_eq!((index_span.end.line, index_span.end.col), (4, 40));
     assert!(matches!(
         program.values.get(*index).unwrap().value,
         workshop_rs::wir::Value::Number { .. }
