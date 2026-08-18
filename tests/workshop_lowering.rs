@@ -416,7 +416,7 @@ rule: "message" Event.OngoingGlobal {
 }
 
 #[test]
-fn foreach_is_a_del_owned_runtime_gap_and_fails_closed() {
+fn global_scalar_foreach_materializes_collection_and_index_once() {
     let (program, diagnostics) = lower(
         r#"
 globalvar Number[] values = [1];
@@ -425,15 +425,99 @@ rule: "foreach" Event.OngoingGlobal {
 }
 "#,
     );
+    assert!(
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
+        "{diagnostics:?}"
+    );
+    program.validate().expect("structurally valid WIR");
+    let dump = program.dump();
+    assert!(dump.contains("countOf"), "{dump}");
+    assert!(dump.contains("valueInArray"), "{dump}");
+    assert!(dump.contains("while"), "{dump}");
+    assert!(dump.contains("__del_foreach_collection_"), "{dump}");
+    assert!(dump.contains("__del_foreach_index_"), "{dump}");
+    let generated: Vec<_> = program
+        .global_variables
+        .iter()
+        .filter(|variable| variable.name.starts_with("__del_foreach_"))
+        .collect();
+    assert_eq!(generated.len(), 2);
+    assert!(generated
+        .iter()
+        .all(|variable| { variable.span.is_some() && variable.name_span.is_some() }));
+    let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
+    let locale = workshop_rs::catalog::Locale::new("en-US");
+    let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
+    let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
+    assert!(workshop_rs::roundtrip::equivalent(&program, &reparsed));
+}
+
+#[test]
+fn player_context_foreach_fails_closed_without_shared_storage() {
+    let (program, diagnostics) = lower(
+        r#"
+globalvar Number[] values = [1];
+rule: "foreach" Event.OngoingPlayer {
+    foreach (Number value in values) { }
+}
+"#,
+    );
     assert!(program.rules.is_empty());
     assert!(
         diagnostics.iter().any(|diagnostic| {
             diagnostic.code == "HI018"
-                && diagnostic.message.contains("DEL-owned")
-                && diagnostic.message.contains("#31")
+                && diagnostic
+                    .message
+                    .contains("player-context foreach requires player-scoped runtime storage")
         }),
         "{diagnostics:?}"
     );
+}
+
+#[test]
+fn global_foreach_rejects_suspending_external_actions() {
+    let (program, diagnostics) = lower(
+        r#"
+globalvar Number[] values = [1];
+rule: "foreach-wait" Event.OngoingGlobal {
+    foreach (Number value in values) {
+        Wait(1);
+    }
+}
+"#,
+    );
+    assert!(
+        program
+            .rules
+            .iter()
+            .all(|rule| rule.name != "foreach-wait")
+    );
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "HI018"
+            && diagnostic
+                .message
+                .contains("non-reentrant global rule context")
+    }), "{diagnostics:?}");
+}
+
+#[test]
+fn global_foreach_rejects_synthetic_name_collisions() {
+    let (program, diagnostics) = lower(
+        r#"
+globalvar Number[] values = [1];
+globalvar Number __del_foreach_collection_1 = 0;
+rule: "foreach-collision" Event.OngoingGlobal {
+    foreach (Number value in values) { }
+}
+"#,
+    );
+    assert!(program.rules.iter().all(|rule| rule.name != "foreach-collision"));
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "HI018"
+            && diagnostic
+                .message
+                .contains("foreach synthetic global name collides")
+    }), "{diagnostics:?}");
 }
 
 #[test]
