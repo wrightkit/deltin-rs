@@ -157,11 +157,64 @@ rule: "damage" Event.OnDamageDealt if (score > 0) {
 }
 
 #[test]
-fn rule_local_storage_remains_a_structured_gap() {
+fn global_rule_scalar_local_storage_materializes_with_provenance() {
     let (program, diagnostics) = lower(
         r#"
-rule: "unsupported" Event.OngoingGlobal {
+rule: "local" Event.OngoingGlobal {
     define local = 1;
+    local = local + 2;
+    local++;
+}
+"#,
+    );
+    assert!(
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
+        "{diagnostics:?}"
+    );
+    assert_eq!(program.global_variables.len(), 1);
+    let variable = program
+        .global_variables
+        .get(workshop_rs::wir::GlobalVarId::from_index(0))
+        .unwrap();
+    assert_eq!(variable.name, "__del_rule_local_0");
+    assert_eq!(variable.index, 0);
+    let rule = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "local")
+        .unwrap();
+    assert_eq!(rule.actions.len(), 3);
+    let target_span = match program.actions.get(rule.actions[0]).unwrap() {
+        workshop_rs::wir::Action::SetGlobalVariable { target_span, .. } => target_span.unwrap(),
+        action => panic!("unexpected action: {action:?}"),
+    };
+    assert_eq!(target_span.start.line, 3);
+    assert_eq!(target_span.start.col, 12);
+    let dump = program.dump();
+    assert!(dump.contains("__del_rule_local_0"), "{dump}");
+    assert_eq!(
+        program.dump(),
+        lower(
+            r#"
+rule: "local" Event.OngoingGlobal {
+    define local = 1;
+    local = local + 2;
+    local++;
+}
+"#
+        )
+        .0
+        .dump()
+    );
+}
+
+#[test]
+fn rule_local_storage_outside_global_scalar_slice_fails_closed() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "unsupported" Event.OngoingPlayer {
+    define local = 1;
+    local = 2;
 }
 "#,
     );
@@ -171,7 +224,23 @@ rule: "unsupported" Event.OngoingGlobal {
             diagnostic.code == "HI018"
                 && diagnostic
                     .message
-                    .contains("rule-local variable declarations")
+                    .contains("same-rule global-event storage context")
+        }),
+        "{diagnostics:?}"
+    );
+
+    let (program, diagnostics) = lower(
+        r#"
+rule: "array" Event.OngoingGlobal {
+    define local = [1];
+    local = [2];
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018" && diagnostic.message.contains("scalar value expressions")
         }),
         "{diagnostics:?}"
     );

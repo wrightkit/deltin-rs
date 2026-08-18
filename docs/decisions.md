@@ -8,6 +8,23 @@ for the Engineer. Evidence authority: `docs/inventory.md`, `docs/syntax-notes.md
 Where evidence is absent, the permissive/`planned` default applies and is marked
 **default-applied**.
 
+## Issue #31 storage slice boundary
+
+The first DEL-owned storage slice materializes only scalar, value-semantics locals
+declared in the same `Event.OngoingGlobal` rule body. The adapter maps each
+`HirVarId` to the deterministic synthetic global name
+`__del_rule_local_<HirVarId>` and preserves the source declaration span on the
+generated WIR variable and write targets. This is a backend lowering strategy,
+not a change to parser, semantic checking, typed HIR, or the canonical Workshop
+catalog/WIR.
+
+The slice deliberately does not infer ownership for locals from functions,
+methods, parameters, closures, or player context. Arrays, objects, structs,
+references, `foreach`, async code, and internal function/subroutine calls remain
+structured `HI018` failures and produce empty WIR. Recursive or re-entrant rule
+storage is not materialized. The slice therefore provides no evidence for the
+remaining #31 runtime strategies or for advancing the support matrix.
+
 ---
 
 1. **Lambda capture dialect — ByValue only.**
