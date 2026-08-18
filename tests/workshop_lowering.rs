@@ -455,6 +455,32 @@ rule: "player-dynamic-switch" Event.OngoingPlayer {
 }
 
 #[test]
+fn recursive_dynamic_switch_fails_closed_with_hi018() {
+    let (program, diagnostics) = lower(
+        r#"
+recursive void Loop() "loop" {
+    switch (Add(1, 2)) {
+        case 3: Loop(); break;
+    }
+}
+rule: "recursive-dynamic-switch" Event.OngoingGlobal {
+    Loop();
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("recursive switch materialization requires a runtime stack")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn variable_and_subroutine_allocation_is_deterministic_and_honors_reservations() {
     let source = r#"
 globalvar Number explicit 2;
