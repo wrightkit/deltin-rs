@@ -183,11 +183,22 @@ impl CatalogProvider {
     }
 
     fn resolve_entry(&self, kind: Kind, name: &str) -> Option<&CatalogEntry> {
+        let canonical_name = if kind == Kind::Action {
+            match name {
+                "ChaseVariableAtRate" => "chaseAtRate",
+                "ChaseVariableOverTime" => "chaseOverTime",
+                "ChasePlayerVariableAtRate" => "chasePlayerVariableAtRate",
+                "ChasePlayerVariableOverTime" => "chasePlayerVariableOverTime",
+                _ => name,
+            }
+        } else {
+            name
+        };
         self.catalog
-            .entry(kind, name)
+            .entry(kind, canonical_name)
             .or_else(|| self.catalog.resolve(kind, &self.locale, name))
             .or_else(|| {
-                let normalized = lowercase_first(name);
+                let normalized = lowercase_first(canonical_name);
                 self.catalog.entry(kind, &normalized)
             })
     }
@@ -221,7 +232,7 @@ impl CatalogProvider {
     }
 
     fn resolve_enum_member(&self, namespace: &[String], name: &str) -> Option<(String, String)> {
-        let domain = namespace.first()?;
+        let domain = canonical_enum_domain(namespace.first()?);
         if let Some(member) = self.catalog.resolve_enum_member(domain, &self.locale, name) {
             return Some(member);
         }
@@ -238,7 +249,7 @@ impl CatalogProvider {
     }
 
     fn resolve_enum_type(&self, name: &str) -> Option<ExternalTypeInfo> {
-        let domain = self.catalog.enum_domain(name)?;
+        let domain = self.catalog.enum_domain(canonical_enum_domain(name))?;
         Some(ExternalTypeInfo {
             canonical_id: domain.domain.clone(),
             category: ExternalCategory::EnumLike,
@@ -373,6 +384,14 @@ fn lowercase_first(value: &str) -> String {
         return String::new();
     };
     first.to_lowercase().collect::<String>() + chars.as_str()
+}
+
+fn canonical_enum_domain(value: &str) -> &str {
+    match value {
+        "RateChaseReevaluation" => "ChaseRateReeval",
+        "TimeChaseReevaluation" => "ChaseTimeReeval",
+        _ => value,
+    }
 }
 
 // DEL enum members use PascalCase source spellings; canonical catalog member

@@ -697,8 +697,8 @@ id = "workshop-lowering.chase-modify"
 name = "workshop-lowering.chase-modify"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
+notes = "A bounded #32 slice adapts DEL ChaseVariableAtRate and StopChasingVariable spellings to canonical workshop-rs identities for direct global/player variable targets; ModifyVariable and member/struct targets remain explicit gaps. This is not a full end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.subroutines"
