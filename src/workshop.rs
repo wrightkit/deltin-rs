@@ -398,6 +398,8 @@ struct Lowerer<'a> {
     diagnostics: Vec<Diagnostic>,
     used_global_indices: HashSet<u32>,
     used_player_indices: HashSet<u32>,
+    player_context: bool,
+    recursive_context: bool,
 }
 
 impl<'a> Lowerer<'a> {
@@ -422,6 +424,8 @@ impl<'a> Lowerer<'a> {
             diagnostics: Vec::new(),
             used_global_indices: HashSet::new(),
             used_player_indices: HashSet::new(),
+            player_context: false,
+            recursive_context: false,
         }
     }
 
@@ -640,6 +644,13 @@ impl<'a> Lowerer<'a> {
             }
             return;
         };
+        let previous_player_context = self.player_context;
+        self.player_context = matches!(
+            &event,
+            wir::Event::EachPlayer
+                | wir::Event::EachPlayerWithFilters { .. }
+                | wir::Event::Player { .. }
+        );
         let mut conditions = Vec::new();
         for condition in &rule.conditions {
             if let Ok(value) = self.lower_value(condition.expr) {
@@ -648,6 +659,7 @@ impl<'a> Lowerer<'a> {
         }
         let actions = self.lower_actions(&rule.body);
         if self.has_new_errors(diagnostic_count) {
+            self.player_context = previous_player_context;
             return;
         }
         self.out.rules.push(wir::Rule {
@@ -659,6 +671,7 @@ impl<'a> Lowerer<'a> {
             conditions,
             actions,
         });
+        self.player_context = previous_player_context;
     }
 
     fn lower_subroutine(&mut self, fid: HirFuncId) {
@@ -669,12 +682,20 @@ impl<'a> Lowerer<'a> {
             self.unsupported(func.span, format!("subroutine '{}' has no body", func.name));
             return;
         };
+        let previous_recursive_context = self.recursive_context;
+        let previous_player_context = self.player_context;
+        self.player_context = false;
+        self.recursive_context = func.is_recursive;
         let diagnostic_count = self.diagnostics.len();
         let actions = self.lower_actions(body);
         if self.has_new_errors(diagnostic_count) {
+            self.player_context = previous_player_context;
+            self.recursive_context = previous_recursive_context;
             return;
         }
         let Some(subroutine) = self.subroutines.get(&fid).copied() else {
+            self.player_context = previous_player_context;
+            self.recursive_context = previous_recursive_context;
             return;
         };
         self.out.rules.push(wir::Rule {
@@ -686,6 +707,8 @@ impl<'a> Lowerer<'a> {
             conditions: Vec::new(),
             actions,
         });
+        self.player_context = previous_player_context;
+        self.recursive_context = previous_recursive_context;
     }
 
     fn lower_event(&mut self, id: HirExprId) -> Option<wir::Event> {
@@ -878,7 +901,7 @@ impl<'a> Lowerer<'a> {
             HirStmtKind::VarDecl { .. } => {
                 self.unsupported(
                     stmt.span,
-                    "rule-local variable declarations have no canonical WIR storage",
+                    "rule-local variable declarations have no canonical Workshop WIR storage",
                 );
                 Vec::new()
             }
@@ -919,6 +942,23 @@ impl<'a> Lowerer<'a> {
             }) if matches!(self.hir.expr(*lhs).map(|expr| &expr.kind), Some(HirExprKind::VarRef { var: lhs_var }) if *lhs_var == var)
                 || matches!(self.hir.expr(*rhs).map(|expr| &expr.kind), Some(HirExprKind::VarRef { var: rhs_var }) if *rhs_var == var)
         )
+    }
+
+    fn allocate_runtime_global(&mut self, name: String, span: Span) -> wir::GlobalVarId {
+        let index = self.allocate_index(None, false, span);
+        self.out.global_variables.push(wir::WorkshopVariable {
+            name,
+            index,
+            span: self.ws_span(span),
+            name_span: self.ws_span(span),
+        })
+    }
+
+    fn global_value(&mut self, variable: wir::GlobalVarId, span: Span) -> wir::ValueId {
+        self.out.values.push(wir::ValueNode::new(
+            wir::Value::GlobalVariable(variable),
+            self.ws_span(span),
+        ))
     }
 
     fn lower_condition_auto_for(
@@ -1175,20 +1215,45 @@ impl<'a> Lowerer<'a> {
         scrutinee: HirExprId,
         arms: &[crate::hir::HirSwitchArm],
     ) -> Vec<wir::ActionId> {
-        if !self.switch_scrutinee_is_stable(scrutinee) {
-            let scrutinee_span = self
-                .hir
-                .expr(scrutinee)
-                .map(|expr| expr.span)
-                .unwrap_or(span);
-            self.unsupported(
+        let scrutinee_span = self
+            .hir
+            .expr(scrutinee)
+            .map(|expr| expr.span)
+            .unwrap_or(span);
+        let stable = self.switch_scrutinee_is_stable(scrutinee);
+        let Ok(lowered_scrutinee) = self.lower_value(scrutinee) else {
+            return Vec::new();
+        };
+        let mut prefix = Vec::new();
+        let scrutinee = if stable {
+            lowered_scrutinee
+        } else {
+            if self.player_context {
+                self.unsupported(
+                    scrutinee_span,
+                    "player-context switch materialization requires a player-scoped runtime temp",
+                );
+                return Vec::new();
+            }
+            if self.recursive_context {
+                self.unsupported(
+                    scrutinee_span,
+                    "recursive switch materialization requires a runtime stack",
+                );
+                return Vec::new();
+            }
+            let variable = self.allocate_runtime_global(
+                format!("__del_runtime_switch_{}", self.out.global_variables.len()),
                 scrutinee_span,
-                "switch scrutinee cannot preserve single-evaluation semantics across repeated case comparisons without runtime materialization",
             );
-            return Vec::new();
-        }
-        let Ok(scrutinee) = self.lower_value(scrutinee) else {
-            return Vec::new();
+            let value = self.global_value(variable, scrutinee_span);
+            prefix.push(self.out.actions.push(wir::Action::SetGlobalVariable {
+                variable,
+                value: lowered_scrutinee,
+                span: self.ws_span(scrutinee_span),
+                target_span: self.ws_span(scrutinee_span),
+            }));
+            value
         };
         let mut branches = Vec::new();
         let mut default_body = None;
@@ -1217,11 +1282,12 @@ impl<'a> Lowerer<'a> {
             self.unsupported(span, "switch has no canonical case or default arm");
             return Vec::new();
         }
-        vec![self.out.actions.push(wir::Action::If {
+        prefix.push(self.out.actions.push(wir::Action::If {
             branches,
             else_body: default_body,
             span: self.ws_span(span),
-        })]
+        }));
+        prefix
     }
 
     fn switch_scrutinee_is_stable(&self, id: HirExprId) -> bool {
@@ -1231,9 +1297,7 @@ impl<'a> Lowerer<'a> {
                 self.global_vars.contains_key(var) || self.player_vars.contains_key(var)
             }
             Some(HirExprKind::Convert { from, .. })
-            | Some(HirExprKind::Cast { expr: from, .. }) => {
-                self.switch_scrutinee_is_stable(*from)
-            }
+            | Some(HirExprKind::Cast { expr: from, .. }) => self.switch_scrutinee_is_stable(*from),
             _ => false,
         }
     }

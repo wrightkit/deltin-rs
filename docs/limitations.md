@@ -33,11 +33,15 @@ plus a short list of evidence-backed approximation areas.
   closed with `HI018` until the storage/runtime strategy tracked in #31 exists;
   this is not a claim that canonical `workshop-rs` WIR is missing a
   provider-local `Foreach` node.
-- Switch lowering repeats the scrutinee reference in generated comparisons.
-  #30 therefore accepts only literals and canonical global/player variable
-  references (including pure conversion wrappers); calls, random/dynamic
-  values, and other unstable expressions fail closed with `HI018` until
-  runtime materialization is owned by the appropriate runtime work.
+- Switch lowering materializes an unstable scrutinee into one generated global
+  helper slot before emitting repeated case comparisons in global rules.
+  Player-context dynamic switches and recursive contexts fail closed with
+  `HI018`; the released WIR contract does not prove a safe player-scoped temp
+  or runtime stack for this slice.
+- Local/parameter storage, player-context locals, parameterized calls,
+  recursive/re-entrant storage, member storage, foreach, and return-value ABI
+  remain structured `HI018` gaps; the adapter does not change HIR or canonical
+  WIR.
 
 ## Intentionally unsupported
 

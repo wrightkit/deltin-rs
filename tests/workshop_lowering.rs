@@ -157,7 +157,7 @@ rule: "damage" Event.OnDamageDealt if (score > 0) {
 }
 
 #[test]
-fn unsupported_rule_local_storage_is_structured_and_not_silently_dropped() {
+fn rule_local_storage_remains_a_structured_gap() {
     let (program, diagnostics) = lower(
         r#"
 rule: "unsupported" Event.OngoingGlobal {
@@ -166,9 +166,15 @@ rule: "unsupported" Event.OngoingGlobal {
 "#,
     );
     assert!(program.rules.is_empty());
-    assert!(diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == "HI018"));
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("rule-local variable declarations")
+        }),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]
@@ -341,7 +347,7 @@ rule: "stable-switch" Event.OngoingGlobal {
 }
 
 #[test]
-fn dynamic_switch_scrutinee_fails_closed_without_runtime_materialization() {
+fn dynamic_switch_scrutinee_is_materialized_once_in_a_helper_slot() {
     let (program, diagnostics) = lower(
         r#"
 globalvar Number value = 0;
@@ -353,12 +359,99 @@ rule: "dynamic-switch" Event.OngoingGlobal {
 }
 "#,
     );
+    assert!(
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
+        "{diagnostics:?}"
+    );
+    let rule = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "dynamic-switch")
+        .unwrap();
+    assert_eq!(rule.actions.len(), 2);
+    let Some(workshop_rs::wir::Action::SetGlobalVariable {
+        variable,
+        value: initialized,
+        ..
+    }) = program.actions.get(rule.actions[0])
+    else {
+        panic!("dynamic switch must initialize a synthetic global temp")
+    };
+    let Some(workshop_rs::wir::ValueNode {
+        value: workshop_rs::wir::Value::Call { name, .. },
+        ..
+    }) = program.values.get(*initialized)
+    else {
+        panic!("dynamic switch temp must capture the lowered call value")
+    };
+    assert_eq!(name, "add");
+    let Some(workshop_rs::wir::Action::If { branches, .. }) = program.actions.get(rule.actions[1])
+    else {
+        panic!("dynamic switch must compare the materialized temp")
+    };
+    let condition = branches[0].condition;
+    let Some(workshop_rs::wir::ValueNode {
+        value: workshop_rs::wir::Value::Call { args, .. },
+        ..
+    }) = program.values.get(condition)
+    else {
+        panic!("switch case must lower to a comparison value")
+    };
+    let Some(workshop_rs::wir::ValueNode {
+        value: workshop_rs::wir::Value::GlobalVariable(materialized),
+        ..
+    }) = program.values.get(args[0])
+    else {
+        panic!("switch comparison must read the synthetic global temp")
+    };
+    assert_eq!(materialized, variable);
+}
+
+#[test]
+fn unsupported_switch_scrutinee_remains_a_structured_gap() {
+    let (program, diagnostics) = lower(
+        r#"
+class Box { }
+rule: "unsupported-switch" Event.OngoingGlobal {
+    switch (new Box()) {
+        case null: break;
+    }
+}
+"#,
+    );
     assert!(program.rules.is_empty());
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == "HI018"
-            && diagnostic.message.contains("single-evaluation")
-            && diagnostic.message.contains("runtime materialization")
-    }), "{diagnostics:?}");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("expression has no core canonical Workshop value lowering")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn player_context_dynamic_switch_fails_closed_without_a_shared_temp() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "player-dynamic-switch" Event.OngoingPlayer {
+    switch (Add(1, 2)) {
+        case 3: break;
+    }
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("player-context switch materialization")
+        }),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]
