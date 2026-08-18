@@ -25,8 +25,8 @@ plus a short list of evidence-backed approximation areas.
   no DEL/OSTW semantic interpretation.
 - Lobby-settings / custom-game-settings imports (`.json`, `.lobby`):
   recorded with provenance, not interpreted.
-- `ds.toml` keys other than `entry_point`: validated syntactically, never
-  interpreted.
+- `ds.toml`: root-project discovery loads `entry_point`; all other keys are
+  validated syntactically but never interpreted by del-rs.
 - Decompiler, optimizer, emulator, pathfinding tooling: inventory entries,
   not implemented (matrix `compiler-utility` / `decompiler`).
 - `foreach` is a DEL-owned lowering/runtime strategy. The bounded #31 slice

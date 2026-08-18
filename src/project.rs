@@ -10,12 +10,14 @@ use crate::diagnostics::{error, Diagnostic, Phase};
 use crate::span::{FileId, SourceMap, Span};
 use crate::syntax::ast::{ExprKind, ItemKind, StrLit};
 use crate::syntax::parse_source;
+use serde::Deserialize;
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProjectConfig {
-    /// Parsed ds.toml; only `entry_point` affects loading.
+    /// Parsed `ds.toml`; only `entry_point` affects loading in this slice.
     pub entry_point: Option<PathBuf>,
 }
 
@@ -48,10 +50,16 @@ pub struct Project {
 
 /// Load a project from disk. Total: read/parse errors become diagnostics.
 pub fn load_project(opts: ProjectOptions) -> Project {
+    let mut sources = SourceMap::new();
+    let mut diagnostics = Vec::new();
+    let config = match opts.config.clone() {
+        Some(config) => Some(config),
+        None => load_config(&opts.root, &mut sources, &mut diagnostics),
+    };
     let mut loader = Loader {
-        sources: SourceMap::new(),
+        sources,
         root: opts.root.clone(),
-        diagnostics: Vec::new(),
+        diagnostics,
         imports: Vec::new(),
         files: Vec::new(),
         in_progress: Vec::new(),
@@ -61,7 +69,7 @@ pub fn load_project(opts: ProjectOptions) -> Project {
     // Entry file: explicit entry or ds.toml entry_point.
     let entry_path = opts
         .entry
-        .or_else(|| opts.config.as_ref().and_then(|c| c.entry_point.clone()))
+        .or_else(|| config.as_ref().and_then(|c| c.entry_point.clone()))
         .unwrap_or_else(|| PathBuf::from("main.del"));
     let entry_abs = if entry_path.is_absolute()
         || entry_path.starts_with(&opts.root)
@@ -84,6 +92,56 @@ pub fn load_project(opts: ProjectOptions) -> Project {
         files: loader.files,
         imports: loader.imports,
         diagnostics: loader.diagnostics,
+    }
+}
+
+#[derive(Deserialize)]
+struct RawProjectConfig {
+    entry_point: Option<String>,
+}
+
+/// Load the project-owned portion of `ds.toml`.
+///
+/// Unknown keys are intentionally ignored after TOML syntax has been checked.
+/// The project-owned `entry_point` field is type-checked; Workshop output
+/// options remain lowering/compiler concerns and are not represented by this
+/// frontend project model.
+fn load_config(
+    root: &Path,
+    sources: &mut SourceMap,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Option<ProjectConfig> {
+    let path = root.join("ds.toml");
+    let text = match std::fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == ErrorKind::NotFound => return None,
+        Err(read_error) => {
+            diagnostics.push(error(
+                Phase::Project,
+                "PJ003",
+                Span::new(FileId(0), 0, 0),
+                format!(
+                    "failed to read project config {} ({read_error})",
+                    path.display()
+                ),
+            ));
+            return None;
+        }
+    };
+    let file = sources.add_file(PathBuf::from("ds.toml"), text.clone());
+    match toml::from_str::<RawProjectConfig>(&text) {
+        Ok(config) => Some(ProjectConfig {
+            entry_point: config.entry_point.map(PathBuf::from),
+        }),
+        Err(parse_error) => {
+            diagnostics.push(error(
+                Phase::Project,
+                "PJ004",
+                Span::new(file, 0, text.len() as u32),
+                format!("invalid ds.toml: {parse_error}"),
+            ));
+            None
+        }
     }
 }
 

@@ -1,0 +1,9 @@
+// source: https://github.com/wrightkit/del-rs/tree/f30c864/tests/corpus/projects/ds-toml
+// license: MIT
+// expect: ok
+// evidence: semantic-contract
+import "lib.del";
+
+rule: "configured entry" {
+    define value = shared;
+}

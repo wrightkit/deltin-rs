@@ -1,0 +1,5 @@
+// source: https://github.com/wrightkit/del-rs/tree/f30c864/tests/corpus/projects/ds-toml
+// license: MIT
+// expect: ok
+// evidence: semantic-contract
+globalvar Number shared = 1;
