@@ -321,31 +321,64 @@ rule: "foreach-local" Event.OngoingGlobal {
         .iter()
         .find(|rule| rule.name == "foreach-local")
         .expect("foreach rule");
+    assert_eq!(rule.actions.len(), 4);
     let workshop_rs::wir::Action::SetGlobalVariable {
-        value: collection, ..
+        variable: local,
+        value: initial,
+        ..
+    } = program.actions.get(rule.actions[0]).unwrap()
+    else {
+        panic!("local array initialization must be the first action")
+    };
+    assert!(matches!(
+        program.values.get(*initial).unwrap().value,
+        workshop_rs::wir::Value::Array(_)
+    ));
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        variable: collection_slot,
+        value: collection,
+        ..
     } = program.actions.get(rule.actions[1]).unwrap()
     else {
         panic!("foreach must materialize its collection after local initialization")
     };
+    assert_eq!(
+        program.global_variables.get(*local).unwrap().name,
+        "__del_rule_local_0"
+    );
+    assert_eq!(
+        program.global_variables.get(*collection_slot).unwrap().name,
+        "__del_foreach_collection_2"
+    );
     assert!(matches!(
-        program.actions.get(rule.actions[1]),
-        Some(workshop_rs::wir::Action::SetGlobalVariable { value, .. })
-            if matches!(program.values.get(*value).unwrap().value,
-                workshop_rs::wir::Value::GlobalVariable(_))
+        program.values.get(*collection).unwrap().value,
+        workshop_rs::wir::Value::GlobalVariable(id) if id == *local
     ));
-    let workshop_rs::wir::Action::SetGlobalVariable { value: index, .. } =
-        program.actions.get(rule.actions[2]).unwrap()
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        variable: index_slot,
+        value: index,
+        ..
+    } = program.actions.get(rule.actions[2]).unwrap()
     else {
         panic!("foreach must initialize its index after the collection")
     };
-    assert!(matches!(
-        program.values.get(*collection).unwrap().value,
-        workshop_rs::wir::Value::GlobalVariable(_)
-    ));
+    assert_eq!(
+        program.global_variables.get(*index_slot).unwrap().name,
+        "__del_foreach_index_3"
+    );
     assert!(matches!(
         program.values.get(*index).unwrap().value,
         workshop_rs::wir::Value::Number { .. }
     ));
+    assert!(matches!(
+        program.actions.get(rule.actions[3]),
+        Some(workshop_rs::wir::Action::While { .. })
+    ));
+    assert!(program
+        .global_variables
+        .iter()
+        .filter(|variable| variable.name.starts_with("__del_foreach_"))
+        .all(|variable| variable.span.is_some() && variable.name_span.is_some()));
 }
 
 #[test]
@@ -374,6 +407,27 @@ rule: "unsupported" Event.OngoingPlayer {
 class Box { }
 rule: "array" Event.OngoingGlobal {
     Box[] local = [new Box()];
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("scalar or lowerable-array value expressions")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn global_rule_vector_array_local_fails_closed() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "vector-array" Event.OngoingGlobal {
+    Vector[] local = [Vector(1, 2, 3)];
 }
 "#,
     );
