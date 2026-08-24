@@ -4,7 +4,7 @@
 //! lives here alongside checking (documented simplification of the module
 //! layout in docs/architecture.md §5).
 
-use crate::diagnostics::{error, Phase};
+use crate::diagnostics::{Phase, error};
 use crate::semantic::provider::*;
 use crate::semantic::resolve::{BuiltinMember, Resolution};
 use crate::semantic::symbols::*;
@@ -877,7 +877,25 @@ impl<'a> Checker<'a> {
     fn check_expr_inner(&mut self, expr: &Expr) -> Type {
         match &expr.kind {
             ExprKind::Number(_) => Type::Number,
-            ExprKind::Str(_) | ExprKind::StrInterp { .. } | ExprKind::Interp { .. } => Type::String,
+            ExprKind::Str(_) => Type::String,
+            ExprKind::StrInterp { parts, args } => {
+                for part in parts {
+                    if let crate::syntax::ast::InterpPart::Hole(hole) = part {
+                        self.check_expr(hole);
+                    }
+                }
+                for arg in args {
+                    self.check_expr(arg);
+                }
+                Type::String
+            }
+            ExprKind::Interp { base, args } => {
+                self.check_expr(base);
+                for arg in args {
+                    self.check_expr(arg);
+                }
+                Type::String
+            }
             ExprKind::Bool(_) => Type::Bool,
             ExprKind::Null => Type::Null,
             ExprKind::This => {
@@ -1321,6 +1339,11 @@ impl<'a> Checker<'a> {
                     }
                 } else if self.is_number_like(lt) && self.is_number_like(rt) {
                     Type::Number
+                } else if *lt == Type::Bool && *rt == Type::Bool {
+                    // Workshop's numeric operations accept boolean comparison
+                    // results as numeric operands (for example, `a == 1` +
+                    // `a == 2`). Preserve that canonical WIR surface.
+                    Type::Number
                 } else {
                     self.err(
                         "SM041",
@@ -1667,7 +1690,7 @@ impl<'a> Checker<'a> {
                 "Random" => Some(BuiltinMember::ArrayRandom),
                 "ModAppend" => Some(BuiltinMember::ArrayModAppend),
                 "ModRemoveByIndex" => Some(BuiltinMember::ArrayModRemoveByIndex),
-                "Append" => Some(BuiltinMember::ArrayAppend),
+                "Append" | "append" => Some(BuiltinMember::ArrayAppend),
                 "Contains" => Some(BuiltinMember::ArrayContains),
                 "SortedArray" => Some(BuiltinMember::ArraySortedArray),
                 "IsTrueForAll" => Some(BuiltinMember::ArrayIsTrueForAll),
@@ -1690,6 +1713,14 @@ impl<'a> Checker<'a> {
                 self.record(expr, ty.clone(), Some(Resolution::BuiltinMember(bm)));
                 return ty;
             }
+        }
+        if matches!(base_ty, Type::Any) && matches!(name.name.as_str(), "Append" | "append") {
+            self.record(
+                expr,
+                Type::Any,
+                Some(Resolution::BuiltinMember(BuiltinMember::ArrayAppend)),
+            );
+            return Type::Any;
         }
         // Playervar access via player expressions.
         if matches!(base_ty, Type::Player)
@@ -2034,11 +2065,15 @@ impl<'a> Checker<'a> {
             }
             ExprKind::Member { base, name } => {
                 let base_ty = self.check_expr(base);
-                let member_res = self.resolve_member(expr, &base_ty, base, name);
-                let builtin = self.program.resolution.get(&expr.id).and_then(|r| match r {
-                    Resolution::BuiltinMember(b) => Some(*b),
-                    _ => None,
-                });
+                let member_res = self.resolve_member(&call.callee, &base_ty, base, name);
+                let builtin = self
+                    .program
+                    .resolution
+                    .get(&call.callee.id)
+                    .and_then(|r| match r {
+                        Resolution::BuiltinMember(b) => Some(*b),
+                        _ => None,
+                    });
                 if let Some(bm) = builtin {
                     // Language-owned array members are callable.
                     return self.check_builtin_call(expr, &bm, base, call, &arg_types);
@@ -2046,10 +2081,14 @@ impl<'a> Checker<'a> {
                 match member_res {
                     Type::FunctionValue(ft) => {
                         // Ref-method calls require a ref context (SM044).
-                        let mid = self.program.resolution.get(&expr.id).and_then(|r| match r {
-                            Resolution::Symbol(m) => Some(*m),
-                            _ => None,
-                        });
+                        let mid =
+                            self.program
+                                .resolution
+                                .get(&call.callee.id)
+                                .and_then(|r| match r {
+                                    Resolution::Symbol(m) => Some(*m),
+                                    _ => None,
+                                });
                         if let Some(mid) = mid {
                             let sym = self.program.tables.symbol(mid).clone();
                             if sym.flags.ref_ && !self.ref_context && self.cur_function.is_some() {
@@ -2380,7 +2419,14 @@ impl<'a> Checker<'a> {
                 if at.is_error() {
                     continue;
                 }
-                let c = self.conversion(at, pt);
+                let c = if *pt == Type::Any && matches!(at, Type::Enum(_) | Type::Struct(_)) {
+                    // Dynamic function inputs in OSTW may receive parallel
+                    // values even though an explicit `Any` variable still
+                    // rejects them (SM038).
+                    Conversion::ToAny
+                } else {
+                    self.conversion(at, pt)
+                };
                 if c.rank() >= 255 && !pt.is_external() {
                     conv_ok = false;
                     break;

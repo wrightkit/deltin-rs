@@ -847,13 +847,14 @@ impl<'a> Classifier<'a> {
 
 struct Emitter<'a> {
     program: &'a wir::Program,
+    catalog: &'a Catalog,
     out: String,
     /// Subroutine id → its body rule id.
     subroutine_rules: Vec<Option<wir::RuleId>>,
 }
 
 impl<'a> Emitter<'a> {
-    fn new(program: &'a wir::Program, _catalog: &'a Catalog) -> Self {
+    fn new(program: &'a wir::Program, catalog: &'a Catalog) -> Self {
         let mut subroutine_rules: Vec<Option<wir::RuleId>> = vec![None; program.subroutines.len()];
         for (index, rule) in program.rules.iter().enumerate() {
             if let Event::Subroutine(subroutine) = &rule.event {
@@ -862,6 +863,7 @@ impl<'a> Emitter<'a> {
         }
         Emitter {
             program,
+            catalog,
             out: String::new(),
             subroutine_rules,
         }
@@ -1068,13 +1070,36 @@ impl<'a> Emitter<'a> {
                 } else {
                     let args = args
                         .iter()
-                        .map(|arg| self.value(*arg))
+                        .enumerate()
+                        .map(|(index, arg)| self.action_arg(name, index, *arg))
                         .collect::<Vec<_>>()
                         .join(", ");
                     self.line(level, &format!("{ostw}({args});"));
                 }
             }
         }
+    }
+
+    fn action_arg(&self, action: &str, index: usize, value: ValueId) -> String {
+        let boolean = self
+            .catalog
+            .entry(Kind::Action, action)
+            .and_then(|entry| entry.param_types.get(index))
+            .and_then(Option::as_deref)
+            == Some("Boolean");
+        if boolean {
+            if let Some(Value::Number { value, .. }) =
+                self.program.values.get(value).map(|node| &node.value)
+            {
+                if *value == 0.0 {
+                    return "false".to_string();
+                }
+                if *value == 1.0 {
+                    return "true".to_string();
+                }
+            }
+        }
+        self.value(value)
     }
 
     /// Render one value as an OSTW expression.

@@ -1,7 +1,7 @@
 //! Core DEL HIR -> canonical Workshop WIR lowering evidence for #30.
 
 use del_rs::hir;
-use del_rs::project::{load_project, ProjectOptions};
+use del_rs::project::{ProjectOptions, load_project};
 use del_rs::semantic::check_project;
 use del_rs::semantic::provider::CatalogProvider;
 use del_rs::workshop::{lower_project_to_wir, lower_to_wir};
@@ -97,9 +97,11 @@ fn hir_is_backend_neutral_and_hir_only_external_lowering_fails_closed() {
 
     let (program, diagnostics) = lower_to_wir(&hir, &semantic.project.sources);
     assert!(program.rules.is_empty());
-    assert!(diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == "HI018" && diagnostic.primary == external.0));
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "HI018" && diagnostic.primary == external.0)
+    );
 }
 
 #[test]
@@ -182,11 +184,13 @@ rule: "damage" Event.OnDamageDealt if (score > 0) {
         0
     );
     assert_eq!(program.rules.len(), 2);
-    assert!(program
-        .rules
-        .get(workshop_rs::wir::RuleId::from_index(0))
-        .and_then(|rule| rule.span)
-        .is_some());
+    assert!(
+        program
+            .rules
+            .get(workshop_rs::wir::RuleId::from_index(0))
+            .and_then(|rule| rule.span)
+            .is_some()
+    );
     let rule = program
         .rules
         .get(workshop_rs::wir::RuleId::from_index(1))
@@ -821,7 +825,6 @@ rule: "calls-dynamic" Event.OngoingGlobal {
                 && diagnostic
                     .message
                     .contains("subroutine switch materialization requires a bounded invocation context")
-=======
         }),
         "{diagnostics:?}"
     );

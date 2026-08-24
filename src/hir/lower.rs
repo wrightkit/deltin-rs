@@ -1,10 +1,10 @@
 //! Lowering: SemanticProgram -> HirProgram (provenance-preserving).
 
 use crate::hir::*;
+use crate::semantic::SemanticProgram;
 use crate::semantic::resolve::{BuiltinMember, Resolution};
 use crate::semantic::symbols::{SymbolId, SymbolKind};
 use crate::semantic::types::Type;
-use crate::semantic::SemanticProgram;
 use crate::syntax::ast::*;
 use std::collections::HashMap;
 
@@ -170,6 +170,11 @@ impl<'a> Lowerer<'a> {
                 let fid = self.hir.funcs.len() as HirFuncId;
                 self.hir.funcs.push(HirFunc {
                     name: f.name.name.clone(),
+                    subroutine_name: f
+                        .attrs
+                        .subroutine
+                        .as_ref()
+                        .map(|subroutine| subroutine.rule_name.name_text()),
                     kind,
                     params: Vec::new(),
                     ret: Type::Any,
@@ -664,18 +669,23 @@ impl<'a> Lowerer<'a> {
     }
 
     fn target_var(&mut self, target: &Expr) -> HirVarId {
-        match &target.kind {
-            ExprKind::Ident(id) => *self
-                .local_vars
-                .get(&id.id)
-                .or_else(|| {
-                    self.program
-                        .var_symbol_of(id.id)
-                        .and_then(|sid| self.symbol_var.get(&sid))
-                })
-                .unwrap_or(&0),
-            _ => 0,
+        if let ExprKind::Ident(id) = &target.kind {
+            if let Some(Resolution::Symbol(sid)) = self.program.resolution.get(&id.id) {
+                if let Some(var) = self.symbol_var.get(sid) {
+                    return *var;
+                }
+            }
+            if let Some((index, _)) = self
+                .hir
+                .vars
+                .iter()
+                .enumerate()
+                .find(|(_, var)| var.name == id.name)
+            {
+                return index as HirVarId;
+            }
         }
+        0
     }
 
     fn register_pattern_bindings(&mut self, cond: &Expr) {
@@ -1103,6 +1113,7 @@ impl<'a> Lowerer<'a> {
         self.next_stmt += 1;
         self.hir.funcs.push(HirFunc {
             name: "<lambda>".into(),
+            subroutine_name: None,
             kind: FuncKind::Lambda,
             params,
             ret: Type::Any,

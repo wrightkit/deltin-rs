@@ -55,6 +55,8 @@ pub enum FuncKind {
 #[derive(Clone, Debug)]
 pub struct HirFunc {
     pub name: String,
+    /// Workshop rule name attached to a source subroutine declaration.
+    pub subroutine_name: Option<String>,
     pub kind: FuncKind,
     pub params: Vec<HirParam>,
     pub ret: Type,

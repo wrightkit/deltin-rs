@@ -4,8 +4,8 @@
 //! adapter; canonical catalog data remains in `workshop-rs`.
 
 use crate::span::{FileId, Span};
-use workshop_rs::catalog::{Catalog, CatalogEntry, Kind, Locale};
 use workshop_rs::WorkshopError;
+use workshop_rs::catalog::{Catalog, CatalogEntry, Kind, Locale};
 
 /// Position a query name is used in.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -198,6 +198,14 @@ impl CatalogProvider {
         } else {
             name
         };
+        if let Some((_, (_, canonical))) = crate::signature::BUILTIN_BINDINGS
+            .iter()
+            .find(|(source, (bound_kind, _))| *source == name && *bound_kind == kind)
+        {
+            if let Some(entry) = self.catalog.entry(kind, canonical) {
+                return Some(entry);
+            }
+        }
         self.catalog
             .entry(kind, canonical_name)
             .or_else(|| self.catalog.resolve(kind, &self.locale, name))
@@ -236,7 +244,13 @@ impl CatalogProvider {
     }
 
     fn resolve_enum_member(&self, namespace: &[String], name: &str) -> Option<(String, String)> {
-        let domain = canonical_enum_domain(namespace.first()?);
+        let source_domain = namespace.first()?;
+        let domain = canonical_enum_domain(source_domain);
+        if let Some(binding) = crate::signature::enum_domain(domain) {
+            if let Some((_, member)) = binding.members.iter().find(|(source, _)| *source == name) {
+                return Some((binding.domain.to_string(), (*member).to_string()));
+            }
+        }
         if let Some(member) = self.catalog.resolve_enum_member(domain, &self.locale, name) {
             return Some(member);
         }
@@ -253,6 +267,13 @@ impl CatalogProvider {
     }
 
     fn resolve_enum_type(&self, name: &str) -> Option<ExternalTypeInfo> {
+        if let Some(binding) = crate::signature::enum_domain(name) {
+            return Some(ExternalTypeInfo {
+                canonical_id: binding.domain.to_string(),
+                category: ExternalCategory::EnumLike,
+                constant: true,
+            });
+        }
         let domain = self.catalog.enum_domain(canonical_enum_domain(name))?;
         Some(ExternalTypeInfo {
             canonical_id: domain.domain.clone(),
