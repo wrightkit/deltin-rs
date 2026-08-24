@@ -250,3 +250,23 @@ No matrix entry changes state in this document; all entries remain `planned` as 
 State flips happen at M1/M2 milestones with fixture evidence, per the milestone gates recorded
 in GitHub issue/PR history. Two architecture.md corrections are recorded (Q3 extension
 fallback; Q16 hex claim).
+
+## #31 bounded runtime slice (2026-08-18)
+
+The released `workshop-rs 0.1.1` WIR has global/player variable tables and
+structured control-flow actions, but no local-variable table, parameterized
+subroutine ABI, or runtime stack. The first DEL-owned runtime slice therefore
+uses only evidence-backed encodings that remain inside those public WIR forms:
+
+- An unstable `switch` scrutinee is assigned once to a generated global helper
+  slot in a global rule; every case comparison reads that slot. Player-context
+  dynamic switches fail closed with `HI018` rather than sharing that global
+  temp across players. Recursive materialization and any construct that cannot
+  lower to a WIR value also fail closed with `HI018`.
+- Local/parameter storage, foreach, member storage, object lifetime, recursion
+  stacks, and return values remain outside this slice. No HIR layout,
+  parser contract, or canonical WIR node is changed to make them appear
+  supported.
+
+The support matrix remains `lowering-dependent`; these tests are implementation
+evidence for the bounded adapter slice, not end-to-end Workshop execution proof.
