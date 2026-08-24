@@ -2289,11 +2289,7 @@ impl<'a> Lowerer<'a> {
             return Vec::new();
         }
         let value = values.remove(0);
-        let target_span = self
-            .hir
-            .vars
-            .get(*var as usize)
-            .and_then(|variable| self.ws_span(variable.span));
+        let target_span = self.hir.expr(base).and_then(|expr| self.ws_span(expr.span));
         match (
             self.global_vars.get(var).copied(),
             self.player_vars.get(var).copied(),
@@ -2431,6 +2427,7 @@ impl<'a> Lowerer<'a> {
             self.unsupported(span, "assignment target is not a known HIR expression");
             return Vec::new();
         };
+        let target_span = self.ws_span(target_expr.span);
         let HirExprKind::VarRef { var } = target_expr.kind else {
             self.unsupported(span, "assignment target is not a Workshop variable");
             return Vec::new();
@@ -2438,11 +2435,6 @@ impl<'a> Lowerer<'a> {
         let Ok(value) = self.lower_value(value) else {
             return Vec::new();
         };
-        let target_span = self
-            .hir
-            .vars
-            .get(var as usize)
-            .and_then(|v| self.ws_span(v.span));
         let modify = self.modify_op(op, span);
         match (
             self.global_variable(var),

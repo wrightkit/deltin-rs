@@ -11,7 +11,7 @@ use crate::span::{FileId, SourceMap, Span};
 use crate::syntax::ast::{ExprKind, ItemKind, StrLit};
 use crate::syntax::parse_source;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
@@ -50,6 +50,16 @@ pub struct Project {
 
 /// Load a project from disk. Total: read/parse errors become diagnostics.
 pub fn load_project(opts: ProjectOptions) -> Project {
+    load_project_with_overlay(opts, &BTreeMap::new())
+}
+
+/// Load a project while replacing project-relative source text from an
+/// in-memory overlay. The project graph and source provenance remain owned by
+/// the same loader as the filesystem path.
+pub fn load_project_with_overlay(
+    opts: ProjectOptions,
+    overlay: &BTreeMap<String, String>,
+) -> Project {
     let mut sources = SourceMap::new();
     let mut diagnostics = Vec::new();
     let config = match opts.config.clone() {
@@ -59,6 +69,7 @@ pub fn load_project(opts: ProjectOptions) -> Project {
     let mut loader = Loader {
         sources,
         root: opts.root.clone(),
+        overlay,
         diagnostics,
         imports: Vec::new(),
         files: Vec::new(),
@@ -181,9 +192,10 @@ pub struct ImportDeclInfo {
     pub span: Span,
 }
 
-struct Loader {
+struct Loader<'a> {
     sources: SourceMap,
     root: PathBuf,
+    overlay: &'a BTreeMap<String, String>,
     diagnostics: Vec<Diagnostic>,
     imports: Vec<ImportEdge>,
     files: Vec<FileId>,
@@ -191,7 +203,7 @@ struct Loader {
     by_canonical: HashMap<PathBuf, FileId>,
 }
 
-impl Loader {
+impl<'a> Loader<'a> {
     fn resolve_path(&self, p: &Path) -> PathBuf {
         if p.is_absolute() {
             p.to_path_buf()
@@ -229,25 +241,28 @@ impl Loader {
             return self.in_progress[pos].1;
         }
 
-        let text = match std::fs::read_to_string(abs) {
-            Ok(t) => t,
-            Err(e) => {
-                let span = importer_span.unwrap_or_else(|| Span::new(FileId(0), 0, 0));
-                self.diagnostics.push(error(
-                    Phase::Project,
-                    "PJ002",
-                    span,
-                    format!("missing import target: {} ({e})", abs.display()),
-                ));
-                // Register a placeholder file so import edges stay consistent.
-                let name = abs.strip_prefix(&self.root).unwrap_or(abs).to_path_buf();
-                let id = self.sources.add_file(name, String::new());
-                self.by_canonical.insert(canonical.clone(), id);
-                return id;
-            }
+        let name = abs.strip_prefix(&self.root).unwrap_or(abs).to_path_buf();
+        let overlay_key = name.to_string_lossy().replace('\\', "/");
+        let text = match self.overlay.get(&overlay_key) {
+            Some(t) => t.clone(),
+            None => match std::fs::read_to_string(abs) {
+                Ok(t) => t,
+                Err(e) => {
+                    let span = importer_span.unwrap_or_else(|| Span::new(FileId(0), 0, 0));
+                    self.diagnostics.push(error(
+                        Phase::Project,
+                        "PJ002",
+                        span,
+                        format!("missing import target: {} ({e})", abs.display()),
+                    ));
+                    // Register a placeholder file so import edges stay consistent.
+                    let id = self.sources.add_file(name, String::new());
+                    self.by_canonical.insert(canonical.clone(), id);
+                    return id;
+                }
+            },
         };
 
-        let name = abs.strip_prefix(&self.root).unwrap_or(abs).to_path_buf();
         let id = self.sources.add_file(name, text);
         self.by_canonical.insert(canonical.clone(), id);
         if let Some(span) = importer_span {

@@ -186,9 +186,10 @@ impl<'a> Builder<'a> {
             let text = project.sources.text(file).to_string();
             let out = crate::syntax::parse_source(file, &text);
             self.file_asts.push(out.ast.clone());
-            let scope = self
-                .tables
-                .push_scope(self.tables.root_scope, ScopeKind::File);
+            // Imported source files share the project namespace. Keep one
+            // root scope so declarations in one reachable file resolve from
+            // rules and functions in another file.
+            let scope = self.tables.root_scope;
             for item in &out.ast.items {
                 if std::env::var("DEL_DEBUG").is_ok() {
                     eprintln!(
@@ -774,11 +775,10 @@ impl<'a> Builder<'a> {
         }
     }
 
-    /// Project-wide lookup for a function/macro by name (file scopes are
-    /// children of the project scope).
+    /// Project-wide lookup for a function/macro by name.
     fn project_function(&self, name: &str) -> Option<SymbolId> {
         for scope in &self.tables.scopes {
-            if scope.kind == ScopeKind::File {
+            if matches!(scope.kind, ScopeKind::File | ScopeKind::Project) {
                 if let Some(ids) = scope.entries.get(name) {
                     if let Some(id) = ids.iter().copied().find(|i| {
                         matches!(
