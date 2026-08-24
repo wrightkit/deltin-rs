@@ -659,6 +659,7 @@ impl<'a> Lowerer<'a> {
                 | wir::Event::Player { .. }
         );
         self.rule_local_globals.clear();
+        self.rule_local_arrays.clear();
         if matches!(&event, wir::Event::Global) {
             self.prepare_global_rule_locals(rule);
         }
@@ -672,6 +673,7 @@ impl<'a> Lowerer<'a> {
         if self.has_new_errors(diagnostic_count) {
             self.player_context = previous_player_context;
             self.rule_local_globals.clear();
+            self.rule_local_arrays.clear();
             return;
         }
         self.out.rules.push(wir::Rule {
@@ -685,6 +687,7 @@ impl<'a> Lowerer<'a> {
         });
         self.player_context = previous_player_context;
         self.rule_local_globals.clear();
+        self.rule_local_arrays.clear();
     }
 
     fn lower_subroutine(&mut self, fid: HirFuncId) {

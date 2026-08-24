@@ -21,13 +21,15 @@ catalog/WIR.
 The shared global table is not a local-variable ABI. To avoid suspension or
 re-entry aliasing, the slice rejects player context, functions, methods,
 parameters, closures, recursive calls, and any external Workshop action in the
-rule body (including actions that may suspend or restart rules). Uninitialized
-locals, arrays, objects, structs, references, `foreach`, and unsupported value
-shapes remain structured `HI018` failures and produce empty WIR. The local map
-is scoped to one rule lowering and uses the common runtime-global allocator, but
-that does not make the slot safe for overlapping activations. The slice therefore
-provides no evidence for the remaining #31 runtime strategies or for advancing
-the support matrix.
+rule body (including actions that may suspend or restart rules). A bounded
+lowerable-array subset is materialized with the same generated slot strategy;
+object/reference elements, uninitialized locals, and unsupported value shapes
+remain structured `HI018` failures and produce empty WIR. The local maps are
+scoped to one rule lowering and use the common runtime-global allocator, but
+that does not make the slots safe for overlapping activations. The slice
+therefore provides no evidence for the remaining #31 runtime strategies or
+for advancing the support matrix. `Value::Array` emit/parse equivalence remains
+a canonical workshop-rs gap and is not reimplemented in del-rs.
 
 ---
 

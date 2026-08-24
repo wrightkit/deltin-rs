@@ -301,6 +301,23 @@ rule: "array" Event.OngoingGlobal {
                 && matches!(program.values.get(args[0]).unwrap().value,
                     workshop_rs::wir::Value::GlobalVariable(id) if id == *local)
     ));
+    let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
+    let locale = workshop_rs::catalog::Locale::new("en-US");
+    let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
+    let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
+    assert_eq!(reparsed.rules.len(), 1);
+    assert_eq!(
+        reparsed
+            .rules
+            .get(workshop_rs::wir::RuleId::from_index(0))
+            .unwrap()
+            .actions
+            .len(),
+        3
+    );
+    // workshop-rs currently reparses emitted Array values as the provider
+    // call `array(...)`; keep this evidence local until that canonical gap is
+    // fixed in workshop-rs rather than weakening del-rs ownership boundaries.
 }
 
 #[test]
@@ -472,6 +489,28 @@ rule: "vector-array" Event.OngoingGlobal {
 }
 
 #[test]
+fn global_rule_array_local_without_initializer_fails_closed() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "uninitialized-array" Event.OngoingGlobal {
+    Number[] local;
+    local = [1];
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("scalar or lowerable-array value expressions")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn non_reentrant_global_array_local_storage_fails_closed() {
     let (program, diagnostics) = lower(
         r#"
@@ -502,6 +541,29 @@ rule: "suspending-local" Event.OngoingGlobal {
     define local = 1;
     Wait(1);
     local = 2;
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("non-recursive, non-reentrant rule body")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn global_rule_array_local_storage_rejects_suspending_external_actions() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "suspending-array-local" Event.OngoingGlobal {
+    Number[] local = [1];
+    Wait(1);
+    local = [2];
 }
 "#,
     );
