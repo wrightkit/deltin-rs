@@ -270,6 +270,7 @@ impl<'a> Lowerer<'a> {
                         name: p.name.name.clone(),
                         ty: p.ty.as_ref().map(|t| self.sem_type(t)).unwrap_or(Type::Any),
                         mode: p.mode,
+                        default: p.default.as_ref().map(|default| self.expr(default)),
                         span: p.name.span,
                     })
                     .collect();
@@ -430,6 +431,7 @@ impl<'a> Lowerer<'a> {
                 name: p.name.name.clone(),
                 ty: p.ty.as_ref().map(|t| self.sem_type(t)).unwrap_or(Type::Any),
                 mode: p.mode,
+                default: p.default.as_ref().map(|default| self.expr(default)),
                 span: p.name.span,
             })
             .collect();
@@ -1085,6 +1087,7 @@ impl<'a> Lowerer<'a> {
                 name: p.name.name.clone(),
                 ty: p.ty.as_ref().map(|t| self.sem_type(t)).unwrap_or(Type::Any),
                 mode: ParamMode::Value,
+                default: None,
                 span: p.name.span,
             })
             .collect();

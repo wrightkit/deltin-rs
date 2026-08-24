@@ -75,6 +75,7 @@ pub struct HirParam {
     pub name: String,
     pub ty: Type,
     pub mode: crate::syntax::ast::ParamMode,
+    pub default: Option<HirExprId>,
     pub span: Span,
 }
 
