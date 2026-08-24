@@ -18,12 +18,16 @@ generated WIR variable and write targets. This is a backend lowering strategy,
 not a change to parser, semantic checking, typed HIR, or the canonical Workshop
 catalog/WIR.
 
-The slice deliberately does not infer ownership for locals from functions,
-methods, parameters, closures, or player context. Arrays, objects, structs,
-references, `foreach`, async code, and internal function/subroutine calls remain
-structured `HI018` failures and produce empty WIR. Recursive or re-entrant rule
-storage is not materialized. The slice therefore provides no evidence for the
-remaining #31 runtime strategies or for advancing the support matrix.
+The shared global table is not a local-variable ABI. To avoid suspension or
+re-entry aliasing, the slice rejects player context, functions, methods,
+parameters, closures, recursive calls, and any external Workshop action in the
+rule body (including actions that may suspend or restart rules). Uninitialized
+locals, arrays, objects, structs, references, `foreach`, and unsupported value
+shapes remain structured `HI018` failures and produce empty WIR. The local map
+is scoped to one rule lowering and uses the common runtime-global allocator, but
+that does not make the slot safe for overlapping activations. The slice therefore
+provides no evidence for the remaining #31 runtime strategies or for advancing
+the support matrix.
 
 ---
 
@@ -280,8 +284,9 @@ uses only evidence-backed encodings that remain inside those public WIR forms:
   dynamic switches fail closed with `HI018` rather than sharing that global
   temp across players. Recursive materialization and any construct that cannot
   lower to a WIR value also fail closed with `HI018`.
-- Local/parameter storage, foreach, member storage, object lifetime, recursion
-  stacks, and return values remain outside this slice. No HIR layout,
+- Parameter storage, foreach, member storage, object lifetime, recursion
+  stacks, and return values remain outside this slice. The bounded scalar local
+  subset above is lowering evidence only; no HIR layout,
   parser contract, or canonical WIR node is changed to make them appear
   supported.
 

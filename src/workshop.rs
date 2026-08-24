@@ -656,6 +656,7 @@ impl<'a> Lowerer<'a> {
                 | wir::Event::EachPlayerWithFilters { .. }
                 | wir::Event::Player { .. }
         );
+        self.rule_local_globals.clear();
         if matches!(&event, wir::Event::Global) {
             self.prepare_global_rule_locals(rule);
         }
@@ -668,6 +669,7 @@ impl<'a> Lowerer<'a> {
         let actions = self.lower_actions(&rule.body);
         if self.has_new_errors(diagnostic_count) {
             self.player_context = previous_player_context;
+            self.rule_local_globals.clear();
             return;
         }
         self.out.rules.push(wir::Rule {
@@ -680,6 +682,7 @@ impl<'a> Lowerer<'a> {
             actions,
         });
         self.player_context = previous_player_context;
+        self.rule_local_globals.clear();
     }
 
     fn lower_subroutine(&mut self, fid: HirFuncId) {
@@ -831,7 +834,7 @@ impl<'a> Lowerer<'a> {
             HirStmtKind::VarDecl { var, init } => {
                 self.hir.vars.get(*var as usize).is_some_and(|var| {
                     var.storage == StorageIntent::Local
-                        && init.is_some_and(|expr| !self.expr_is_scalar_value(expr))
+                        && init.is_none_or(|expr| !self.expr_is_scalar_value(expr))
                 })
             }
             HirStmtKind::Assign { target, value, .. } => {
@@ -879,8 +882,8 @@ impl<'a> Lowerer<'a> {
             HirExprKind::VarRef { var } => self.hir.vars.get(*var as usize).is_some_and(|var| {
                 matches!(
                     var.ty,
-                    Type::Number | Type::String | Type::Bool | Type::Null | Type::Any
-                )
+                    Type::Number | Type::String | Type::Bool | Type::Null
+                ) || (var.ty == Type::Any && var.storage == StorageIntent::Local)
             }),
             HirExprKind::Binary { lhs, rhs, .. } => {
                 self.expr_is_scalar_value(*lhs) && self.expr_is_scalar_value(*rhs)
@@ -1048,6 +1051,17 @@ impl<'a> Lowerer<'a> {
                         | crate::hir::CallTarget::Method { .. }
                         | crate::hir::CallTarget::Constructor(_)
                         | crate::hir::CallTarget::FunctionValue(_)
+                ) || matches!(
+                    target,
+                    crate::hir::CallTarget::External {
+                        name,
+                        namespace,
+                        span,
+                    } if matches!(
+                        self.context
+                            .and_then(|context| context.lookup(*span, name, namespace)),
+                        Some(ExternalBinding::Action(_))
+                    )
                 ) {
                     return true;
                 }
