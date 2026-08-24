@@ -63,7 +63,7 @@ pub struct RuleCondition {
 }
 
 /// Vanilla Workshop superset rule: `rule("name") { event/conditions/actions }`.
-/// Body sections are opaque token spans; the frontend never interprets them.
+/// Body sections are opaque token spans; the parser never interprets them.
 #[derive(Clone, Debug)]
 pub struct VanillaRuleDecl {
     pub name: Option<Expr>,
@@ -342,7 +342,7 @@ pub enum StmtKind {
     Delete {
         target: Expr,
     },
-    /// Vanilla target assignment (`{'var'}[..] = expr;`) — no frontend semantics.
+    /// Vanilla target assignment (`{'var'}[..] = expr;`) — no DEL/OSTW semantics.
     Hook {
         target: Expr,
         value: Expr,
@@ -563,7 +563,7 @@ pub enum PostfixOp {
 pub enum UnaryOp {
     Negate,
     Not,
-    /// `~` workshop-value indirection (superset; no frontend semantics).
+    /// `~` workshop-value indirection (superset; no DEL/OSTW semantics).
     Indirect,
 }
 

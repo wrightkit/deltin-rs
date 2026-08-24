@@ -1,5 +1,5 @@
 //! Corpus harness: walks `tests/corpus/**/*.{del,ostw,workshop}` and checks
-//! each fixture's declared outcome against the frontend pipeline.
+//! each fixture's declared outcome against the source pipeline.
 //!
 //! Header directives (leading comment block):
 //! - `// source: <url>` — required (provenance)

@@ -1,6 +1,6 @@
 //! DEL-owned source/provenance bridge for the `workshop-rs` boundary.
 //!
-//! This module maps the frontend's byte-offset source model into the
+//! This module maps the source implementation's byte-offset source model into the
 //! canonical Workshop source model. It deliberately contains no HIR,
 //! lowering, backend encoding, or catalog state.
 
