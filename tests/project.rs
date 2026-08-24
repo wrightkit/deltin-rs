@@ -1,6 +1,6 @@
 //! Project loading tests for the independently supported project slice.
 
-use del_rs::project::{load_project, ProjectOptions};
+use del_rs::project::{load_project, ProjectConfig, ProjectOptions};
 use std::path::PathBuf;
 
 fn fixture(name: &str) -> PathBuf {
@@ -69,6 +69,21 @@ fn explicit_entry_takes_precedence_over_ds_toml() {
         PathBuf::from("src/lib.del")
     );
     assert_eq!(project.files.len(), 1);
+}
+
+#[test]
+fn caller_config_takes_precedence_without_discovering_root_config() {
+    let root = fixture("ds-toml");
+    let project = load_project(ProjectOptions {
+        root,
+        entry: None,
+        config: Some(ProjectConfig {
+            entry_point: Some(PathBuf::from("src/lib.del")),
+        }),
+    });
+    assert!(project.diagnostics.is_empty(), "{:?}", project.diagnostics);
+    assert_eq!(project.sources.get(project.entry).name, PathBuf::from("src/lib.del"));
+    assert!(project.sources.by_name(&PathBuf::from("ds.toml")).is_none());
 }
 
 #[test]

@@ -105,7 +105,7 @@ struct RawProjectConfig {
 /// Unknown keys are intentionally ignored after TOML syntax has been checked.
 /// The project-owned `entry_point` field is type-checked; Workshop output
 /// options remain lowering/compiler concerns and are not represented by this
-/// frontend project model.
+/// source/project model.
 fn load_config(
     root: &Path,
     sources: &mut SourceMap,
