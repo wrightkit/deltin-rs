@@ -38,10 +38,13 @@ plus a short list of evidence-backed approximation areas.
   Player-context dynamic switches and recursive contexts fail closed with
   `HI018`; the released WIR contract does not prove a safe player-scoped temp
   or runtime stack for this slice.
-- Local/parameter storage, player-context locals, parameterized calls,
-  recursive/re-entrant storage, member storage, foreach, and return-value ABI
-  remain structured `HI018` gaps; the adapter does not change HIR or canonical
-  WIR.
+- Scalar value locals in one `Event.OngoingGlobal` rule body have a bounded
+  lowering-only implementation using deterministic synthetic global slots.
+  The adapter rejects player context, uninitialized or non-scalar locals,
+  external Workshop actions, internal calls, recursive/re-entrant storage,
+  parameters, member storage, `foreach`, and return-value ABI with structured
+  `HI018`; a shared global slot is not a general local or invocation-frame ABI.
+  The adapter does not change HIR or canonical WIR.
 
 ## Intentionally unsupported
 

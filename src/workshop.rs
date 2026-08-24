@@ -12,6 +12,7 @@ use crate::hir::{
 use crate::project::Project;
 use crate::semantic::provider::{ExternalBinding, ExternalParam};
 use crate::semantic::resolve::Resolution;
+use crate::semantic::types::Type;
 use crate::semantic::SemanticProgram;
 use crate::span::{FileId, SourceMap, Span};
 use crate::syntax::ast::{
@@ -393,6 +394,7 @@ struct Lowerer<'a> {
     context: Option<&'a WorkshopLoweringContext>,
     out: wir::Program,
     global_vars: HashMap<HirVarId, wir::GlobalVarId>,
+    rule_local_globals: HashMap<HirVarId, wir::GlobalVarId>,
     player_vars: HashMap<HirVarId, wir::PlayerVarId>,
     subroutines: HashMap<HirFuncId, wir::SubroutineId>,
     diagnostics: Vec<Diagnostic>,
@@ -420,6 +422,7 @@ impl<'a> Lowerer<'a> {
             context,
             out,
             global_vars: HashMap::new(),
+            rule_local_globals: HashMap::new(),
             player_vars: HashMap::new(),
             subroutines: HashMap::new(),
             diagnostics: Vec::new(),
@@ -474,8 +477,8 @@ impl<'a> Lowerer<'a> {
                     });
                     self.player_vars.insert(id, wir_id);
                 }
-                StorageIntent::Local
-                | StorageIntent::Member
+                StorageIntent::Local => {}
+                StorageIntent::Member
                 | StorageIntent::StaticMember
                 | StorageIntent::Parameter
                 | StorageIntent::External => self.unsupported(
@@ -653,6 +656,10 @@ impl<'a> Lowerer<'a> {
                 | wir::Event::EachPlayerWithFilters { .. }
                 | wir::Event::Player { .. }
         );
+        self.rule_local_globals.clear();
+        if matches!(&event, wir::Event::Global) {
+            self.prepare_global_rule_locals(rule);
+        }
         let mut conditions = Vec::new();
         for condition in &rule.conditions {
             if let Ok(value) = self.lower_value(condition.expr) {
@@ -662,6 +669,7 @@ impl<'a> Lowerer<'a> {
         let actions = self.lower_actions(&rule.body);
         if self.has_new_errors(diagnostic_count) {
             self.player_context = previous_player_context;
+            self.rule_local_globals.clear();
             return;
         }
         self.out.rules.push(wir::Rule {
@@ -674,6 +682,7 @@ impl<'a> Lowerer<'a> {
             actions,
         });
         self.player_context = previous_player_context;
+        self.rule_local_globals.clear();
     }
 
     fn lower_subroutine(&mut self, fid: HirFuncId) {
@@ -786,6 +795,391 @@ impl<'a> Lowerer<'a> {
         actions
     }
 
+    fn prepare_global_rule_locals(&mut self, rule: &crate::hir::HirRule) {
+        let mut locals = Vec::new();
+        self.collect_local_declarations(&rule.body, &mut locals);
+        locals.sort_unstable();
+        locals.dedup();
+        if locals.is_empty() {
+            return;
+        }
+        if self.block_contains_internal_call(&rule.body) {
+            self.unsupported(
+                rule.span,
+                "global-rule local storage requires a non-recursive, non-reentrant rule body",
+            );
+            return;
+        }
+        if self.block_contains_nonscalar_local_write(&rule.body) {
+            self.unsupported(
+                rule.span,
+                "global-rule local storage accepts only scalar value expressions",
+            );
+            return;
+        }
+        for var in locals {
+            self.materialize_rule_local(var);
+        }
+    }
+
+    fn block_contains_nonscalar_local_write(&self, block: &crate::hir::HirBlock) -> bool {
+        block
+            .stmts
+            .iter()
+            .any(|stmt| self.stmt_contains_nonscalar_local_write(stmt))
+    }
+
+    fn stmt_contains_nonscalar_local_write(&self, stmt: &HirStmt) -> bool {
+        match &stmt.kind {
+            HirStmtKind::VarDecl { var, init } => {
+                self.hir.vars.get(*var as usize).is_some_and(|var| {
+                    var.storage == StorageIntent::Local
+                        && init.is_none_or(|expr| !self.expr_is_scalar_value(expr))
+                })
+            }
+            HirStmtKind::Assign { target, value, .. } => {
+                matches!(
+                    self.hir.expr(*target).map(|expr| &expr.kind),
+                    Some(HirExprKind::VarRef { var })
+                        if self.hir.vars.get(*var as usize).is_some_and(|var| var.storage == StorageIntent::Local)
+                ) && !self.expr_is_scalar_value(*value)
+            }
+            HirStmtKind::Block(block) => self.block_contains_nonscalar_local_write(block),
+            HirStmtKind::If { then, els, .. } => {
+                self.stmt_contains_nonscalar_local_write(then)
+                    || els
+                        .as_deref()
+                        .is_some_and(|stmt| self.stmt_contains_nonscalar_local_write(stmt))
+            }
+            HirStmtKind::While { body, .. }
+            | HirStmtKind::AutoFor { body, .. }
+            | HirStmtKind::Foreach { body, .. } => self.stmt_contains_nonscalar_local_write(body),
+            HirStmtKind::For {
+                init, step, body, ..
+            } => {
+                init.as_deref()
+                    .is_some_and(|stmt| self.stmt_contains_nonscalar_local_write(stmt))
+                    || step
+                        .as_deref()
+                        .is_some_and(|stmt| self.stmt_contains_nonscalar_local_write(stmt))
+                    || self.stmt_contains_nonscalar_local_write(body)
+            }
+            HirStmtKind::Switch { arms, .. } => arms.iter().any(|arm| {
+                arm.stmts
+                    .iter()
+                    .any(|stmt| self.stmt_contains_nonscalar_local_write(stmt))
+            }),
+            _ => false,
+        }
+    }
+
+    fn expr_is_scalar_value(&self, id: HirExprId) -> bool {
+        let Some(expr) = self.hir.expr(id) else {
+            return false;
+        };
+        match &expr.kind {
+            HirExprKind::Literal(_) => true,
+            HirExprKind::VarRef { var } => self.hir.vars.get(*var as usize).is_some_and(|var| {
+                matches!(
+                    var.ty,
+                    Type::Number | Type::String | Type::Bool | Type::Null
+                ) || (var.ty == Type::Any && var.storage == StorageIntent::Local)
+            }),
+            HirExprKind::Binary { lhs, rhs, .. } => {
+                self.expr_is_scalar_value(*lhs) && self.expr_is_scalar_value(*rhs)
+            }
+            HirExprKind::Unary { operand, .. }
+            | HirExprKind::Convert { from: operand, .. }
+            | HirExprKind::Cast { expr: operand, .. } => self.expr_is_scalar_value(*operand),
+            HirExprKind::Ternary { cond, then, els } => {
+                self.expr_is_scalar_value(*cond)
+                    && self.expr_is_scalar_value(*then)
+                    && self.expr_is_scalar_value(*els)
+            }
+            _ => false,
+        }
+    }
+
+    fn collect_local_declarations(&self, block: &crate::hir::HirBlock, locals: &mut Vec<HirVarId>) {
+        for stmt in &block.stmts {
+            self.collect_local_declarations_stmt(stmt, locals);
+        }
+    }
+
+    fn collect_local_declarations_stmt(&self, stmt: &HirStmt, locals: &mut Vec<HirVarId>) {
+        match &stmt.kind {
+            HirStmtKind::VarDecl { var, .. } => {
+                if self
+                    .hir
+                    .vars
+                    .get(*var as usize)
+                    .is_some_and(|var| var.storage == StorageIntent::Local)
+                {
+                    locals.push(*var);
+                }
+            }
+            HirStmtKind::Block(block) => self.collect_local_declarations(block, locals),
+            HirStmtKind::If { then, els, .. } => {
+                self.collect_local_declarations_stmt(then, locals);
+                if let Some(els) = els {
+                    self.collect_local_declarations_stmt(els, locals);
+                }
+            }
+            HirStmtKind::While { body, .. }
+            | HirStmtKind::AutoFor { body, .. }
+            | HirStmtKind::Foreach { body, .. } => {
+                self.collect_local_declarations_stmt(body, locals)
+            }
+            HirStmtKind::For {
+                init, step, body, ..
+            } => {
+                if let Some(init) = init {
+                    self.collect_local_declarations_stmt(init, locals);
+                }
+                if let Some(step) = step {
+                    self.collect_local_declarations_stmt(step, locals);
+                }
+                self.collect_local_declarations_stmt(body, locals);
+            }
+            HirStmtKind::Switch { arms, .. } => {
+                for arm in arms {
+                    for stmt in &arm.stmts {
+                        self.collect_local_declarations_stmt(stmt, locals);
+                    }
+                }
+            }
+            HirStmtKind::Assign { .. }
+            | HirStmtKind::Expr(_)
+            | HirStmtKind::Return { .. }
+            | HirStmtKind::Break
+            | HirStmtKind::Continue
+            | HirStmtKind::Delete { .. }
+            | HirStmtKind::Hook { .. }
+            | HirStmtKind::Error => {}
+        }
+    }
+
+    fn block_contains_internal_call(&self, block: &crate::hir::HirBlock) -> bool {
+        block
+            .stmts
+            .iter()
+            .any(|stmt| self.stmt_contains_internal_call(stmt))
+    }
+
+    fn stmt_contains_internal_call(&self, stmt: &HirStmt) -> bool {
+        let exprs = match &stmt.kind {
+            HirStmtKind::Block(block) => return self.block_contains_internal_call(block),
+            HirStmtKind::VarDecl { init, .. } => init.iter().copied().collect(),
+            HirStmtKind::Assign { target, value, .. } => vec![*target, *value],
+            HirStmtKind::Expr(expr) => vec![*expr],
+            HirStmtKind::If { cond, then, els } => {
+                return self.expr_contains_internal_call(*cond)
+                    || self.stmt_contains_internal_call(then)
+                    || els
+                        .as_deref()
+                        .is_some_and(|stmt| self.stmt_contains_internal_call(stmt));
+            }
+            HirStmtKind::While { cond, body } => {
+                return self.expr_contains_internal_call(*cond)
+                    || self.stmt_contains_internal_call(body);
+            }
+            HirStmtKind::For {
+                init,
+                cond,
+                step,
+                body,
+            } => {
+                return init
+                    .as_deref()
+                    .is_some_and(|stmt| self.stmt_contains_internal_call(stmt))
+                    || cond.is_some_and(|expr| self.expr_contains_internal_call(expr))
+                    || step
+                        .as_deref()
+                        .is_some_and(|stmt| self.stmt_contains_internal_call(stmt))
+                    || self.stmt_contains_internal_call(body);
+            }
+            HirStmtKind::AutoFor {
+                var: _,
+                start,
+                end,
+                step,
+                body,
+            } => {
+                return self.expr_contains_internal_call(*start)
+                    || self.expr_contains_internal_call(*end)
+                    || self.expr_contains_internal_call(*step)
+                    || self.stmt_contains_internal_call(body);
+            }
+            HirStmtKind::Foreach {
+                var: _,
+                collection,
+                body,
+            } => {
+                return self.expr_contains_internal_call(*collection)
+                    || self.stmt_contains_internal_call(body);
+            }
+            HirStmtKind::Switch { scrutinee, arms } => {
+                return self.expr_contains_internal_call(*scrutinee)
+                    || arms.iter().any(|arm| {
+                        arm.label
+                            .is_some_and(|label| self.expr_contains_internal_call(label))
+                            || arm
+                                .stmts
+                                .iter()
+                                .any(|stmt| self.stmt_contains_internal_call(stmt))
+                    });
+            }
+            HirStmtKind::Return { value } => value.iter().copied().collect(),
+            HirStmtKind::Delete { target } => vec![*target],
+            HirStmtKind::Hook { target, value } => vec![*target, *value],
+            HirStmtKind::Break | HirStmtKind::Continue | HirStmtKind::Error => Vec::new(),
+        };
+        exprs
+            .into_iter()
+            .any(|expr| self.expr_contains_internal_call(expr))
+    }
+
+    fn expr_contains_internal_call(&self, id: HirExprId) -> bool {
+        let Some(expr) = self.hir.expr(id) else {
+            return false;
+        };
+        match &expr.kind {
+            HirExprKind::Call { target, args } => {
+                if matches!(
+                    target,
+                    crate::hir::CallTarget::Func(_)
+                        | crate::hir::CallTarget::Method { .. }
+                        | crate::hir::CallTarget::Constructor(_)
+                        | crate::hir::CallTarget::FunctionValue(_)
+                ) || matches!(
+                    target,
+                    crate::hir::CallTarget::External {
+                        name,
+                        namespace,
+                        span,
+                    } if matches!(
+                        self.context
+                            .and_then(|context| context.lookup(*span, name, namespace)),
+                        Some(ExternalBinding::Action(_))
+                    )
+                ) {
+                    return true;
+                }
+                args.iter().any(|arg| match arg {
+                    HirArg::Pos(value) | HirArg::Named { value, .. } => {
+                        self.expr_contains_internal_call(*value)
+                    }
+                })
+            }
+            HirExprKind::Member { base, .. }
+            | HirExprKind::Unary { operand: base, .. }
+            | HirExprKind::Convert { from: base, .. }
+            | HirExprKind::Cast { expr: base, .. }
+            | HirExprKind::Postfix { operand: base, .. }
+            | HirExprKind::Async { call: base, .. } => self.expr_contains_internal_call(*base),
+            HirExprKind::Index { base, index }
+            | HirExprKind::Binary {
+                lhs: base,
+                rhs: index,
+                ..
+            }
+            | HirExprKind::Assign {
+                target: base,
+                value: index,
+                ..
+            } => {
+                self.expr_contains_internal_call(*base) || self.expr_contains_internal_call(*index)
+            }
+            HirExprKind::Ternary { cond, then, els } => {
+                self.expr_contains_internal_call(*cond)
+                    || self.expr_contains_internal_call(*then)
+                    || self.expr_contains_internal_call(*els)
+            }
+            HirExprKind::ArrayLit { elems } => elems
+                .iter()
+                .any(|expr| self.expr_contains_internal_call(*expr)),
+            HirExprKind::StructLit {
+                fields,
+                base,
+                single_value,
+            } => {
+                fields
+                    .iter()
+                    .any(|(_, expr)| self.expr_contains_internal_call(*expr))
+                    || base.is_some_and(|expr| self.expr_contains_internal_call(expr))
+                    || single_value.is_some_and(|expr| self.expr_contains_internal_call(expr))
+            }
+            HirExprKind::New { args, .. } | HirExprKind::EnumCtor { args, .. } => {
+                args.iter().any(|arg| match arg {
+                    HirArg::Pos(value) | HirArg::Named { value, .. } => {
+                        self.expr_contains_internal_call(*value)
+                    }
+                })
+            }
+            HirExprKind::StrInterp { args, .. } => args
+                .iter()
+                .any(|expr| self.expr_contains_internal_call(*expr)),
+            HirExprKind::External { .. }
+            | HirExprKind::Literal(_)
+            | HirExprKind::VarRef { .. }
+            | HirExprKind::FunctionValue { .. }
+            | HirExprKind::This { .. }
+            | HirExprKind::Error => false,
+        }
+    }
+
+    fn materialize_rule_local(&mut self, var: HirVarId) {
+        if self.rule_local_globals.contains_key(&var) {
+            return;
+        }
+        let Some(hir_var) = self.hir.vars.get(var as usize) else {
+            self.unsupported(
+                self.fallback_span(),
+                format!("unknown local HIR variable {var}"),
+            );
+            return;
+        };
+        if hir_var.storage != StorageIntent::Local
+            || hir_var.semantics != crate::hir::ValueSemantics::Value
+            || !matches!(
+                hir_var.ty,
+                Type::Number | Type::String | Type::Bool | Type::Null | Type::Any
+            )
+        {
+            self.unsupported(
+                hir_var.span,
+                format!(
+                    "rule-local variable '{}' is outside the scalar value storage slice",
+                    hir_var.name
+                ),
+            );
+            return;
+        }
+        let name = format!("__del_rule_local_{var}");
+        if self.out.global_variables.iter().any(|variable| variable.name == name) {
+            self.unsupported(
+                hir_var.span,
+                format!("synthetic rule-local global name '{name}' collides with a declared global"),
+            );
+            return;
+        }
+        let index = self.allocate_index(None, false, hir_var.span);
+        let wir_id = self.out.global_variables.push(wir::WorkshopVariable {
+            name,
+            index,
+            span: self.ws_span(hir_var.span),
+            name_span: self.ws_span(hir_var.span),
+        });
+        self.rule_local_globals.insert(var, wir_id);
+    }
+
+    fn global_variable(&self, var: HirVarId) -> Option<wir::GlobalVarId> {
+        self.global_vars
+            .get(&var)
+            .copied()
+            .or_else(|| self.rule_local_globals.get(&var).copied())
+    }
+
     fn lower_stmt(&mut self, stmt: &HirStmt) -> Vec<wir::ActionId> {
         match &stmt.kind {
             HirStmtKind::Block(block) => self.lower_actions(block),
@@ -854,7 +1248,7 @@ impl<'a> Lowerer<'a> {
                 };
                 let body = self.lower_stmt(body);
                 match (
-                    self.global_vars.get(var).copied(),
+                    self.global_variable(*var),
                     self.player_vars.get(var).copied(),
                 ) {
                     (Some(variable), _) => {
@@ -906,11 +1300,31 @@ impl<'a> Lowerer<'a> {
                 self.lower_switch(stmt.span, *scrutinee, arms)
             }
             HirStmtKind::VarDecl { .. } => {
-                self.unsupported(
-                    stmt.span,
-                    "rule-local variable declarations have no canonical Workshop WIR storage",
-                );
-                Vec::new()
+                let HirStmtKind::VarDecl { var, init } = stmt.kind else {
+                    unreachable!();
+                };
+                let Some(variable) = self.rule_local_globals.get(&var).copied() else {
+                    self.unsupported(
+                        stmt.span,
+                        "rule-local variable requires a same-rule global-event storage context",
+                    );
+                    return Vec::new();
+                };
+                let Some(init) = init else { return Vec::new() };
+                let Ok(value) = self.lower_value(init) else {
+                    return Vec::new();
+                };
+                let target_span = self
+                    .hir
+                    .vars
+                    .get(var as usize)
+                    .and_then(|var| self.ws_span(var.span));
+                vec![self.out.actions.push(wir::Action::SetGlobalVariable {
+                    variable,
+                    value,
+                    span: self.ws_span(stmt.span),
+                    target_span,
+                })]
             }
             HirStmtKind::Foreach { .. } => {
                 self.unsupported(
@@ -992,7 +1406,7 @@ impl<'a> Lowerer<'a> {
             .get(var as usize)
             .and_then(|v| self.ws_span(v.span));
         let init = match (
-            self.global_vars.get(&var).copied(),
+            self.global_variable(var),
             self.player_vars.get(&var).copied(),
         ) {
             (Some(variable), _) => self.out.actions.push(wir::Action::SetGlobalVariable {
@@ -1182,7 +1596,7 @@ impl<'a> Lowerer<'a> {
             .get(var as usize)
             .and_then(|v| self.ws_span(v.span));
         match (
-            self.global_vars.get(&var).copied(),
+            self.global_variable(var),
             self.player_vars.get(&var).copied(),
         ) {
             (Some(variable), _) => vec![self.out.actions.push(wir::Action::ModifyGlobalVariable {
@@ -1308,7 +1722,7 @@ impl<'a> Lowerer<'a> {
         match self.hir.expr(id).map(|expr| &expr.kind) {
             Some(HirExprKind::Literal(_)) => true,
             Some(HirExprKind::VarRef { var }) => {
-                self.global_vars.contains_key(var) || self.player_vars.contains_key(var)
+                self.global_variable(*var).is_some() || self.player_vars.contains_key(var)
             }
             Some(HirExprKind::Convert { from, .. })
             | Some(HirExprKind::Cast { expr: from, .. }) => self.switch_scrutinee_is_stable(*from),
@@ -1425,7 +1839,7 @@ impl<'a> Lowerer<'a> {
             .and_then(|v| self.ws_span(v.span));
         let modify = self.modify_op(op, span);
         match (
-            self.global_vars.get(&var).copied(),
+            self.global_variable(var),
             self.player_vars.get(&var).copied(),
         ) {
             (Some(variable), _) => {
@@ -1661,7 +2075,7 @@ impl<'a> Lowerer<'a> {
                 LiteralValue::Null => wir::Value::Null,
             },
             HirExprKind::VarRef { var } => {
-                if let Some(variable) = self.global_vars.get(&var).copied() {
+                if let Some(variable) = self.global_variable(var) {
                     wir::Value::GlobalVariable(variable)
                 } else if let Some(variable) = self.player_vars.get(&var).copied() {
                     let player = self
