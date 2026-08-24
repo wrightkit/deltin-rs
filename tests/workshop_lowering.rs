@@ -197,7 +197,12 @@ rule: "local" Event.OngoingGlobal {
     let locale = workshop_rs::catalog::Locale::new("en-US");
     let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
     let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
-    assert!(workshop_rs::roundtrip::equivalent(&program, &reparsed));
+    assert!(
+        workshop_rs::roundtrip::equivalent(&program, &reparsed),
+        "original:\n{}\nreparsed:\n{}\n{emitted}",
+        program.dump(),
+        reparsed.dump()
+    );
     let dump = program.dump();
     assert!(dump.contains("__del_rule_local_0"), "{dump}");
     assert_eq!(
@@ -419,7 +424,7 @@ rule: "message" Event.OngoingGlobal {
 fn global_scalar_foreach_materializes_collection_and_index_once() {
     let (program, diagnostics) = lower(
         r#"
-globalvar Number[] values = [1];
+globalvar Number[] values;
 rule: "foreach" Event.OngoingGlobal {
     foreach (Number value in values) { }
 }
@@ -436,6 +441,33 @@ rule: "foreach" Event.OngoingGlobal {
     assert!(dump.contains("while"), "{dump}");
     assert!(dump.contains("__del_foreach_collection_"), "{dump}");
     assert!(dump.contains("__del_foreach_index_"), "{dump}");
+    let rule = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "foreach")
+        .expect("foreach rule");
+    assert_eq!(rule.actions.len(), 3);
+    assert!(matches!(
+        program.actions.get(rule.actions[0]),
+        Some(workshop_rs::wir::Action::SetGlobalVariable { .. })
+    ));
+    assert!(matches!(
+        program.actions.get(rule.actions[1]),
+        Some(workshop_rs::wir::Action::SetGlobalVariable { .. })
+    ));
+    let Some(workshop_rs::wir::Action::While { body, .. }) = program.actions.get(rule.actions[2])
+    else {
+        panic!("foreach must lower to a canonical while action")
+    };
+    assert!(matches!(
+        program.actions.get(body[0]),
+        Some(workshop_rs::wir::Action::SetGlobalVariable { target_span, .. })
+            if target_span.is_some()
+    ));
+    assert!(matches!(
+        program.actions.get(*body.last().unwrap()),
+        Some(workshop_rs::wir::Action::ModifyGlobalVariable { .. })
+    ));
     let generated: Vec<_> = program
         .global_variables
         .iter()
@@ -449,14 +481,19 @@ rule: "foreach" Event.OngoingGlobal {
     let locale = workshop_rs::catalog::Locale::new("en-US");
     let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
     let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
-    assert!(workshop_rs::roundtrip::equivalent(&program, &reparsed));
+    assert!(
+        workshop_rs::roundtrip::equivalent(&program, &reparsed),
+        "original:\n{}\nreparsed:\n{}\n{emitted}",
+        program.dump(),
+        reparsed.dump()
+    );
 }
 
 #[test]
 fn player_context_foreach_fails_closed_without_shared_storage() {
     let (program, diagnostics) = lower(
         r#"
-globalvar Number[] values = [1];
+globalvar Number[] values;
 rule: "foreach" Event.OngoingPlayer {
     foreach (Number value in values) { }
 }
@@ -478,7 +515,7 @@ rule: "foreach" Event.OngoingPlayer {
 fn global_foreach_rejects_suspending_external_actions() {
     let (program, diagnostics) = lower(
         r#"
-globalvar Number[] values = [1];
+globalvar Number[] values;
 rule: "foreach-wait" Event.OngoingGlobal {
     foreach (Number value in values) {
         Wait(1);
@@ -504,14 +541,21 @@ rule: "foreach-wait" Event.OngoingGlobal {
 fn global_foreach_rejects_synthetic_name_collisions() {
     let (program, diagnostics) = lower(
         r#"
-globalvar Number[] values = [1];
-globalvar Number __del_foreach_collection_1 = 0;
+globalvar Number[] values;
+globalvar Number __del_foreach_collection_3 = 0;
 rule: "foreach-collision" Event.OngoingGlobal {
     foreach (Number value in values) { }
 }
 "#,
     );
-    assert!(program.rules.iter().all(|rule| rule.name != "foreach-collision"));
+    assert!(
+        program
+            .rules
+            .iter()
+            .all(|rule| rule.name != "foreach-collision"),
+        "{}\n{diagnostics:?}",
+        program.dump()
+    );
     assert!(diagnostics.iter().any(|diagnostic| {
         diagnostic.code == "HI018"
             && diagnostic
