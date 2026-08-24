@@ -113,3 +113,23 @@ fn invalid_ds_toml_is_a_project_diagnostic_with_config_provenance() {
         PathBuf::from("main.del")
     );
 }
+
+#[test]
+fn unreadable_ds_toml_uses_a_registered_config_source() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/project-fixtures/non-file-ds-toml");
+    let project = load_project(ProjectOptions {
+        root,
+        entry: None,
+        config: None,
+    });
+    let diagnostic = project
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == "PJ003")
+        .expect("non-file ds.toml must be diagnosed");
+    assert_eq!(
+        project.sources.get(diagnostic.primary.file).name,
+        PathBuf::from("ds.toml")
+    );
+}

@@ -116,10 +116,11 @@ fn load_config(
         Ok(text) => text,
         Err(error) if error.kind() == ErrorKind::NotFound => return None,
         Err(read_error) => {
+            let file = sources.add_file(PathBuf::from("ds.toml"), String::new());
             diagnostics.push(error(
                 Phase::Project,
                 "PJ003",
-                Span::new(FileId(0), 0, 0),
+                Span::new(file, 0, 0),
                 format!(
                     "failed to read project config {} ({read_error})",
                     path.display()
