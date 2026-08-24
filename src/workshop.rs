@@ -925,9 +925,18 @@ impl<'a> Lowerer<'a> {
                     self.collect_local_declarations_stmt(els, locals);
                 }
             }
-            HirStmtKind::While { body, .. }
-            | HirStmtKind::AutoFor { body, .. }
-            | HirStmtKind::Foreach { body, .. } => {
+            HirStmtKind::While { body, .. } | HirStmtKind::AutoFor { body, .. } => {
+                self.collect_local_declarations_stmt(body, locals)
+            }
+            HirStmtKind::Foreach { var, body, .. } => {
+                if self
+                    .hir
+                    .vars
+                    .get(*var as usize)
+                    .is_some_and(|var| var.storage == StorageIntent::Local)
+                {
+                    locals.push(*var);
+                }
                 self.collect_local_declarations_stmt(body, locals)
             }
             HirStmtKind::For {
@@ -1327,11 +1336,15 @@ impl<'a> Lowerer<'a> {
                 })]
             }
             HirStmtKind::Foreach { .. } => {
-                self.unsupported(
-                    stmt.span,
-                    "DEL-owned foreach lowering/runtime gap depends on the storage/runtime strategy tracked in #31",
-                );
-                Vec::new()
+                let HirStmtKind::Foreach {
+                    var,
+                    collection,
+                    body,
+                } = &stmt.kind
+                else {
+                    unreachable!();
+                };
+                self.lower_foreach(stmt.span, *var, *collection, body)
             }
             HirStmtKind::Return { .. }
             | HirStmtKind::Break
@@ -1442,6 +1455,150 @@ impl<'a> Lowerer<'a> {
             span: self.ws_span(span),
         });
         vec![init, loop_action]
+    }
+
+    fn lower_foreach(
+        &mut self,
+        span: Span,
+        var: HirVarId,
+        collection: HirExprId,
+        body: &HirStmt,
+    ) -> Vec<wir::ActionId> {
+        if self.player_context {
+            self.unsupported(
+                span,
+                "player-context foreach requires player-scoped runtime storage",
+            );
+            return Vec::new();
+        }
+        let Some(collection_expr) = self.hir.expr(collection) else {
+            self.unsupported(span, "foreach collection is not a known HIR expression");
+            return Vec::new();
+        };
+        if !matches!(collection_expr.ty, Type::Array(_)) {
+            self.unsupported(span, "foreach lowering supports only array collections");
+            return Vec::new();
+        }
+        let Some(local) = self.hir.vars.get(var as usize) else {
+            self.unsupported(
+                span,
+                format!("foreach binder references unknown HIR variable {var}"),
+            );
+            return Vec::new();
+        };
+        if local.storage != StorageIntent::Local
+            || local.semantics != crate::hir::ValueSemantics::Value
+            || !matches!(
+                local.ty,
+                Type::Number | Type::String | Type::Bool | Type::Null | Type::Any
+            )
+        {
+            self.unsupported(span, "foreach binder requires scalar value storage");
+            return Vec::new();
+        }
+        if self.stmt_contains_internal_call(body) {
+            self.unsupported(
+                span,
+                "foreach body requires a non-reentrant global rule context",
+            );
+            return Vec::new();
+        }
+        let Some(binder) = self.rule_local_globals.get(&var).copied() else {
+            self.unsupported(
+                span,
+                "foreach binder requires a same-rule global-event storage context",
+            );
+            return Vec::new();
+        };
+        let Ok(collection_value) = self.lower_value(collection) else {
+            return Vec::new();
+        };
+        let collection_name = format!(
+            "__del_foreach_collection_{}",
+            self.out.global_variables.len()
+        );
+        let index_name = format!("__del_foreach_index_{}", self.out.global_variables.len() + 1);
+        if self.out.global_variables.iter().any(|variable| {
+            variable.name == collection_name || variable.name == index_name
+        }) {
+            self.unsupported(
+                span,
+                "foreach synthetic global name collides with a declared global",
+            );
+            return Vec::new();
+        }
+        let collection_temp = self.allocate_runtime_global(collection_name, collection_expr.span);
+        let index_temp = self.allocate_runtime_global(index_name, span);
+        let collection_ref = self.global_value(collection_temp, collection_expr.span);
+        let index_ref = self.global_value(index_temp, span);
+        let zero = self.out.values.push(wir::ValueNode::new(
+            wir::Value::Number {
+                value: 0.0,
+                text: "0".to_string(),
+            },
+            self.ws_span(span),
+        ));
+        let one = self.out.values.push(wir::ValueNode::new(
+            wir::Value::Number {
+                value: 1.0,
+                text: "1".to_string(),
+            },
+            self.ws_span(span),
+        ));
+        let count = self.out.values.push(wir::ValueNode::new(
+            wir::Value::Call {
+                name: "countOf".to_string(),
+                args: vec![collection_ref],
+            },
+            self.ws_span(span),
+        ));
+        let condition = self.out.values.push(wir::ValueNode::new(
+            wir::Value::Call {
+                name: "<".to_string(),
+                args: vec![index_ref, count],
+            },
+            self.ws_span(span),
+        ));
+        let element = self.out.values.push(wir::ValueNode::new(
+            wir::Value::Call {
+                name: "valueInArray".to_string(),
+                args: vec![collection_ref, index_ref],
+            },
+            self.ws_span(span),
+        ));
+        let mut loop_body = vec![self.out.actions.push(wir::Action::SetGlobalVariable {
+            variable: binder,
+            value: element,
+            span: self.ws_span(span),
+            target_span: self.ws_span(local.span),
+        })];
+        loop_body.extend(self.lower_stmt(body));
+        loop_body.push(self.out.actions.push(wir::Action::ModifyGlobalVariable {
+            variable: index_temp,
+            op: wir::ModifyOp::Add,
+            value: one,
+            span: self.ws_span(span),
+            target_span: self.ws_span(span),
+        }));
+        vec![
+            self.out.actions.push(wir::Action::SetGlobalVariable {
+                variable: collection_temp,
+                value: collection_value,
+                span: self.ws_span(span),
+                target_span: self.ws_span(collection_expr.span),
+            }),
+            self.out.actions.push(wir::Action::SetGlobalVariable {
+                variable: index_temp,
+                value: zero,
+                span: self.ws_span(span),
+                target_span: self.ws_span(span),
+            }),
+            self.out.actions.push(wir::Action::While {
+                condition,
+                body: loop_body,
+                span: self.ws_span(span),
+            }),
+        ]
     }
 
     fn lower_loop_step(&mut self, id: HirExprId) -> Result<wir::ValueId, ()> {
