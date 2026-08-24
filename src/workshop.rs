@@ -2105,8 +2105,12 @@ impl<'a> Lowerer<'a> {
                     namespace,
                     span: callee_span,
                 } => {
-                    let Some(binding) = self.external_binding(callee_span, &name, &namespace)
-                    else {
+                    let binding = if Self::is_chase_alias(&name) {
+                        self.chase_binding_for_target(callee_span, &name, &namespace, &args)
+                    } else {
+                        self.external_binding(callee_span, &name, &namespace)
+                    };
+                    let Some(binding) = binding else {
                         return Vec::new();
                     };
                     let ExternalBinding::Action(info) = binding else {
@@ -2142,6 +2146,98 @@ impl<'a> Lowerer<'a> {
                 Vec::new()
             }
         }
+    }
+
+    fn is_chase_alias(name: &str) -> bool {
+        matches!(
+            name,
+            "ChaseVariableAtRate"
+                | "ChaseVariableOverTime"
+                | "ChasePlayerVariableAtRate"
+                | "ChasePlayerVariableOverTime"
+                | "StopChasingVariable"
+                | "StopChasingPlayerVariable"
+        )
+    }
+
+    fn chase_binding_for_target(
+        &mut self,
+        span: Span,
+        name: &str,
+        namespace: &[String],
+        args: &[HirArg],
+    ) -> Option<ExternalBinding> {
+        let Some(ExternalBinding::Action(info)) = self.external_binding(span, name, namespace)
+        else {
+            return None;
+        };
+        let Some(target) = Self::chase_target_arg(args, info.params.as_deref()) else {
+            self.unsupported(span, "chase target must be a resolved global or player variable");
+            return None;
+        };
+        let Some(HirExprKind::VarRef { var }) = self.hir.expr(target).map(|expr| &expr.kind) else {
+            self.unsupported(span, "chase target must be a resolved global or player variable");
+            return None;
+        };
+        let player = self.player_vars.contains_key(var);
+        if !player && !self.global_vars.contains_key(var) {
+            self.unsupported(span, "chase target must be a resolved global or player variable");
+            return None;
+        }
+        if player && matches!(name, "StopChasingVariable" | "StopChasingPlayerVariable") {
+            self.unsupported(
+                span,
+                "canonical player stop-chase action is unavailable in the released Workshop catalog",
+            );
+            return None;
+        }
+        let mut info = info;
+        info.canonical_id = match name {
+            "ChaseVariableAtRate" | "ChasePlayerVariableAtRate" => "chaseAtRate",
+            "ChaseVariableOverTime" | "ChasePlayerVariableOverTime" => "chaseOverTime",
+            "StopChasingVariable" | "StopChasingPlayerVariable" => "stopChasingVariable",
+            _ => info.canonical_id.as_str(),
+        }
+        .to_string();
+        Some(ExternalBinding::Action(info))
+    }
+
+    fn chase_target_arg(
+        args: &[HirArg],
+        params: Option<&[ExternalParam]>,
+    ) -> Option<HirExprId> {
+        let params = params?;
+        let target_index = params
+            .iter()
+            .position(|param| param.name.eq_ignore_ascii_case("Variable"))?;
+        let mut bound = vec![false; params.len()];
+        let mut next_positional = 0;
+        for arg in args {
+            let (index, value) = match arg {
+                HirArg::Pos(value) => {
+                    while next_positional < bound.len() && bound[next_positional] {
+                        next_positional += 1;
+                    }
+                    let index = next_positional;
+                    next_positional += 1;
+                    (index, *value)
+                }
+                HirArg::Named { name, value } => {
+                    let index = params
+                        .iter()
+                        .position(|param| param.name.eq_ignore_ascii_case(name))?;
+                    (index, *value)
+                }
+            };
+            if index >= bound.len() || bound[index] {
+                return None;
+            }
+            bound[index] = true;
+            if index == target_index {
+                return Some(value);
+            }
+        }
+        None
     }
 
     fn call_subroutine(&mut self, fid: HirFuncId, span: Span) -> Vec<wir::ActionId> {
