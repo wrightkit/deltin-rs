@@ -177,6 +177,10 @@ rule: "local" Event.OngoingGlobal {
         .get(workshop_rs::wir::GlobalVarId::from_index(0))
         .unwrap();
     assert_eq!(variable.name, "__del_rule_local_0");
+    assert!(variable.span.is_some() && variable.name_span.is_some());
+    let span = variable.span.unwrap();
+    assert_eq!((span.start.line, span.start.col), (3, 12));
+    assert_eq!((span.end.line, span.end.col), (3, 17));
     assert_eq!(variable.index, 0);
     let rule = program
         .rules
@@ -222,12 +226,213 @@ rule: "local" Event.OngoingGlobal {
 }
 
 #[test]
-fn rule_local_storage_outside_global_scalar_slice_fails_closed() {
+fn global_rule_array_local_storage_materializes_value_reference_and_assignment() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "array" Event.OngoingGlobal {
+    Number[] local = [1, 2];
+    local = local;
+    local = [local[0], 3];
+}
+"#,
+    );
+    assert!(
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
+        "{diagnostics:?}"
+    );
+    program.validate().expect("structurally valid WIR");
+    let variable = program
+        .global_variables
+        .get(workshop_rs::wir::GlobalVarId::from_index(0))
+        .unwrap();
+    assert_eq!(variable.name, "__del_rule_local_0");
+    let span = variable.span.unwrap();
+    assert_eq!((span.start.line, span.start.col), (3, 14));
+    assert_eq!((span.end.line, span.end.col), (3, 19));
+    let rule = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "array")
+        .expect("array rule");
+    assert_eq!(rule.actions.len(), 3);
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        variable: local,
+        value: initial,
+        ..
+    } = program.actions.get(rule.actions[0]).unwrap()
+    else {
+        panic!("array declaration must set a global variable")
+    };
+    assert_eq!(*local, workshop_rs::wir::GlobalVarId::from_index(0));
+    let workshop_rs::wir::Value::Array(elements) = &program.values.get(*initial).unwrap().value
+    else {
+        panic!("array declaration must use canonical WIR Array")
+    };
+    assert_eq!(elements.len(), 2);
+
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        variable: assigned,
+        value: reference,
+        ..
+    } = program.actions.get(rule.actions[1]).unwrap()
+    else {
+        panic!("array assignment must set a global variable")
+    };
+    assert_eq!(*assigned, *local);
+    assert!(matches!(
+        program.values.get(*reference).unwrap().value,
+        workshop_rs::wir::Value::GlobalVariable(id) if id == *local
+    ));
+
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        value: reassigned, ..
+    } = program.actions.get(rule.actions[2]).unwrap()
+    else {
+        panic!("array reassignment must set a global variable")
+    };
+    let workshop_rs::wir::Value::Array(elements) = &program.values.get(*reassigned).unwrap().value
+    else {
+        panic!("array reassignment must use canonical WIR Array")
+    };
+    assert!(matches!(
+        program.values.get(elements[0]).unwrap().value,
+        workshop_rs::wir::Value::Call { ref name, ref args }
+            if name == "valueInArray"
+                && matches!(program.values.get(args[0]).unwrap().value,
+                    workshop_rs::wir::Value::GlobalVariable(id) if id == *local)
+    ));
+    let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
+    let locale = workshop_rs::catalog::Locale::new("en-US");
+    let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
+    let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
+    assert_eq!(reparsed.rules.len(), 1);
+    assert_eq!(
+        reparsed
+            .rules
+            .get(workshop_rs::wir::RuleId::from_index(0))
+            .unwrap()
+            .actions
+            .len(),
+        3
+    );
+    // workshop-rs currently reparses emitted Array values as the provider
+    // call `array(...)`; keep this evidence local until that canonical gap is
+    // fixed in workshop-rs rather than weakening del-rs ownership boundaries.
+}
+
+#[test]
+fn global_rule_foreach_reads_local_array_collection() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "foreach-local" Event.OngoingGlobal {
+    Number[] local = [1, 2];
+    foreach (Number value in local) { }
+}
+"#,
+    );
+    assert!(
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
+        "{diagnostics:?}"
+    );
+    program.validate().expect("structurally valid WIR");
+    let dump = program.dump();
+    assert!(dump.contains("countOf"), "{dump}");
+    assert!(dump.contains("valueInArray"), "{dump}");
+    assert!(dump.contains("__del_foreach_collection_"), "{dump}");
+    let rule = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "foreach-local")
+        .expect("foreach rule");
+    assert_eq!(rule.actions.len(), 4);
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        variable: local,
+        value: initial,
+        ..
+    } = program.actions.get(rule.actions[0]).unwrap()
+    else {
+        panic!("local array initialization must be the first action")
+    };
+    assert!(matches!(
+        program.values.get(*initial).unwrap().value,
+        workshop_rs::wir::Value::Array(_)
+    ));
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        variable: collection_slot,
+        value: collection,
+        ..
+    } = program.actions.get(rule.actions[1]).unwrap()
+    else {
+        panic!("foreach must materialize its collection after local initialization")
+    };
+    assert_eq!(
+        program.global_variables.get(*local).unwrap().name,
+        "__del_rule_local_0"
+    );
+    let local_span = program.global_variables.get(*local).unwrap().span.unwrap();
+    assert_eq!((local_span.start.line, local_span.start.col), (3, 14));
+    assert_eq!((local_span.end.line, local_span.end.col), (3, 19));
+    assert_eq!(
+        program.global_variables.get(*collection_slot).unwrap().name,
+        "__del_foreach_collection_2"
+    );
+    let collection_span = program
+        .global_variables
+        .get(*collection_slot)
+        .unwrap()
+        .span
+        .unwrap();
+    assert_eq!(
+        (collection_span.start.line, collection_span.start.col),
+        (4, 30)
+    );
+    assert_eq!((collection_span.end.line, collection_span.end.col), (4, 35));
+    assert!(matches!(
+        program.values.get(*collection).unwrap().value,
+        workshop_rs::wir::Value::GlobalVariable(id) if id == *local
+    ));
+    let workshop_rs::wir::Action::SetGlobalVariable {
+        variable: index_slot,
+        value: index,
+        ..
+    } = program.actions.get(rule.actions[2]).unwrap()
+    else {
+        panic!("foreach must initialize its index after the collection")
+    };
+    assert_eq!(
+        program.global_variables.get(*index_slot).unwrap().name,
+        "__del_foreach_index_3"
+    );
+    let index_span = program
+        .global_variables
+        .get(*index_slot)
+        .unwrap()
+        .span
+        .unwrap();
+    assert_eq!((index_span.start.line, index_span.start.col), (4, 5));
+    assert_eq!((index_span.end.line, index_span.end.col), (4, 40));
+    assert!(matches!(
+        program.values.get(*index).unwrap().value,
+        workshop_rs::wir::Value::Number { .. }
+    ));
+    assert!(matches!(
+        program.actions.get(rule.actions[3]),
+        Some(workshop_rs::wir::Action::While { .. })
+    ));
+    assert!(program
+        .global_variables
+        .iter()
+        .filter(|variable| variable.name.starts_with("__del_foreach_"))
+        .all(|variable| variable.span.is_some() && variable.name_span.is_some()));
+}
+
+#[test]
+fn rule_local_storage_outside_global_array_slice_fails_closed() {
     let (program, diagnostics) = lower(
         r#"
 rule: "unsupported" Event.OngoingPlayer {
-    define local = 1;
-    local = 2;
+    Number[] local = [1];
+    local = [2];
 }
 "#,
     );
@@ -244,16 +449,85 @@ rule: "unsupported" Event.OngoingPlayer {
 
     let (program, diagnostics) = lower(
         r#"
+class Box { }
 rule: "array" Event.OngoingGlobal {
-    define local = [1];
-    local = [2];
+    Box[] local = [new Box()];
 }
 "#,
     );
     assert!(program.rules.is_empty());
     assert!(
         diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == "HI018" && diagnostic.message.contains("scalar value expressions")
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("scalar or lowerable-array value expressions")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn global_rule_vector_array_local_fails_closed() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "vector-array" Event.OngoingGlobal {
+    Vector[] local = [Vector(1, 2, 3)];
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("scalar or lowerable-array value expressions")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn global_rule_array_local_without_initializer_fails_closed() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "uninitialized-array" Event.OngoingGlobal {
+    Number[] local;
+    local = [1];
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("scalar or lowerable-array value expressions")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn non_reentrant_global_array_local_storage_fails_closed() {
+    let (program, diagnostics) = lower(
+        r#"
+void Reenter() "reenter" { }
+rule: "non-reentrant" Event.OngoingGlobal {
+    Number[] local = [1];
+    Reenter();
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("non-recursive, non-reentrant rule body")
         }),
         "{diagnostics:?}"
     );
@@ -267,6 +541,29 @@ rule: "suspending-local" Event.OngoingGlobal {
     define local = 1;
     Wait(1);
     local = 2;
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("non-recursive, non-reentrant rule body")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn global_rule_array_local_storage_rejects_suspending_external_actions() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "suspending-array-local" Event.OngoingGlobal {
+    Number[] local = [1];
+    Wait(1);
+    local = [2];
 }
 "#,
     );

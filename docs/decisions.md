@@ -21,13 +21,15 @@ catalog/WIR.
 The shared global table is not a local-variable ABI. To avoid suspension or
 re-entry aliasing, the slice rejects player context, functions, methods,
 parameters, closures, recursive calls, and any external Workshop action in the
-rule body (including actions that may suspend or restart rules). Uninitialized
-locals, arrays, objects, structs, references, `foreach`, and unsupported value
-shapes remain structured `HI018` failures and produce empty WIR. The local map
-is scoped to one rule lowering and uses the common runtime-global allocator, but
-that does not make the slot safe for overlapping activations. The slice therefore
-provides no evidence for the remaining #31 runtime strategies or for advancing
-the support matrix.
+rule body (including actions that may suspend or restart rules). A bounded
+lowerable-array subset is materialized with the same generated slot strategy;
+object/reference elements, uninitialized locals, and unsupported value shapes
+remain structured `HI018` failures and produce empty WIR. The local maps are
+scoped to one rule lowering and use the common runtime-global allocator, but
+that does not make the slots safe for overlapping activations. The slice
+therefore provides no evidence for the remaining #31 runtime strategies or
+for advancing the support matrix. `Value::Array` emit/parse equivalence remains
+a canonical workshop-rs gap and is not reimplemented in del-rs.
 
 ---
 
@@ -306,6 +308,20 @@ global helper slots across players or re-entrant execution would change
 observable semantics. Synthetic helper-name collisions also fail closed. This
 is a DEL adapter policy over the released WIR forms, not a new provider-local
 WIR node or a claim of live Workshop-client execution.
+
+## #31 global lowerable-array local storage (2026-08-18)
+
+Global-rule local variables whose types and initializers are representable by
+canonical WIR values may use the same generated global storage as scalar
+locals. This slice extends the value set to nested arrays of scalar values and
+lowers array literals, variable references, indexes, and assignments through
+the existing `Array`, `GlobalVariable`, and `valueInArray` forms. It does not
+define object identity, reference generations, member layout, or a local table.
+
+Array elements that require object/reference semantics, player-context locals,
+and re-entrant bodies fail closed with `HI018`. The choice is deliberately
+limited to WIR values already supplied by `workshop-rs`; no provider-local
+collection or runtime-layout contract is introduced.
 
 The support matrix remains `lowering-dependent`; these tests are implementation
 evidence for the bounded adapter slice, not end-to-end Workshop execution proof.

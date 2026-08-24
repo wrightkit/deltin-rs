@@ -395,6 +395,7 @@ struct Lowerer<'a> {
     out: wir::Program,
     global_vars: HashMap<HirVarId, wir::GlobalVarId>,
     rule_local_globals: HashMap<HirVarId, wir::GlobalVarId>,
+    rule_local_arrays: HashSet<HirVarId>,
     player_vars: HashMap<HirVarId, wir::PlayerVarId>,
     subroutines: HashMap<HirFuncId, wir::SubroutineId>,
     diagnostics: Vec<Diagnostic>,
@@ -423,6 +424,7 @@ impl<'a> Lowerer<'a> {
             out,
             global_vars: HashMap::new(),
             rule_local_globals: HashMap::new(),
+            rule_local_arrays: HashSet::new(),
             player_vars: HashMap::new(),
             subroutines: HashMap::new(),
             diagnostics: Vec::new(),
@@ -657,6 +659,7 @@ impl<'a> Lowerer<'a> {
                 | wir::Event::Player { .. }
         );
         self.rule_local_globals.clear();
+        self.rule_local_arrays.clear();
         if matches!(&event, wir::Event::Global) {
             self.prepare_global_rule_locals(rule);
         }
@@ -670,6 +673,7 @@ impl<'a> Lowerer<'a> {
         if self.has_new_errors(diagnostic_count) {
             self.player_context = previous_player_context;
             self.rule_local_globals.clear();
+            self.rule_local_arrays.clear();
             return;
         }
         self.out.rules.push(wir::Rule {
@@ -683,6 +687,7 @@ impl<'a> Lowerer<'a> {
         });
         self.player_context = previous_player_context;
         self.rule_local_globals.clear();
+        self.rule_local_arrays.clear();
     }
 
     fn lower_subroutine(&mut self, fid: HirFuncId) {
@@ -813,12 +818,70 @@ impl<'a> Lowerer<'a> {
         if self.block_contains_nonscalar_local_write(&rule.body) {
             self.unsupported(
                 rule.span,
-                "global-rule local storage accepts only scalar value expressions",
+                "global-rule local storage accepts only scalar or lowerable-array value expressions",
             );
             return;
         }
         for var in locals {
+            if self.block_contains_array_local_declaration(&rule.body, var) {
+                self.rule_local_arrays.insert(var);
+            }
             self.materialize_rule_local(var);
+        }
+    }
+
+    fn block_contains_array_local_declaration(
+        &self,
+        block: &crate::hir::HirBlock,
+        var: HirVarId,
+    ) -> bool {
+        block
+            .stmts
+            .iter()
+            .any(|stmt| self.stmt_contains_array_local_declaration(stmt, var))
+    }
+
+    fn stmt_contains_array_local_declaration(&self, stmt: &HirStmt, var: HirVarId) -> bool {
+        match &stmt.kind {
+            HirStmtKind::VarDecl {
+                var: declared,
+                init,
+            } => {
+                *declared == var
+                    && init.is_some_and(|expr| {
+                        self.hir
+                            .expr(expr)
+                            .is_some_and(|expr| matches!(expr.ty, Type::Array(_)))
+                    })
+            }
+            HirStmtKind::Block(block) => self.block_contains_array_local_declaration(block, var),
+            HirStmtKind::If { then, els, .. } => {
+                self.stmt_contains_array_local_declaration(then, var)
+                    || els
+                        .as_deref()
+                        .is_some_and(|stmt| self.stmt_contains_array_local_declaration(stmt, var))
+            }
+            HirStmtKind::While { body, .. }
+            | HirStmtKind::AutoFor { body, .. }
+            | HirStmtKind::Foreach { body, .. } => {
+                self.stmt_contains_array_local_declaration(body, var)
+            }
+            HirStmtKind::For {
+                init, step, body, ..
+            } => {
+                init.as_deref()
+                    .is_some_and(|stmt| self.stmt_contains_array_local_declaration(stmt, var))
+                    || step
+                        .as_deref()
+                        .is_some_and(|stmt| self.stmt_contains_array_local_declaration(stmt, var))
+                    || self.stmt_contains_array_local_declaration(body, var)
+            }
+            HirStmtKind::Switch { arms, .. } => arms.iter().any(|arm| {
+                arm.stmts
+                    .iter()
+                    .any(|stmt| self.stmt_contains_array_local_declaration(stmt, var))
+            }),
+            _ => false,
         }
     }
 
@@ -834,7 +897,18 @@ impl<'a> Lowerer<'a> {
             HirStmtKind::VarDecl { var, init } => {
                 self.hir.vars.get(*var as usize).is_some_and(|var| {
                     var.storage == StorageIntent::Local
-                        && init.is_none_or(|expr| !self.expr_is_scalar_value(expr))
+                        && init.is_none_or(|expr| {
+                            let is_array = matches!(var.ty, Type::Array(_))
+                                || self
+                                    .hir
+                                    .expr(expr)
+                                    .is_some_and(|expr| matches!(expr.ty, Type::Array(_)));
+                            if is_array {
+                                !self.expr_is_lowerable_value(expr)
+                            } else {
+                                !self.expr_is_scalar_value(expr)
+                            }
+                        })
                 })
             }
             HirStmtKind::Assign { target, value, .. } => {
@@ -842,7 +916,7 @@ impl<'a> Lowerer<'a> {
                     self.hir.expr(*target).map(|expr| &expr.kind),
                     Some(HirExprKind::VarRef { var })
                         if self.hir.vars.get(*var as usize).is_some_and(|var| var.storage == StorageIntent::Local)
-                ) && !self.expr_is_scalar_value(*value)
+                ) && !self.expr_is_supported_local_write(*target, *value)
             }
             HirStmtKind::Block(block) => self.block_contains_nonscalar_local_write(block),
             HirStmtKind::If { then, els, .. } => {
@@ -897,6 +971,87 @@ impl<'a> Lowerer<'a> {
                     && self.expr_is_scalar_value(*els)
             }
             _ => false,
+        }
+    }
+
+    fn expr_is_supported_local_write(&self, target: HirExprId, value: HirExprId) -> bool {
+        let Some(HirExprKind::VarRef { var }) = self.hir.expr(target).map(|expr| &expr.kind) else {
+            return false;
+        };
+        let Some(variable) = self.hir.vars.get(*var as usize) else {
+            return false;
+        };
+        if matches!(variable.ty, Type::Array(_)) || self.rule_local_arrays.contains(var) {
+            self.expr_is_lowerable_value(value)
+        } else {
+            self.expr_is_scalar_value(value)
+        }
+    }
+
+    fn is_wir_value_type(ty: &Type) -> bool {
+        matches!(
+            ty,
+            Type::Number | Type::String | Type::Bool | Type::Null | Type::Any
+        ) || matches!(ty, Type::Array(inner) if Self::is_wir_value_type(inner))
+    }
+
+    fn expr_is_lowerable_value(&self, id: HirExprId) -> bool {
+        let Some(expr) = self.hir.expr(id) else {
+            return false;
+        };
+        if !Self::is_wir_value_type(&expr.ty) {
+            return false;
+        }
+        match &expr.kind {
+            HirExprKind::Literal(_) | HirExprKind::External { .. } => true,
+            HirExprKind::VarRef { var } => self
+                .hir
+                .vars
+                .get(*var as usize)
+                .is_some_and(|variable| Self::is_wir_value_type(&variable.ty)),
+            HirExprKind::ArrayLit { elems } => elems
+                .iter()
+                .all(|element| self.expr_is_lowerable_value(*element)),
+            HirExprKind::Index { base, index } => {
+                self.expr_is_lowerable_value(*base) && self.expr_is_lowerable_value(*index)
+            }
+            HirExprKind::Binary { lhs, rhs, .. } => {
+                self.expr_is_lowerable_value(*lhs) && self.expr_is_lowerable_value(*rhs)
+            }
+            HirExprKind::Unary { operand, .. }
+            | HirExprKind::Convert { from: operand, .. }
+            | HirExprKind::Cast { expr: operand, .. } => self.expr_is_lowerable_value(*operand),
+            HirExprKind::Ternary { cond, then, els } => {
+                self.expr_is_lowerable_value(*cond)
+                    && self.expr_is_lowerable_value(*then)
+                    && self.expr_is_lowerable_value(*els)
+            }
+            HirExprKind::Call { target, args } => {
+                let args_lowerable = args.iter().all(|arg| match arg {
+                    HirArg::Pos(value) | HirArg::Named { value, .. } => {
+                        self.expr_is_lowerable_value(*value)
+                    }
+                });
+                let target_lowerable = match target {
+                    CallTarget::External { .. } => true,
+                    CallTarget::BuiltinArrayMethod { base, .. } => {
+                        self.expr_is_lowerable_value(*base)
+                    }
+                    _ => false,
+                };
+                args_lowerable && target_lowerable
+            }
+            HirExprKind::Member { .. }
+            | HirExprKind::Assign { .. }
+            | HirExprKind::Postfix { .. }
+            | HirExprKind::FunctionValue { .. }
+            | HirExprKind::New { .. }
+            | HirExprKind::StructLit { .. }
+            | HirExprKind::EnumCtor { .. }
+            | HirExprKind::StrInterp { .. }
+            | HirExprKind::Async { .. }
+            | HirExprKind::This { .. }
+            | HirExprKind::Error => false,
         }
     }
 
@@ -1150,15 +1305,12 @@ impl<'a> Lowerer<'a> {
         };
         if hir_var.storage != StorageIntent::Local
             || hir_var.semantics != crate::hir::ValueSemantics::Value
-            || !matches!(
-                hir_var.ty,
-                Type::Number | Type::String | Type::Bool | Type::Null | Type::Any
-            )
+            || (!Self::is_wir_value_type(&hir_var.ty) && !self.rule_local_arrays.contains(&var))
         {
             self.unsupported(
                 hir_var.span,
                 format!(
-                    "rule-local variable '{}' is outside the scalar value storage slice",
+                    "rule-local variable '{}' is outside the scalar or lowerable-array value storage slice",
                     hir_var.name
                 ),
             );

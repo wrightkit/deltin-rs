@@ -36,6 +36,14 @@ plus a short list of evidence-backed approximation areas.
   actions. Player-context iteration, non-scalar/reference binders, and
   re-entrant bodies still fail closed with `HI018`; this is not a claim that
   canonical `workshop-rs` WIR is missing a provider-local `Foreach` node.
+- Global-rule local storage now also accepts lowerable array values: the local
+  is materialized as a generated global slot and uses canonical WIR `Array`,
+  global-variable, and array-index values. Player-context locals, arrays with
+  object/reference elements, uninitialized locals, suspending external actions,
+  and re-entrant storage remain `HI018` gaps. The released workshop-rs
+  emitter/parser currently does not round-trip `Value::Array` equivalently
+  (it reparses the emitted form as `Call("array", ...)`); that canonical gap
+  remains owned by workshop-rs and is not bypassed here.
 - Switch lowering materializes an unstable scrutinee into one generated global
   helper slot before emitting repeated case comparisons in global rules.
   Player-context dynamic switches and recursive contexts fail closed with
