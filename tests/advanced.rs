@@ -22,7 +22,11 @@ fn check(text: &str) -> Vec<del_rs::Diagnostic> {
 }
 
 fn codes(diags: &[del_rs::Diagnostic]) -> Vec<String> {
-    diags.iter().filter(|d| d.is_error()).map(|d| d.code.clone()).collect()
+    diags
+        .iter()
+        .filter(|d| d.is_error())
+        .map(|d| d.code.clone())
+        .collect()
 }
 
 fn has_code(diags: &[del_rs::Diagnostic], code: &str) -> bool {

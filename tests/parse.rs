@@ -28,7 +28,10 @@ fn errors(diags: &[del_rs::Diagnostic]) -> Vec<String> {
 #[test]
 fn lexer_tokens_and_trivia() {
     let mut sources = SourceMap::new();
-    let id = sources.add_file(PathBuf::from("t.del"), "// c\n# d\nrule: \"x\" /* b */ {\n}".to_string());
+    let id = sources.add_file(
+        PathBuf::from("t.del"),
+        "// c\n# d\nrule: \"x\" /* b */ {\n}".to_string(),
+    );
     let (tokens, diags) = lexer::lex(id, sources.text(id));
     assert!(diags.is_empty());
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
@@ -134,8 +137,14 @@ fn parser_variable_declaration_forms() {
         ("playervar define lives = 5;\n", false),
         ("globalvar define myVar 5 = EventPlayer();\n", false),
         ("globalvar define myVar! = EventPlayer();\n", false),
-        ("public define ScopeData: RoundToInteger(1.5, Rounding.Down);\n", false),
-        ("playervar Number checkpointIndex {'checkpoint_reached'};\n", false),
+        (
+            "public define ScopeData: RoundToInteger(1.5, Rounding.Down);\n",
+            false,
+        ),
+        (
+            "playervar Number checkpointIndex {'checkpoint_reached'};\n",
+            false,
+        ),
         ("globalvar { \"Variable Name\", 0, 1 }\n", false),
     ] {
         let (ast, diags) = parse(text);
@@ -253,7 +262,11 @@ fn parser_auto_for_forms() {
         "rule: \"\" {\n    for (i = 0; i < 10; i = i + 1) {}\n}\n",
     ] {
         let (ast, diags) = parse(text);
-        assert!(errors(&diags).is_empty(), "case {text:?}: {:?}", errors(&diags));
+        assert!(
+            errors(&diags).is_empty(),
+            "case {text:?}: {:?}",
+            errors(&diags)
+        );
     }
 }
 
@@ -268,9 +281,13 @@ fn parser_interpolated_string_parts() {
             _ => panic!(),
         };
         let stmt = &stmts[0];
-        let StmtKind::Var(v) = &stmt.kind else { panic!() };
+        let StmtKind::Var(v) = &stmt.kind else {
+            panic!()
+        };
         let Some((_, init)) = &v.init else { panic!() };
-        let ExprKind::StrInterp { parts, args } = &init.kind else { panic!() };
+        let ExprKind::StrInterp { parts, args } = &init.kind else {
+            panic!()
+        };
         assert_eq!(parts.len(), 3);
         assert_eq!(args.len(), 2);
     }
@@ -337,7 +354,8 @@ fn parser_single_value_struct() {
 
 #[test]
 fn lexer_locale_and_quote_forms() {
-    let text = "define a = \"hi\";\n define b = 'hi';\n define c = @\"hi\";\n define d = $'hi {a}';\n";
+    let text =
+        "define a = \"hi\";\n define b = 'hi';\n define c = @\"hi\";\n define d = $'hi {a}';\n";
     let mut sources = SourceMap::new();
     let id = sources.add_file(PathBuf::from("t.del"), text.to_string());
     let (tokens, _) = lexer::lex(id, text);
@@ -356,7 +374,10 @@ fn negative_parser_fixtures() {
     for (text, expected_codes) in [
         ("enum TestEnum\n", vec!["PR002"]),
         ("enum \n", vec!["PR010"]),
-        ("rule: \"Interpolated string test\"\n{\n    define x = $'a {b}' \";\n}\n", vec!["LX002"]),
+        (
+            "rule: \"Interpolated string test\"\n{\n    define x = $'a {b}' \";\n}\n",
+            vec!["LX002"],
+        ),
     ] {
         let (_, diags) = parse(text);
         for code in &expected_codes {

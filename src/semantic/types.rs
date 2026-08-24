@@ -193,9 +193,7 @@ pub fn conversion(
         | (Type::Null, Type::Hero)
         | (Type::Null, Type::Color)
         | (Type::Null, Type::Player)
-        | (Type::Null, Type::Players) => {
-            Conversion::FromNull
-        }
+        | (Type::Null, Type::Players) => Conversion::FromNull,
         (Type::Class(sub), Type::Class(base)) => {
             if is_subclass(*sub, *base, base_of) {
                 Conversion::UpcastClass
@@ -203,7 +201,10 @@ pub fn conversion(
                 Conversion::None
             }
         }
-        (Type::GenericInstantiation { def: a, args: aa }, Type::GenericInstantiation { def: b, args: bb }) => {
+        (
+            Type::GenericInstantiation { def: a, args: aa },
+            Type::GenericInstantiation { def: b, args: bb },
+        ) => {
             if a == b && aa.len() == bb.len() {
                 let mut rank = Conversion::Identity;
                 for (x, y) in aa.iter().zip(bb) {
@@ -250,7 +251,10 @@ pub fn conversion(
         }
         (Type::External(_), _) | (_, Type::External(_)) => Conversion::ExternalUnknown,
         (Type::Union(members), to) => {
-            if members.iter().any(|m| conversion(m, to, single_of, base_of).rank() < 255) {
+            if members
+                .iter()
+                .any(|m| conversion(m, to, single_of, base_of).rank() < 255)
+            {
                 Conversion::Identity
             } else {
                 Conversion::None
@@ -260,7 +264,11 @@ pub fn conversion(
     }
 }
 
-pub fn is_subclass(sub: SymbolId, base: SymbolId, base_of: &dyn Fn(SymbolId) -> Option<SymbolId>) -> bool {
+pub fn is_subclass(
+    sub: SymbolId,
+    base: SymbolId,
+    base_of: &dyn Fn(SymbolId) -> Option<SymbolId>,
+) -> bool {
     let mut cur = Some(sub);
     while let Some(c) = cur {
         if c == base {

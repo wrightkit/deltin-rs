@@ -89,14 +89,20 @@ pub const DIAGNOSTIC_CODES: &[(&str, &str)] = &[
     ("SM003", "unknown name"),
     ("SM004", "'this' outside an instance context"),
     ("SM005", "private member access outside its declaring type"),
-    ("SM006", "protected member access outside its declaring type or subclass"),
+    (
+        "SM006",
+        "protected member access outside its declaring type or subclass",
+    ),
     ("SM007", "ambiguous overload resolution"),
     ("SM008", "no matching overload"),
     ("SM009", "missing default argument"),
     ("SM010", "unknown named argument"),
     ("SM011", "duplicate named argument"),
     ("SM012", "parameter double-filled"),
-    ("SM013", "method group does not match the assignment target type"),
+    (
+        "SM013",
+        "method group does not match the assignment target type",
+    ),
     ("SM014", "type argument violates the 'single' bound"),
     ("SM015", "assignment to a const function value"),
     ("SM016", "assignment to a constant-type variable"),
@@ -114,10 +120,16 @@ pub const DIAGNOSTIC_CODES: &[(&str, &str)] = &[
     ("SM028", "base type is not a class"),
     ("SM029", "inheritance cycle"),
     ("SM030", "override without a matching virtual ancestor"),
-    ("SM031", "virtual dispatch legality (reserved; enforced at HIR level, HI012)"),
+    (
+        "SM031",
+        "virtual dispatch legality (reserved; enforced at HIR level, HI012)",
+    ),
     ("SM032", "constructor outside a class/struct"),
     ("SM033", "duplicate member name in type"),
-    ("SM034", "operation requires a 'single'-bounded type parameter"),
+    (
+        "SM034",
+        "operation requires a 'single'-bounded type parameter",
+    ),
     ("SM035", "recursion requires the 'recursive' attribute"),
     ("SM036", "macros cannot be recursive"),
     ("SM037", "illegal enum cast"),
@@ -131,33 +143,63 @@ pub const DIAGNOSTIC_CODES: &[(&str, &str)] = &[
     ("SM045", "ref/in not allowed on macros or subroutines"),
     ("SM046", "rule condition must not be constant or parallel"),
     ("SM047", "type alias cycle"),
-    ("SM048", "assignment to an immutable (:-initialized) variable"),
+    (
+        "SM048",
+        "assignment to an immutable (:-initialized) variable",
+    ),
     ("SM049", "provider-declared error"),
-    ("SM050", "generic function instantiation requires a resolvable type"),
+    (
+        "SM050",
+        "generic function instantiation requires a resolvable type",
+    ),
     ("SM051", "return value mismatch"),
     ("SM052", "condition must be bool-compatible"),
     ("SM053", "positional argument follows a named argument"),
     ("SM099", "too many semantic errors; stopping"),
     // HIR validation
-    ("HI001", "node span is invalid (unknown file or out-of-range offsets)"),
+    (
+        "HI001",
+        "node span is invalid (unknown file or out-of-range offsets)",
+    ),
     ("HI002", "HIR type is ill-formed"),
-    ("HI003", "variable reference targets an unknown HIR variable"),
+    (
+        "HI003",
+        "variable reference targets an unknown HIR variable",
+    ),
     ("HI004", "member target does not match its base type"),
     ("HI005", "call arity/named-argument mismatch"),
     ("HI006", "assignment target is not a valid lvalue"),
     ("HI007", "break/continue outside a loop or switch"),
     ("HI008", "return mismatch"),
-    ("HI009", "conversion node is inconsistent with the conversion relation"),
+    (
+        "HI009",
+        "conversion node is inconsistent with the conversion relation",
+    ),
     ("HI010", "new/delete target is not a class"),
-    ("HI011", "switch arm label incompatible with the scrutinee type"),
-    ("HI012", "virtual dispatch target is not virtual / static target is virtual"),
+    (
+        "HI011",
+        "switch arm label incompatible with the scrutinee type",
+    ),
+    (
+        "HI012",
+        "virtual dispatch target is not virtual / static target is virtual",
+    ),
     ("HI013", "lambda function-value/capture inconsistency"),
-    ("HI014", "call cycle through a non-recursive inline function or macro"),
+    (
+        "HI014",
+        "call cycle through a non-recursive inline function or macro",
+    ),
     ("HI015", "auto-for variable storage conflict"),
     ("HI016", "field initializer type mismatch"),
     ("HI017", "interpolation/async/hook shape violation"),
-    ("HI018", "HIR construct cannot be lowered to canonical Workshop WIR"),
-    ("HI099", "HIR has validation errors; oracle refuses to execute"),
+    (
+        "HI018",
+        "HIR construct cannot be lowered to canonical Workshop WIR",
+    ),
+    (
+        "HI099",
+        "HIR has validation errors; oracle refuses to execute",
+    ),
     // Oracle
     ("OR001", "stale reference: use of a deleted object"),
     ("OR002", "execution steps limit exceeded"),
@@ -171,7 +213,13 @@ pub const DIAGNOSTIC_CODES: &[(&str, &str)] = &[
 
 /// Build a diagnostic; panics on an unregistered code (programmer error) so the
 /// registry stays the single source of truth.
-pub fn diag(phase: Phase, code: &str, severity: Severity, primary: Span, message: impl Into<String>) -> Diagnostic {
+pub fn diag(
+    phase: Phase,
+    code: &str,
+    severity: Severity,
+    primary: Span,
+    message: impl Into<String>,
+) -> Diagnostic {
     debug_assert!(
         DIAGNOSTIC_CODES.iter().any(|(c, _)| *c == code),
         "unregistered diagnostic code: {code}"
@@ -226,7 +274,10 @@ mod tests {
             );
             let suffix = &code[2..];
             assert_eq!(suffix.len(), 3, "bad code shape {code}");
-            assert!(suffix.chars().all(|c| c.is_ascii_digit()), "bad code {code}");
+            assert!(
+                suffix.chars().all(|c| c.is_ascii_digit()),
+                "bad code {code}"
+            );
             assert!(seen.insert(code), "duplicate code {code}");
         }
     }
@@ -234,7 +285,8 @@ mod tests {
     #[test]
     fn diag_panics_on_unregistered_code() {
         let span = Span::new(FileId(0), 0, 0);
-        let r = std::panic::catch_unwind(|| diag(Phase::Parse, "ZZ999", Severity::Error, span, "x"));
+        let r =
+            std::panic::catch_unwind(|| diag(Phase::Parse, "ZZ999", Severity::Error, span, "x"));
         assert!(r.is_err());
     }
 }

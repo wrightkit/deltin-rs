@@ -135,5 +135,5 @@ fn catalog_provider_rejects_excess_arguments_and_exposes_catalog_identity() {
     let provider = CatalogProvider::new().expect("built-in catalog");
     let result = provider.resolve(&query(&[], "Wait", ExternalPosition::Value, 3));
     assert!(matches!(result, ExternalResolution::DefiniteError(_)));
-    assert_eq!(provider.catalog_identity().catalog_version, "0.1.0");
+    assert_eq!(provider.catalog_identity().catalog_version, "0.1.2");
 }

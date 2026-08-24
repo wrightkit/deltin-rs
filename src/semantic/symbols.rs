@@ -1,8 +1,8 @@
 //! Symbols and scopes (architecture §13.2).
 
+use crate::semantic::types::Type;
 use crate::span::Span;
 use crate::syntax::ast::NodeId;
-use crate::semantic::types::Type;
 use std::collections::HashMap;
 
 pub type SymbolId = u32;

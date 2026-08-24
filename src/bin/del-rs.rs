@@ -26,7 +26,7 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Validate a DEL/OSTW file or project through the full parsing and semantic pipeline.
+    /// Validate a DEL/OSTW file or project through parsing and semantic analysis.
     Check(PathArgs),
     /// Query semantic identity, type, and resolution at a source position.
     Inspect(InspectArgs),

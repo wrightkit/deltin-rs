@@ -84,7 +84,10 @@ impl SourceFile {
         LineCol {
             line: (idx + 1) as u32,
             // Column in Unicode scalar values.
-            col: self.text[line_start as usize..offset as usize].chars().count() as u32 + 1,
+            col: self.text[line_start as usize..offset as usize]
+                .chars()
+                .count() as u32
+                + 1,
         }
     }
 
@@ -99,7 +102,11 @@ impl SourceFile {
         } else {
             self.text.len()
         };
-        let end = end.saturating_sub(if end > 0 && self.text.as_bytes()[end - 1] == b'\n' { 1 } else { 0 });
+        let end = end.saturating_sub(if end > 0 && self.text.as_bytes()[end - 1] == b'\n' {
+            1
+        } else {
+            0
+        });
         &self.text[start..end]
     }
 }

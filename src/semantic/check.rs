@@ -5,11 +5,11 @@
 //! layout in docs/architecture.md §5).
 
 use crate::diagnostics::{error, Phase};
-use crate::semantic::*;
 use crate::semantic::provider::*;
 use crate::semantic::resolve::{BuiltinMember, Resolution};
 use crate::semantic::symbols::*;
 use crate::semantic::types::*;
+use crate::semantic::*;
 use crate::span::{FileId, Span};
 use crate::syntax::ast::*;
 use std::collections::HashMap;
@@ -27,7 +27,10 @@ pub struct Checker<'a> {
 }
 
 impl<'a> Checker<'a> {
-    pub fn new(program: &'a mut SemanticProgram, provider: &'a dyn WorkshopProvider) -> Checker<'a> {
+    pub fn new(
+        program: &'a mut SemanticProgram,
+        provider: &'a dyn WorkshopProvider,
+    ) -> Checker<'a> {
         let root = program.tables.root_scope;
         Checker {
             program,
@@ -81,8 +84,10 @@ impl<'a> Checker<'a> {
             TypeRefKind::GenericInstantiation { name, args } => {
                 match self.lookup_type(&name.name, scope) {
                     Some(sym) => {
-                        let arg_types: Vec<Type> =
-                            args.iter().map(|a| self.resolve_type_ref(a, scope)).collect();
+                        let arg_types: Vec<Type> = args
+                            .iter()
+                            .map(|a| self.resolve_type_ref(a, scope))
+                            .collect();
                         Type::GenericInstantiation {
                             def: sym,
                             args: arg_types,
@@ -95,8 +100,11 @@ impl<'a> Checker<'a> {
                 }
             }
             TypeRefKind::Function(ft) => {
-                let params: Vec<Type> =
-                    ft.params.iter().map(|p| self.resolve_type_ref(p, scope)).collect();
+                let params: Vec<Type> = ft
+                    .params
+                    .iter()
+                    .map(|p| self.resolve_type_ref(p, scope))
+                    .collect();
                 let ret = self.resolve_type_ref(&ft.ret, scope);
                 Type::FunctionValue(FunctionType {
                     params,
@@ -105,7 +113,10 @@ impl<'a> Checker<'a> {
                 })
             }
             TypeRefKind::Union(members) => {
-                let ts: Vec<Type> = members.iter().map(|m| self.resolve_type_ref(m, scope)).collect();
+                let ts: Vec<Type> = members
+                    .iter()
+                    .map(|m| self.resolve_type_ref(m, scope))
+                    .collect();
                 Type::Union(ts)
             }
             TypeRefKind::Error => Type::Error,
@@ -159,10 +170,13 @@ impl<'a> Checker<'a> {
     }
 
     fn base_of(&self, id: SymbolId) -> Option<SymbolId> {
-        self.program.type_decls.get(&id).and_then(|t| match &t.base {
-            Some(Type::Class(b)) => Some(*b),
-            _ => None,
-        })
+        self.program
+            .type_decls
+            .get(&id)
+            .and_then(|t| match &t.base {
+                Some(Type::Class(b)) => Some(*b),
+                _ => None,
+            })
     }
 
     fn is_assignable(&self, from: &Type, to: &Type) -> bool {
@@ -193,7 +207,8 @@ impl<'a> Checker<'a> {
             .get(&id)
             .map(|t| {
                 t.members.iter().any(|m| {
-                    self.program.enum_members
+                    self.program
+                        .enum_members
                         .get(m)
                         .map(|i| !i.field_types.is_empty())
                         .unwrap_or(false)
@@ -239,7 +254,10 @@ impl<'a> Checker<'a> {
             if parallel
                 && (is_constant_or_parallel(&ty)
                     || (ty.is_external()
-                        && matches!(discriminant.kind, ExprKind::Member { .. } | ExprKind::Ident(_))))
+                        && matches!(
+                            discriminant.kind,
+                            ExprKind::Member { .. } | ExprKind::Ident(_)
+                        )))
             {
                 self.err(
                     "SM042",
@@ -270,7 +288,12 @@ impl<'a> Checker<'a> {
                 if let Some(&sid) = self.program.init_symbols.get(&nid) {
                     let sym = self.program.tables.symbol(sid);
                     if sym.ty == Type::Any {
-                        let ty = self.program.types.get(&init_expr.id).cloned().unwrap_or(Type::Any);
+                        let ty = self
+                            .program
+                            .types
+                            .get(&init_expr.id)
+                            .cloned()
+                            .unwrap_or(Type::Any);
                         if ty == Type::Null {
                             self.program.tables.symbols[sid as usize].ty = Type::Any;
                         } else {
@@ -286,7 +309,9 @@ impl<'a> Checker<'a> {
     fn collect_enum_keys(&mut self) -> Vec<(Expr, bool)> {
         let mut out = Vec::new();
         for file in &self.program.project.files {
-            let Some(parsed) = self.program.asts.get(file) else { continue };
+            let Some(parsed) = self.program.asts.get(file) else {
+                continue;
+            };
             for item in &parsed.items {
                 if let ItemKind::TypeDecl(t) = &item.kind {
                     if t.kind != TypeDeclKind::Enum {
@@ -307,7 +332,9 @@ impl<'a> Checker<'a> {
 
     fn find_var_init(&mut self, nid: NodeId) -> Option<(InitKind, Expr)> {
         for file in &self.program.project.files {
-            let Some(parsed) = self.program.asts.get(file) else { continue };
+            let Some(parsed) = self.program.asts.get(file) else {
+                continue;
+            };
             for item in &parsed.items {
                 if let ItemKind::Var(v) = &item.kind {
                     if v.name.id == nid {
@@ -414,7 +441,9 @@ impl<'a> Checker<'a> {
 
     fn collect_body_stmts(&self, body_node: NodeId) -> Vec<Stmt> {
         for file in &self.program.project.files {
-            let Some(parsed) = self.program.asts.get(file) else { continue };
+            let Some(parsed) = self.program.asts.get(file) else {
+                continue;
+            };
             for item in &parsed.items {
                 match &item.kind {
                     ItemKind::Function(f) if f.name.id == body_node => {
@@ -447,7 +476,10 @@ impl<'a> Checker<'a> {
     pub fn check_statement(&mut self, stmt: &Stmt) {
         match &stmt.kind {
             StmtKind::Block(b) => {
-                let scope = self.program.tables.push_scope(self.scope(), ScopeKind::Block);
+                let scope = self
+                    .program
+                    .tables
+                    .push_scope(self.scope(), ScopeKind::Block);
                 self.scopes.push(scope);
                 for s in &b.stmts {
                     self.check_statement(s);
@@ -536,7 +568,10 @@ impl<'a> Checker<'a> {
                     self.err(
                         "SM052",
                         cond.span,
-                        format!("if condition must be bool-compatible, found {}", ty.describe()),
+                        format!(
+                            "if condition must be bool-compatible, found {}",
+                            ty.describe()
+                        ),
                     );
                 }
                 self.check_statement(then);
@@ -550,7 +585,10 @@ impl<'a> Checker<'a> {
                     self.err(
                         "SM052",
                         cond.span,
-                        format!("while condition must be bool-compatible, found {}", ty.describe()),
+                        format!(
+                            "while condition must be bool-compatible, found {}",
+                            ty.describe()
+                        ),
                     );
                 }
                 self.loop_depth += 1;
@@ -575,7 +613,10 @@ impl<'a> Checker<'a> {
                         self.err(
                             "SM052",
                             c.span,
-                            format!("for condition must be bool-compatible, found {}", ty.describe()),
+                            format!(
+                                "for condition must be bool-compatible, found {}",
+                                ty.describe()
+                            ),
                         );
                     }
                 }
@@ -592,7 +633,11 @@ impl<'a> Checker<'a> {
                 self.check_statement(&f.body);
                 self.loop_depth -= 1;
             }
-            StmtKind::Foreach { var, collection, body } => {
+            StmtKind::Foreach {
+                var,
+                collection,
+                body,
+            } => {
                 let coll_ty = self.check_expr(collection);
                 let elem = coll_ty
                     .array_element()
@@ -686,7 +731,11 @@ impl<'a> Checker<'a> {
             }
             StmtKind::Break | StmtKind::Continue => {
                 if self.loop_depth == 0 {
-                    self.err("SM052", stmt.span, "break/continue outside a loop or switch");
+                    self.err(
+                        "SM052",
+                        stmt.span,
+                        "break/continue outside a loop or switch",
+                    );
                 }
             }
             StmtKind::Expr(e) => {
@@ -694,14 +743,15 @@ impl<'a> Checker<'a> {
             }
             StmtKind::Delete { target } => {
                 let ty = self.check_expr(target);
-                if !matches!(ty, Type::Class(_) | Type::Any)
-                    && !ty.is_external()
-                    && !ty.is_error()
+                if !matches!(ty, Type::Class(_) | Type::Any) && !ty.is_external() && !ty.is_error()
                 {
                     self.err(
                         "SM039",
                         target.span,
-                        format!("delete requires a class-typed operand, found {}", ty.describe()),
+                        format!(
+                            "delete requires a class-typed operand, found {}",
+                            ty.describe()
+                        ),
                     );
                 }
             }
@@ -836,7 +886,11 @@ impl<'a> Checker<'a> {
                     self.record(expr, ty.clone(), Some(Resolution::This));
                     return ty;
                 }
-                self.err("SM004", expr.span, "'this' used outside an instance context");
+                self.err(
+                    "SM004",
+                    expr.span,
+                    "'this' used outside an instance context",
+                );
                 Type::Error
             }
             ExprKind::Root => {
@@ -855,7 +909,10 @@ impl<'a> Checker<'a> {
                             self.err(
                                 "SM041",
                                 expr.span,
-                                format!("unary '-' requires a Number operand, found {}", t.describe()),
+                                format!(
+                                    "unary '-' requires a Number operand, found {}",
+                                    t.describe()
+                                ),
                             );
                         }
                         Type::Number
@@ -894,10 +951,15 @@ impl<'a> Checker<'a> {
                 let tt = self.check_expr(target);
                 let vt = self.check_expr_with_hint(value, tt.clone());
                 if !self.check_lvalue(target) {
-                    self.err("SM017", target.span, "assignment target is not a mutable lvalue");
+                    self.err(
+                        "SM017",
+                        target.span,
+                        "assignment target is not a mutable lvalue",
+                    );
                 }
                 let _ = op;
-                let empty_array = matches!(&value.kind, ExprKind::ArrayLit { elems } if elems.is_empty());
+                let empty_array =
+                    matches!(&value.kind, ExprKind::ArrayLit { elems } if elems.is_empty());
                 if !self.is_assignable(&vt, &tt)
                     && !tt.is_external()
                     && !tt.is_error()
@@ -925,7 +987,10 @@ impl<'a> Checker<'a> {
                     self.err(
                         "SM041",
                         cond.span,
-                        format!("ternary condition must be bool-compatible, found {}", ct.describe()),
+                        format!(
+                            "ternary condition must be bool-compatible, found {}",
+                            ct.describe()
+                        ),
                     );
                 }
                 let tt = self.check_expr(then);
@@ -948,7 +1013,10 @@ impl<'a> Checker<'a> {
                     let _ = self.check_arg(a);
                 }
                 match &t {
-                    Type::Class(_) | Type::GenericInstantiation { .. } | Type::External(_) | Type::Error => t,
+                    Type::Class(_)
+                    | Type::GenericInstantiation { .. }
+                    | Type::External(_)
+                    | Type::Error => t,
                     other => {
                         self.err(
                             "SM039",
@@ -1017,7 +1085,12 @@ impl<'a> Checker<'a> {
                             owner: Some(*sid),
                             flags: SymbolFlags::default(),
                         });
-                        self.program.type_decls.get_mut(sid).unwrap().members.push(fid);
+                        self.program
+                            .type_decls
+                            .get_mut(sid)
+                            .unwrap()
+                            .members
+                            .push(fid);
                     }
                 }
                 if let Some(base) = &sl.base {
@@ -1035,7 +1108,10 @@ impl<'a> Checker<'a> {
                         None => Type::Any,
                     })
                     .collect();
-                let scope = self.program.tables.push_scope(self.scope(), ScopeKind::Function);
+                let scope = self
+                    .program
+                    .tables
+                    .push_scope(self.scope(), ScopeKind::Function);
                 self.scopes.push(scope);
                 for (p, t) in l.params.iter().zip(params.iter()) {
                     let sym = Symbol {
@@ -1101,15 +1177,19 @@ impl<'a> Checker<'a> {
     /// Check a lambda whose target function type is known: untyped params
     /// infer from the signature (corpus recursion-closure).
     fn check_lambda_with_hint(&mut self, expr: &Expr, ft: FunctionType) -> Type {
-        let ExprKind::Lambda(l) = &expr.kind else { return self.check_expr(expr) };
-        let scope = self.program.tables.push_scope(self.scope(), ScopeKind::Function);
+        let ExprKind::Lambda(l) = &expr.kind else {
+            return self.check_expr(expr);
+        };
+        let scope = self
+            .program
+            .tables
+            .push_scope(self.scope(), ScopeKind::Function);
         self.scopes.push(scope);
         for (p, t) in l.params.iter().zip(ft.params.iter()) {
-            let ty = p
-                .ty
-                .as_ref()
-                .map(|t| self.resolve_type_ref(t, scope))
-                .unwrap_or_else(|| t.clone());
+            let ty =
+                p.ty.as_ref()
+                    .map(|t| self.resolve_type_ref(t, scope))
+                    .unwrap_or_else(|| t.clone());
             let sym = Symbol {
                 name: p.name.name.clone(),
                 kind: SymbolKind::Variable,
@@ -1192,7 +1272,10 @@ impl<'a> Checker<'a> {
                     self.err(
                         "SM041",
                         span,
-                        format!("comparison requires Number operands, found {}", lt.describe()),
+                        format!(
+                            "comparison requires Number operands, found {}",
+                            lt.describe()
+                        ),
                     );
                 }
                 Type::Bool
@@ -1202,7 +1285,10 @@ impl<'a> Checker<'a> {
                     self.err(
                         "SM041",
                         span,
-                        format!("logical operator requires Bool operands, found {}", lt.describe()),
+                        format!(
+                            "logical operator requires Bool operands, found {}",
+                            lt.describe()
+                        ),
                     );
                 }
                 Type::Bool
@@ -1210,7 +1296,11 @@ impl<'a> Checker<'a> {
             BinaryOp::Add => {
                 if matches!(lt, Type::String) || matches!(rt, Type::String) {
                     Type::String
-                } else if *lt == Type::Any || *rt == Type::Any || lt.is_external() || rt.is_external() {
+                } else if *lt == Type::Any
+                    || *rt == Type::Any
+                    || lt.is_external()
+                    || rt.is_external()
+                {
                     Type::Any
                 } else if matches!(lt, Type::Vector) || matches!(rt, Type::Vector) {
                     if (matches!(lt, Type::Vector | Type::Number) || lt.is_error())
@@ -1244,11 +1334,7 @@ impl<'a> Checker<'a> {
                     Type::Number
                 }
             }
-            BinaryOp::Sub
-            | BinaryOp::Mul
-            | BinaryOp::Div
-            | BinaryOp::Mod
-            | BinaryOp::Pow => {
+            BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod | BinaryOp::Pow => {
                 if !(self.is_number_like(lt) && self.is_number_like(rt))
                     && !matches!(lt, Type::Vector)
                     && !matches!(rt, Type::Vector)
@@ -1279,8 +1365,16 @@ impl<'a> Checker<'a> {
     }
 
     fn check_pattern(&mut self, expr: &Expr, operand_ty: &Type, pattern: &Pattern) {
-        let first = pattern.enum_path.first().map(|i| i.name.clone()).unwrap_or_default();
-        let member = pattern.enum_path.last().map(|i| i.name.clone()).unwrap_or_default();
+        let first = pattern
+            .enum_path
+            .first()
+            .map(|i| i.name.clone())
+            .unwrap_or_default();
+        let member = pattern
+            .enum_path
+            .last()
+            .map(|i| i.name.clone())
+            .unwrap_or_default();
         let shorthand = pattern.enum_path.len() == 1;
         // Full path: EnumType.Member. Shorthand: Member (member of the
         // operand's enum type, corpus enum-pattern-shorthand).
@@ -1309,11 +1403,18 @@ impl<'a> Checker<'a> {
             .into_iter()
             .find(|m| self.program.tables.symbol(*m).name == member)
         else {
-            self.err("SM022", expr.span, format!("unknown pattern member '{member}'"));
+            self.err(
+                "SM022",
+                expr.span,
+                format!("unknown pattern member '{member}'"),
+            );
             return;
         };
         let info = self.program.enum_members.get(&mid).cloned();
-        let has_payload = info.as_ref().map(|i| !i.field_types.is_empty()).unwrap_or(false);
+        let has_payload = info
+            .as_ref()
+            .map(|i| !i.field_types.is_empty())
+            .unwrap_or(false);
         // SM021: a parallel enum with a payload-bearing member requires an
         // enum-compatible operand (corpus: incompatible-pattern-error vs
         // pattern-compatible-ok/pattern-single-ok).
@@ -1341,7 +1442,10 @@ impl<'a> Checker<'a> {
                     format!("extraneous variable binding for enum member '{member}'"),
                 );
             }
-            if parallel && !info.field_types.is_empty() && pattern.bindings.len() != info.field_types.len() {
+            if parallel
+                && !info.field_types.is_empty()
+                && pattern.bindings.len() != info.field_types.len()
+            {
                 self.err(
                     "SM024",
                     expr.span,
@@ -1380,7 +1484,11 @@ impl<'a> Checker<'a> {
             if info.kind != TypeDeclKind::Enum {
                 continue;
             }
-            if info.members.iter().any(|m| self.program.tables.symbol(*m).name == member) {
+            if info
+                .members
+                .iter()
+                .any(|m| self.program.tables.symbol(*m).name == member)
+            {
                 return Some(*tid);
             }
         }
@@ -1424,7 +1532,8 @@ impl<'a> Checker<'a> {
                 false
             }
             ExprKind::Member { base, .. } => {
-                if let Some(Resolution::PlayervarAccess(_)) = self.program.resolution.get(&expr.id) {
+                if let Some(Resolution::PlayervarAccess(_)) = self.program.resolution.get(&expr.id)
+                {
                     return true;
                 }
                 match self.program.types.get(&base.id) {
@@ -1455,7 +1564,11 @@ impl<'a> Checker<'a> {
             return ty;
         }
         if let Some(prim) = primitive_type(&ident.name) {
-            self.record(expr, prim.clone(), Some(Resolution::PrimitiveType(prim.clone())));
+            self.record(
+                expr,
+                prim.clone(),
+                Some(Resolution::PrimitiveType(prim.clone())),
+            );
             return prim;
         }
         let query = NameQuery {
@@ -1535,7 +1648,11 @@ impl<'a> Checker<'a> {
         }
         if matches!(base_ty, Type::Enum(_)) {
             if name.name == "Key" || name.name == "Name" {
-                self.record(expr, Type::Number, Some(Resolution::BuiltinMember(BuiltinMember::Key)));
+                self.record(
+                    expr,
+                    Type::Number,
+                    Some(Resolution::BuiltinMember(BuiltinMember::Key)),
+                );
                 return Type::Number;
             }
         }
@@ -1585,7 +1702,11 @@ impl<'a> Checker<'a> {
             }
         }
         if matches!(base_ty, Type::FunctionValue(_)) && name.name == "Invoke" {
-            self.record(expr, Type::Any, Some(Resolution::BuiltinMember(BuiltinMember::Invoke)));
+            self.record(
+                expr,
+                Type::Any,
+                Some(Resolution::BuiltinMember(BuiltinMember::Invoke)),
+            );
             return Type::Any;
         }
         // Provider / error path.
@@ -1593,18 +1714,20 @@ impl<'a> Checker<'a> {
     }
 
     /// Find a member symbol on a type (including inherited).
-    fn member_symbol(&mut self, base_ty: &Type, name: &str) -> Option<(SymbolId, Option<SymbolId>)> {
+    fn member_symbol(
+        &mut self,
+        base_ty: &Type,
+        name: &str,
+    ) -> Option<(SymbolId, Option<SymbolId>)> {
         let (start, kind) = match base_ty {
             Type::Class(c) => (Some(*c), SymbolKind::Class),
             Type::Struct(c) => (Some(*c), SymbolKind::Struct),
             Type::Enum(c) => (Some(*c), SymbolKind::Enum),
-            Type::GenericInstantiation { def, .. } => {
-                match self.program.tables.symbol(*def).kind {
-                    SymbolKind::Class => (Some(*def), SymbolKind::Class),
-                    SymbolKind::Struct => (Some(*def), SymbolKind::Struct),
-                    _ => (None, SymbolKind::Class),
-                }
-            }
+            Type::GenericInstantiation { def, .. } => match self.program.tables.symbol(*def).kind {
+                SymbolKind::Class => (Some(*def), SymbolKind::Class),
+                SymbolKind::Struct => (Some(*def), SymbolKind::Struct),
+                _ => (None, SymbolKind::Class),
+            },
             _ => (None, SymbolKind::Class),
         };
         let _ = kind;
@@ -1668,7 +1791,12 @@ impl<'a> Checker<'a> {
                     || *base_ty == Type::Any
                     || matches!(
                         base_ty,
-                        Type::Color | Type::Team | Type::Hero | Type::Player | Type::Players | Type::Vector
+                        Type::Color
+                            | Type::Team
+                            | Type::Hero
+                            | Type::Player
+                            | Type::Players
+                            | Type::Vector
                     )
                 {
                     let ty = Type::External(ExternalType {
@@ -1761,7 +1889,10 @@ impl<'a> Checker<'a> {
                     self.err(
                         "SM041",
                         index.span,
-                        format!("array index must be a Number, found {}", index_ty.describe()),
+                        format!(
+                            "array index must be a Number, found {}",
+                            index_ty.describe()
+                        ),
                     );
                 }
                 base_ty.array_element().cloned().unwrap_or(Type::Any)
@@ -1772,7 +1903,10 @@ impl<'a> Checker<'a> {
                         self.err(
                             "SM041",
                             index.span,
-                            format!("struct index must be a Number, found {}", index_ty.describe()),
+                            format!(
+                                "struct index must be a Number, found {}",
+                                index_ty.describe()
+                            ),
                         );
                     }
                     Type::Number
@@ -1840,7 +1974,11 @@ impl<'a> Checker<'a> {
                 );
             }
         }
-        let arg_types: Vec<Type> = call.args.iter().map(|a| self.check_expr(&a.value)).collect();
+        let arg_types: Vec<Type> = call
+            .args
+            .iter()
+            .map(|a| self.check_expr(&a.value))
+            .collect();
         match &call.callee.kind {
             ExprKind::Ident(id) => {
                 let ids = self.program.tables.lookup(self.scope(), &id.name);
@@ -1897,14 +2035,10 @@ impl<'a> Checker<'a> {
             ExprKind::Member { base, name } => {
                 let base_ty = self.check_expr(base);
                 let member_res = self.resolve_member(expr, &base_ty, base, name);
-                let builtin = self
-                    .program
-                    .resolution
-                    .get(&expr.id)
-                    .and_then(|r| match r {
-                        Resolution::BuiltinMember(b) => Some(*b),
-                        _ => None,
-                    });
+                let builtin = self.program.resolution.get(&expr.id).and_then(|r| match r {
+                    Resolution::BuiltinMember(b) => Some(*b),
+                    _ => None,
+                });
                 if let Some(bm) = builtin {
                     // Language-owned array members are callable.
                     return self.check_builtin_call(expr, &bm, base, call, &arg_types);
@@ -1912,14 +2046,10 @@ impl<'a> Checker<'a> {
                 match member_res {
                     Type::FunctionValue(ft) => {
                         // Ref-method calls require a ref context (SM044).
-                        let mid = self
-                            .program
-                            .resolution
-                            .get(&expr.id)
-                            .and_then(|r| match r {
-                                Resolution::Symbol(m) => Some(*m),
-                                _ => None,
-                            });
+                        let mid = self.program.resolution.get(&expr.id).and_then(|r| match r {
+                            Resolution::Symbol(m) => Some(*m),
+                            _ => None,
+                        });
                         if let Some(mid) = mid {
                             let sym = self.program.tables.symbol(mid).clone();
                             if sym.flags.ref_ && !self.ref_context && self.cur_function.is_some() {
@@ -1961,7 +2091,10 @@ impl<'a> Checker<'a> {
                         if let Some(bm) = builtin {
                             // Language-owned array members are callable.
                             self.check_builtin_call(expr, &bm, base, call, &arg_types)
-                        } else if base_ty.is_external() || base_ty.is_error() || base_ty == Type::Any {
+                        } else if base_ty.is_external()
+                            || base_ty.is_error()
+                            || base_ty == Type::Any
+                        {
                             let ty = Type::External(ExternalType {
                                 category: ExternalCategory::AnyLike,
                                 constant: false,
@@ -1983,7 +2116,11 @@ impl<'a> Checker<'a> {
                         self.err(
                             "SM008",
                             expr.span,
-                            format!("'{}' is not a function (type {})", name.name, other.describe()),
+                            format!(
+                                "'{}' is not a function (type {})",
+                                name.name,
+                                other.describe()
+                            ),
                         );
                         let ty = Type::Error;
                         self.record(expr, ty.clone(), None);
@@ -2076,9 +2213,7 @@ impl<'a> Checker<'a> {
             | BuiltinMember::ArrayIsTrueForAny => Type::Bool,
             BuiltinMember::ArrayMap
             | BuiltinMember::ArrayFilteredArray
-            | BuiltinMember::ArraySortedArray => {
-                Type::Array(Box::new(Type::Any))
-            }
+            | BuiltinMember::ArraySortedArray => Type::Array(Box::new(Type::Any)),
             BuiltinMember::ArrayAppend => self
                 .program
                 .types
@@ -2086,10 +2221,15 @@ impl<'a> Checker<'a> {
                 .and_then(|t| t.array_element().cloned())
                 .map(|e| Type::Array(Box::new(e)))
                 .unwrap_or(Type::Any),
-            BuiltinMember::ArrayRandom | BuiltinMember::ArrayModAppend | BuiltinMember::ArrayModRemoveByIndex => {
+            BuiltinMember::ArrayRandom
+            | BuiltinMember::ArrayModAppend
+            | BuiltinMember::ArrayModRemoveByIndex => {
                 // Array-modifying builtins require a mutable source
                 // (corpus immutable-array-modification-error).
-                if matches!(bm, BuiltinMember::ArrayModAppend | BuiltinMember::ArrayModRemoveByIndex) {
+                if matches!(
+                    bm,
+                    BuiltinMember::ArrayModAppend | BuiltinMember::ArrayModRemoveByIndex
+                ) {
                     if !self.check_lvalue(base) {
                         self.err(
                             "SM017",
@@ -2108,7 +2248,12 @@ impl<'a> Checker<'a> {
 
     fn lvalue_symbol(&mut self, base: &Expr) -> Option<SymbolId> {
         match &base.kind {
-            ExprKind::Ident(id) => self.program.tables.lookup(self.scope(), &id.name).first().copied(),
+            ExprKind::Ident(id) => self
+                .program
+                .tables
+                .lookup(self.scope(), &id.name)
+                .first()
+                .copied(),
             _ => None,
         }
     }
@@ -2257,7 +2402,11 @@ impl<'a> Checker<'a> {
     #[cfg(debug_assertions)]
     fn param_info(&mut self, sid: SymbolId) -> (Vec<String>, Vec<bool>) {
         if std::env::var("DEL_DEBUG").is_ok() {
-            eprintln!("param_info for symbol {sid} decl={:?} file={}", self.program.tables.symbol(sid).decl.0, self.program.project.files.len());
+            eprintln!(
+                "param_info for symbol {sid} decl={:?} file={}",
+                self.program.tables.symbol(sid).decl.0,
+                self.program.project.files.len()
+            );
         }
         self.param_info_inner(sid)
     }
@@ -2318,7 +2467,9 @@ impl<'a> Checker<'a> {
                 false
             }
             ExprKind::Member { base, name } => {
-                if let Some(Resolution::PlayervarAccess(_)) = self.program.resolution.get(&target.id) {
+                if let Some(Resolution::PlayervarAccess(_)) =
+                    self.program.resolution.get(&target.id)
+                {
                     return true;
                 }
                 let base_ty = self.program.types.get(&base.id).cloned();
@@ -2388,9 +2539,7 @@ fn body_stmts(body: FuncBody) -> Vec<Stmt> {
         FuncBody::Expr(e) => vec![Stmt {
             id: e.id,
             span: e.span,
-            kind: StmtKind::Return {
-                value: Some(e),
-            },
+            kind: StmtKind::Return { value: Some(e) },
         }],
         FuncBody::None => Vec::new(),
     }

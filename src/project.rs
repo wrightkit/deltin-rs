@@ -71,9 +71,7 @@ pub fn load_project(opts: ProjectOptions) -> Project {
         .entry
         .or_else(|| config.as_ref().and_then(|c| c.entry_point.clone()))
         .unwrap_or_else(|| PathBuf::from("main.del"));
-    let entry_abs = if entry_path.is_absolute()
-        || entry_path.starts_with(&opts.root)
-    {
+    let entry_abs = if entry_path.is_absolute() || entry_path.starts_with(&opts.root) {
         entry_path
     } else {
         loader.resolve_path(&entry_path)
@@ -205,9 +203,7 @@ impl Loader {
     /// Load a file (recursively via imports). `importer_span` is the span of
     /// the import that brought this file in (None for the entry).
     fn load_file(&mut self, abs: &Path, importer_span: Option<Span>) -> FileId {
-        let canonical = abs
-            .canonicalize()
-            .unwrap_or_else(|_| abs.to_path_buf());
+        let canonical = abs.canonicalize().unwrap_or_else(|_| abs.to_path_buf());
         // Already loaded: record the import edge and return.
         if let Some(id) = self.by_canonical.get(&canonical) {
             return *id;
@@ -219,13 +215,7 @@ impl Loader {
                 .map(|(p, _)| p.display().to_string())
                 .chain(std::iter::once(canonical.display().to_string()))
                 .collect();
-            let span = importer_span.unwrap_or_else(|| {
-                Span::new(
-                    FileId(0),
-                    0,
-                    0,
-                )
-            });
+            let span = importer_span.unwrap_or_else(|| Span::new(FileId(0), 0, 0));
             let mut d = error(
                 Phase::Project,
                 "PJ001",
@@ -233,10 +223,7 @@ impl Loader {
                 format!("import cycle: {}", cycle.join(" -> ")),
             );
             for (p, _) in &self.in_progress[pos..] {
-                d = d.with_related(
-                    Span::new(FileId(0), 0, 0),
-                    format!("in {}", p.display()),
-                );
+                d = d.with_related(Span::new(FileId(0), 0, 0), format!("in {}", p.display()));
             }
             self.diagnostics.push(d);
             return self.in_progress[pos].1;
@@ -245,9 +232,7 @@ impl Loader {
         let text = match std::fs::read_to_string(abs) {
             Ok(t) => t,
             Err(e) => {
-                let span = importer_span.unwrap_or_else(|| {
-                    Span::new(FileId(0), 0, 0)
-                });
+                let span = importer_span.unwrap_or_else(|| Span::new(FileId(0), 0, 0));
                 self.diagnostics.push(error(
                     Phase::Project,
                     "PJ002",
@@ -267,7 +252,12 @@ impl Loader {
         self.by_canonical.insert(canonical.clone(), id);
         if let Some(span) = importer_span {
             self.imports.push(ImportEdge {
-                importer: self.in_progress.last().map(|(_, f)| f).copied().unwrap_or(id),
+                importer: self
+                    .in_progress
+                    .last()
+                    .map(|(_, f)| f)
+                    .copied()
+                    .unwrap_or(id),
                 imported: id,
                 span,
             });

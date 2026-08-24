@@ -178,7 +178,10 @@ impl<'a> Parser<'a> {
             self.err(
                 "PR010",
                 tok.span,
-                format!("expected identifier ({what}), found {}", tok.kind.describe()),
+                format!(
+                    "expected identifier ({what}), found {}",
+                    tok.kind.describe()
+                ),
             );
             None
         }
@@ -665,7 +668,9 @@ impl<'a> Parser<'a> {
                 let t = match self.expect(TokenKind::Str, "subroutine name string") {
                     Some(t) => t,
                     None => {
-                        return DeclOutcome::Error { consumed: name.span };
+                        return DeclOutcome::Error {
+                            consumed: name.span,
+                        };
                     }
                 };
                 subroutine = Some(SubroutineInfo {
@@ -855,13 +860,11 @@ impl<'a> Parser<'a> {
         } else {
             Some(self.parse_type())
         };
-        let name = self
-            .expect_ident("parameter")
-            .unwrap_or_else(|| Ident {
-                id: self.node(),
-                span: self.peek_token().span,
-                name: String::new(),
-            });
+        let name = self.expect_ident("parameter").unwrap_or_else(|| Ident {
+            id: self.node(),
+            span: self.peek_token().span,
+            name: String::new(),
+        });
         let mut extended = false;
         if self.at(TokenKind::Bang) {
             self.consume();
@@ -1117,11 +1120,7 @@ impl<'a> Parser<'a> {
                     });
                 }
                 DeclOutcome::Error { consumed } => {
-                    self.err(
-                        "PR031",
-                        consumed,
-                        "malformed class member declaration",
-                    );
+                    self.err("PR031", consumed, "malformed class member declaration");
                 }
             }
             if self.pos == before {
@@ -1266,7 +1265,10 @@ impl<'a> Parser<'a> {
             }
             TokenKind::KwReturn => {
                 self.consume();
-                let value = if matches!(self.peek(), TokenKind::Semicolon | TokenKind::RBrace | TokenKind::Eof) {
+                let value = if matches!(
+                    self.peek(),
+                    TokenKind::Semicolon | TokenKind::RBrace | TokenKind::Eof
+                ) {
                     None
                 } else {
                     Some(self.parse_expr())
@@ -1345,11 +1347,7 @@ impl<'a> Parser<'a> {
                     match self.parse_decl_after_attrs(attrs, true) {
                         DeclOutcome::Var(v) => StmtKind::Var(v),
                         DeclOutcome::Function(f) => {
-                            self.err(
-                                "PR031",
-                                f.name.span,
-                                "function declaration inside a block",
-                            );
+                            self.err("PR031", f.name.span, "function declaration inside a block");
                             StmtKind::Error {
                                 consumed: f.name.span,
                             }
@@ -1535,7 +1533,10 @@ impl<'a> Parser<'a> {
                 self.err(
                     "PR011",
                     t.span,
-                    format!("expected ';' after for initializer, found {}", t.kind.describe()),
+                    format!(
+                        "expected ';' after for initializer, found {}",
+                        t.kind.describe()
+                    ),
                 );
             }
             Some(Box::new(s))
@@ -1664,7 +1665,9 @@ impl<'a> Parser<'a> {
             TokenKind::PipePipe => Some(4),
             TokenKind::AmpAmp => Some(5),
             TokenKind::EqEq | TokenKind::BangEq => Some(6),
-            TokenKind::Lt | TokenKind::Gt | TokenKind::LtEq | TokenKind::GtEq | TokenKind::KwIs => Some(7),
+            TokenKind::Lt | TokenKind::Gt | TokenKind::LtEq | TokenKind::GtEq | TokenKind::KwIs => {
+                Some(7)
+            }
             TokenKind::Plus | TokenKind::Minus => Some(8),
             TokenKind::Star | TokenKind::Slash | TokenKind::Percent => Some(9),
             TokenKind::Caret => Some(10),
@@ -1809,7 +1812,10 @@ impl<'a> Parser<'a> {
                     self.err(
                         "PR035",
                         t.span,
-                        format!("expected pattern binding identifier, found {}", t.kind.describe()),
+                        format!(
+                            "expected pattern binding identifier, found {}",
+                            t.kind.describe()
+                        ),
                     );
                 }
                 if self.at(TokenKind::Comma) {
@@ -1825,7 +1831,10 @@ impl<'a> Parser<'a> {
                 "expected enum member path after 'is'",
             );
         }
-        Pattern { enum_path, bindings }
+        Pattern {
+            enum_path,
+            bindings,
+        }
     }
 
     fn parse_unary(&mut self) -> Expr {
@@ -2080,7 +2089,11 @@ impl<'a> Parser<'a> {
                     id,
                     span,
                     kind: ExprKind::Async {
-                        kind: if bang { AsyncKind::AsyncBang } else { AsyncKind::Async },
+                        kind: if bang {
+                            AsyncKind::AsyncBang
+                        } else {
+                            AsyncKind::Async
+                        },
                         call: Box::new(call),
                     },
                 }
@@ -2113,9 +2126,9 @@ impl<'a> Parser<'a> {
                     id: self.node(),
                     span,
                     kind: ExprKind::JsonImport {
-                    path: Box::new(path),
-                    as_name,
-                },
+                        path: Box::new(path),
+                        as_name,
+                    },
                 }
             }
             TokenKind::Lt if self.is_formatted_string() => self.parse_formatted_string(),
@@ -2443,14 +2456,13 @@ impl<'a> Parser<'a> {
     }
 
     fn is_lambda_lookahead_const(&mut self) -> bool {
-        self.at(TokenKind::KwConst)
-            && {
-                let save = self.pos;
-                self.consume();
-                let r = self.is_lambda_lookahead();
-                self.pos = save;
-                r
-            }
+        self.at(TokenKind::KwConst) && {
+            let save = self.pos;
+            self.consume();
+            let r = self.is_lambda_lookahead();
+            self.pos = save;
+            r
+        }
     }
 
     fn parse_lambda(&mut self) -> Expr {
@@ -2493,7 +2505,10 @@ impl<'a> Parser<'a> {
                             Some(n) => n,
                             None => break,
                         };
-                        params.push(LambdaParam { name: n, ty: Some(ty) });
+                        params.push(LambdaParam {
+                            name: n,
+                            ty: Some(ty),
+                        });
                     }
                 } else {
                     let ty = self.parse_type();
@@ -2501,7 +2516,10 @@ impl<'a> Parser<'a> {
                         Some(n) => n,
                         None => break,
                     };
-                    params.push(LambdaParam { name: n, ty: Some(ty) });
+                    params.push(LambdaParam {
+                        name: n,
+                        ty: Some(ty),
+                    });
                 }
                 if self.pos == before {
                     self.consume();
@@ -2516,15 +2534,13 @@ impl<'a> Parser<'a> {
             self.expect(TokenKind::Arrow, "'=>'");
         } else {
             let span = self.peek_token().span;
-            self.err(
-                "PR033",
-                span,
-                "expected lambda parameter list",
-            );
+            self.err("PR033", span, "expected lambda parameter list");
             return Expr {
                 id: self.node(),
                 span: self.prev_end(),
-                kind: ExprKind::Error { consumed: self.prev_end() },
+                kind: ExprKind::Error {
+                    consumed: self.prev_end(),
+                },
             };
         }
         let body = self.parse_lambda_body();
@@ -2598,7 +2614,10 @@ impl<'a> Parser<'a> {
                 Arg { name, value: v }
             } else {
                 let v = self.parse_expr();
-                Arg { name: None, value: v }
+                Arg {
+                    name: None,
+                    value: v,
+                }
             };
             args.push(value);
             if self.at(TokenKind::Comma) {
@@ -2742,7 +2761,10 @@ impl<'a> Parser<'a> {
                     self.err(
                         "PR037",
                         t.span,
-                        format!("malformed struct literal field, found {}", t.kind.describe()),
+                        format!(
+                            "malformed struct literal field, found {}",
+                            t.kind.describe()
+                        ),
                     );
                     self.consume();
                 }
@@ -2840,11 +2862,7 @@ impl<'a> Parser<'a> {
             let is_lambda = if params.len() != 1 || const_ {
                 if !self.at(TokenKind::Arrow) && report {
                     let span = self.peek_token().span;
-                    self.err(
-                        "PR034",
-                        span,
-                        "expected '=>' in lambda type",
-                    );
+                    self.err("PR034", span, "expected '=>' in lambda type");
                 }
                 true
             } else {

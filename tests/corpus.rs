@@ -1,5 +1,5 @@
 //! Corpus harness: walks `tests/corpus/**/*.{del,ostw,workshop}` and checks
-//! each fixture's declared outcome against the source pipeline.
+//! each fixture's declared outcome against the parsing and semantic pipeline.
 //!
 //! Header directives (leading comment block):
 //! - `// source: <url>` — required (provenance)
@@ -86,7 +86,10 @@ fn run_case(path: &Path, text: &str, expect: Expect) -> CaseResult {
         });
         let mut all = project.diagnostics.clone();
         if !project.diagnostics.iter().any(|d| d.is_error()) {
-            let program = del_rs::semantic::check_project(&project, &del_rs::semantic::provider::NoopProvider::new());
+            let program = del_rs::semantic::check_project(
+                &project,
+                &del_rs::semantic::provider::NoopProvider::new(),
+            );
             all.extend(program.diagnostics.clone());
             semantic_errors = program.diagnostics.iter().filter(|d| d.is_error()).count();
             if semantic_errors == 0 {
@@ -99,7 +102,10 @@ fn run_case(path: &Path, text: &str, expect: Expect) -> CaseResult {
             .iter()
             .filter(|d| d.is_error() && matches!(d.phase, del_rs::diagnostics::Phase::Hir))
             .count();
-        semantic_errors = all.iter().filter(|d| d.is_error() && matches!(d.phase, del_rs::diagnostics::Phase::Semantic)).count();
+        semantic_errors = all
+            .iter()
+            .filter(|d| d.is_error() && matches!(d.phase, del_rs::diagnostics::Phase::Semantic))
+            .count();
     }
 
     let outcome: &'static str = match expect {
@@ -153,7 +159,12 @@ fn corpus_parse_harness() {
         let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
             .unwrap()
             .map(|e| e.unwrap().path())
-            .filter(|p| matches!(p.extension().and_then(|e| e.to_str()), Some("del" | "ostw" | "workshop")))
+            .filter(|p| {
+                matches!(
+                    p.extension().and_then(|e| e.to_str()),
+                    Some("del" | "ostw" | "workshop")
+                )
+            })
             .collect();
         files.sort();
         for f in files {
@@ -164,14 +175,20 @@ fn corpus_parse_harness() {
                 panic!("fixture {} is missing a // expect: header", f.display())
             });
             assert!(has_source, "fixture {} is missing // source:", f.display());
-            assert!(has_license, "fixture {} is missing // license:", f.display());
+            assert!(
+                has_license,
+                "fixture {} is missing // license:",
+                f.display()
+            );
             cases.push(run_case(&f, &text, expect));
         }
     }
     let passed = cases.iter().filter(|c| c.outcome == "PASS").count();
     let failed = cases.iter().filter(|c| c.outcome == "FAIL").count();
     let pending = cases.iter().filter(|c| c.outcome == "PENDING").count();
-    eprintln!("corpus harness: {total} fixtures | pass {passed} | fail {failed} | pending {pending}");
+    eprintln!(
+        "corpus harness: {total} fixtures | pass {passed} | fail {failed} | pending {pending}"
+    );
     if failed > 0 {
         for c in cases.iter().filter(|c| c.outcome == "FAIL") {
             eprintln!("  FAIL {:?} {}", c.expect, c.path);
@@ -210,7 +227,11 @@ fn project_fixtures_load() {
             errors.len(),
             errors.join("\n")
         );
-        assert!(project.files.len() >= 2, "project {name}: expected imports to load, got files {:?}", project.files.len());
+        assert!(
+            project.files.len() >= 2,
+            "project {name}: expected imports to load, got files {:?}",
+            project.files.len()
+        );
 
         let semantic = del_rs::semantic::check_project(
             &project,
@@ -241,7 +262,11 @@ fn project_fixtures_load() {
             "project {name}: HIR errors:\n{}",
             hir_errors.join("\n")
         );
-        eprintln!("project {name}: {} files loaded, {} imports", project.files.len(), project.imports.len());
+        eprintln!(
+            "project {name}: {} files loaded, {} imports",
+            project.files.len(),
+            project.imports.len()
+        );
     }
 }
 
@@ -296,7 +321,10 @@ fn compatibility_report_classifies_evidence_and_gaps() {
     }));
     assert!(report.cases.iter().all(|case| {
         case.fixture.evidence != del_rs::compatibility::EvidenceSource::RealProject
-            || !case.fixture.source.contains("ItsDeltin/Overwatch-Script-To-Workshop")
+            || !case
+                .fixture
+                .source
+                .contains("ItsDeltin/Overwatch-Script-To-Workshop")
     }));
     for case in &report.cases {
         if case.fixture.expect == del_rs::compatibility::ExpectedOutcome::Unknown {

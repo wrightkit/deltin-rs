@@ -85,7 +85,11 @@ recursive Number fact(Number n) {
 }
 "#;
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().filter(|d| d.is_error()).next().is_none(), "{:?}", diags);
+    assert!(
+        diags.iter().filter(|d| d.is_error()).next().is_none(),
+        "{:?}",
+        diags
+    );
     let fid = find_func(&hir, "fact");
     let result = run_oracle(
         &hir,
@@ -111,7 +115,11 @@ Number sum(Number[] values) {
 }
 "#;
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().filter(|d| d.is_error()).next().is_none(), "{:?}", diags);
+    assert!(
+        diags.iter().filter(|d| d.is_error()).next().is_none(),
+        "{:?}",
+        diags
+    );
     let fid = find_func(&hir, "sum");
     let result = run_oracle(
         &hir,
@@ -142,7 +150,11 @@ Number classify(Number v) {
 }
 "#;
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().filter(|d| d.is_error()).next().is_none(), "{:?}", diags);
+    assert!(
+        diags.iter().filter(|d| d.is_error()).next().is_none(),
+        "{:?}",
+        diags
+    );
     let fid = find_func(&hir, "classify");
     // Fallthrough: case 1 runs then falls into case 2 (out = 3).
     let result = run_oracle(
@@ -173,7 +185,10 @@ fn oracle_loop_limit() {
             ..OracleOptions::default()
         },
     );
-    assert!(matches!(result.error, Some(del_rs::hir::oracle::OracleError::LoopLimit { .. })));
+    assert!(matches!(
+        result.error,
+        Some(del_rs::hir::oracle::OracleError::LoopLimit { .. })
+    ));
 }
 
 #[test]

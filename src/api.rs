@@ -114,7 +114,11 @@ pub fn resolution_at(program: &SemanticProgram, file: FileId, offset: u32) -> Op
 }
 
 /// Innermost expression node covering the offset (deepest span wins).
-fn expr_node_at(program: &SemanticProgram, file: FileId, offset: u32) -> Option<crate::syntax::ast::NodeId> {
+fn expr_node_at(
+    program: &SemanticProgram,
+    file: FileId,
+    offset: u32,
+) -> Option<crate::syntax::ast::NodeId> {
     let ast = program.asts.get(&file)?;
     let mut best: Option<(crate::syntax::ast::NodeId, u32)> = None;
     for item in &ast.items {
@@ -208,7 +212,9 @@ fn walk_stmt_exprs(s: &crate::syntax::ast::Stmt, f: &mut dyn FnMut(&crate::synta
             }
             walk_stmt_exprs(&fr.body, f);
         }
-        K::Foreach { collection, body, .. } => {
+        K::Foreach {
+            collection, body, ..
+        } => {
             walk_expr_exprs(collection, f);
             walk_stmt_exprs(body, f);
         }
@@ -313,7 +319,10 @@ fn walk_expr_exprs(e: &crate::syntax::ast::Expr, f: &mut dyn FnMut(&crate::synta
     }
 }
 
-pub fn declaration(program: &SemanticProgram, symbol: SymbolId) -> Option<&crate::semantic::symbols::Symbol> {
+pub fn declaration(
+    program: &SemanticProgram,
+    symbol: SymbolId,
+) -> Option<&crate::semantic::symbols::Symbol> {
     program.tables.symbols.get(symbol as usize)
 }
 
@@ -374,5 +383,9 @@ pub fn matrix_status(
     matrix: &crate::matrix::SupportMatrix,
     category: crate::matrix::Category,
 ) -> Vec<&crate::matrix::MatrixEntry> {
-    matrix.entries.iter().filter(|e| e.category == category).collect()
+    matrix
+        .entries
+        .iter()
+        .filter(|e| e.category == category)
+        .collect()
 }

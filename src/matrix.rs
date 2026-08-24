@@ -135,10 +135,7 @@ pub fn load_and_validate() -> Result<SupportMatrix, Vec<String>> {
                 ));
             }
         }
-        let requires_notes = matches!(
-            entry.state,
-            State::LoweringDependent | State::OutOfScope
-        );
+        let requires_notes = matches!(entry.state, State::LoweringDependent | State::OutOfScope);
         if requires_notes && entry.notes.is_none() {
             problems.push(format!(
                 "entry {}: state {:?} requires a rationale in notes",
@@ -146,7 +143,7 @@ pub fn load_and_validate() -> Result<SupportMatrix, Vec<String>> {
             ));
         }
         // State sanity: workshop-lowering category entries should not claim
-        // source support (the source implementation does not lower to Workshop).
+        // Source support (the parser/semantic pipeline does not lower to Workshop here).
         if entry.category == Category::WorkshopLowering && entry.state.is_supported() {
             problems.push(format!(
                 "entry {}: workshop-lowering category cannot claim supported state {:?}",
@@ -166,11 +163,7 @@ pub fn state_counts(matrix: &SupportMatrix) -> Vec<(State, usize)> {
     State::ALL
         .iter()
         .map(|s| {
-            let n = matrix
-                .entries
-                .iter()
-                .filter(|e| e.state == *s)
-                .count();
+            let n = matrix.entries.iter().filter(|e| e.state == *s).count();
             (*s, n)
         })
         .collect()

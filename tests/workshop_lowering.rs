@@ -821,6 +821,7 @@ rule: "calls-dynamic" Event.OngoingGlobal {
                 && diagnostic
                     .message
                     .contains("subroutine switch materialization requires a bounded invocation context")
+=======
         }),
         "{diagnostics:?}"
     );
