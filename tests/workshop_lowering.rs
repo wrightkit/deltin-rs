@@ -907,7 +907,7 @@ fn chase_aliases_select_canonical_identity_from_resolved_target() {
 globalvar Number globalTarget;
 playervar Number playerTarget;
 rule: "global-target" Event.OngoingGlobal {
-    ChasePlayerVariableAtRate(globalTarget, 1, 1, RateChaseReevaluation.DestinationAndRate);
+    ChasePlayerVariableAtRate(Destination: 1, Variable: globalTarget, Rate: 1, Reevaluation: RateChaseReevaluation.DestinationAndRate);
     StopChasingVariable(globalTarget);
 }
 rule: "player-target" Event.OngoingPlayer {
@@ -956,9 +956,12 @@ fn player_stop_chase_remains_a_canonical_catalog_gap() {
     let (program, diagnostics) = lower(
         r#"
 playervar Number target;
-rule: "player-stop" Event.OngoingPlayer { StopChasingPlayerVariable(target); }
+rule: "player-stop" Event.OngoingPlayer { StopChasingVariable(target); }
 "#,
     );
     assert!(program.rules.is_empty());
-    assert!(diagnostics.iter().any(|diagnostic| diagnostic.code == "SM003" || diagnostic.code == "HI018"), "{diagnostics:?}");
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "HI018"
+            && diagnostic.message.contains("player stop-chase action is unavailable")
+    }), "{diagnostics:?}");
 }
