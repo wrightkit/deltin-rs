@@ -60,6 +60,8 @@ pub struct HirFunc {
     pub ret: Type,
     pub body: Option<HirBlock>,
     pub is_recursive: bool,
+    /// Whether a subroutine executes in Workshop player context.
+    pub is_player_context: bool,
     pub is_virtual: bool,
     pub captures: Vec<HirCapture>,
     pub class: Option<HirClassId>,

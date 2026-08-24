@@ -48,6 +48,13 @@ plus a short list of evidence-backed approximation areas.
   parameters, member storage, and return-value ABI with structured
   `HI018`; a shared global slot is not a general local or invocation-frame ABI.
   The adapter does not change HIR or canonical WIR.
+- Scalar value-parameter lowering has a similarly bounded direct-call slice:
+  only non-player, non-recursive, `void` subroutines with strict scalar value
+  parameters and non-suspending bodies are materialized into generated global
+  slots. `Any`, player/nested/control-flow/recursive calls, `Wait` or other
+  external actions in the callee, returns, `in`/`ref`, non-scalar values, and
+  side-effectful arguments fail closed with `HI018`. The slots are not an
+  invocation-frame or reentrant ABI.
 
 ## Intentionally unsupported
 

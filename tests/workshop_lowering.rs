@@ -103,6 +103,61 @@ fn hir_is_backend_neutral_and_hir_only_external_lowering_fails_closed() {
 }
 
 #[test]
+fn global_rule_scalar_subroutine_parameters_materialize_with_provenance() {
+    let (program, diagnostics) = lower(
+        r#"
+void First(Number amount, Number label) "First" { amount += 1; }
+rule: "params" Event.OngoingGlobal { First(label: 1, amount: 2); }
+"#,
+    );
+    assert!(diagnostics.iter().all(|diagnostic| !diagnostic.is_error()), "{diagnostics:?}");
+    program.validate().expect("structurally valid WIR");
+    assert_eq!(program.global_variables.len(), 2);
+    assert_eq!(program.global_variables.get(workshop_rs::wir::GlobalVarId::from_index(0)).unwrap().name, "__del_param_f0_p0");
+    assert_eq!(program.global_variables.get(workshop_rs::wir::GlobalVarId::from_index(1)).unwrap().name, "__del_param_f0_p1");
+    let rule = program.rules.iter().find(|rule| rule.name == "params").unwrap();
+    assert!(matches!(program.actions.get(rule.actions[0]), Some(workshop_rs::wir::Action::SetGlobalVariable { variable, .. }) if *variable == workshop_rs::wir::GlobalVarId::from_index(1)));
+    assert!(matches!(program.actions.get(rule.actions[1]), Some(workshop_rs::wir::Action::SetGlobalVariable { variable, .. }) if *variable == workshop_rs::wir::GlobalVarId::from_index(0)));
+    assert!(matches!(program.actions.get(rule.actions[2]), Some(workshop_rs::wir::Action::CallSubroutine { .. })));
+    let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
+    let locale = workshop_rs::catalog::Locale::new("en-US");
+    let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
+    let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
+    assert!(
+        workshop_rs::roundtrip::equivalent(&program, &reparsed),
+        "original:\n{}\nreparsed:\n{}\n{emitted}",
+        program.dump(),
+        reparsed.dump()
+    );
+}
+
+#[test]
+fn parameter_runtime_rejects_suspending_callee_and_any() {
+    for source in [
+        r#"void Waiter(Number amount) "Waiter" { Wait(1); }
+rule: "wait" Event.OngoingGlobal { Waiter(1); }"#,
+        r#"void Target(Any amount) "Target" { }
+rule: "any" Event.OngoingGlobal { Target(1); }"#,
+    ] {
+        let (program, diagnostics) = lower(source);
+        assert!(program.rules.is_empty(), "{source}");
+        assert!(diagnostics.iter().any(|diagnostic| diagnostic.code == "HI018"), "{source}\n{diagnostics:?}");
+    }
+}
+
+#[test]
+fn parameter_runtime_rejects_control_flow_parameter_calls() {
+    let (program, diagnostics) = lower(
+        r#"
+void Target(Number amount) "Target" { }
+rule: "nested" Event.OngoingGlobal { if (true) { Target(1); } }
+"#,
+    );
+    assert!(program.rules.is_empty(), "{}\n{diagnostics:?}", program.dump());
+    assert!(diagnostics.iter().any(|diagnostic| diagnostic.code == "HI018" && diagnostic.message.contains("direct actions")), "{diagnostics:?}");
+}
+
+#[test]
 fn core_rule_lowering_preserves_canonical_ids_and_provenance() {
     let (program, diagnostics) = lower(
         r#"
