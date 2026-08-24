@@ -1155,9 +1155,17 @@ impl<'a> Lowerer<'a> {
             );
             return;
         }
+        let name = format!("__del_rule_local_{var}");
+        if self.out.global_variables.iter().any(|variable| variable.name == name) {
+            self.unsupported(
+                hir_var.span,
+                format!("synthetic rule-local global name '{name}' collides with a declared global"),
+            );
+            return;
+        }
         let index = self.allocate_index(None, false, hir_var.span);
         let wir_id = self.out.global_variables.push(wir::WorkshopVariable {
-            name: format!("__del_rule_local_{var}"),
+            name,
             index,
             span: self.ws_span(hir_var.span),
             name_span: self.ws_span(hir_var.span),

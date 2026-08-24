@@ -278,6 +278,24 @@ rule: "suspending-local" Event.OngoingGlobal {
 }
 
 #[test]
+fn global_rule_local_storage_rejects_synthetic_name_collisions() {
+    let (program, diagnostics) = lower(
+        r#"
+globalvar Number __del_rule_local_1 = 0;
+rule: "colliding-local" Event.OngoingGlobal {
+    define local = 1;
+    local = 2;
+}
+"#,
+    );
+    assert!(program.rules.is_empty(), "{}\n{diagnostics:?}", program.dump());
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "HI018"
+            && diagnostic.message.contains("synthetic rule-local global name")
+    }), "{diagnostics:?}");
+}
+
+#[test]
 fn core_control_flow_and_player_storage_lower_to_canonical_wir() {
     let (program, diagnostics) = lower(
         r#"
