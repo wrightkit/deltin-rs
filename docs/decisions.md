@@ -309,3 +309,18 @@ WIR node or a claim of live Workshop-client execution.
 
 The support matrix remains `lowering-dependent`; these tests are implementation
 evidence for the bounded adapter slice, not end-to-end Workshop execution proof.
+
+## #31 scalar parameter runtime slice (2026-08-25)
+
+The released WIR has no parameterized `CallSubroutine` ABI or invocation frame.
+The bounded DEL adapter therefore permits only direct calls from a global rule
+to a non-player, non-recursive, `void` subroutine with strict scalar value
+parameters. It materializes source-ordered argument expressions into generated
+global slots, then emits the canonical no-argument subroutine call; parameter
+declaration, argument, slot, and call provenance are retained.
+
+These slots are scratch storage for a single non-suspending call, not a local or
+reentrant ABI. Any callee suspension-capable external action, nested call,
+player/recursive context, return value, `in`/`ref` mode, `Any`, non-scalar or
+side-effectful argument, or non-direct call fails closed with `HI018` and empty
+WIR. No parameterized WIR, catalog, or runtime-layout contract is added.

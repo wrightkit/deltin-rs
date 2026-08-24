@@ -395,6 +395,7 @@ struct Lowerer<'a> {
     out: wir::Program,
     global_vars: HashMap<HirVarId, wir::GlobalVarId>,
     rule_local_globals: HashMap<HirVarId, wir::GlobalVarId>,
+    parameter_slots: HashMap<HirVarId, wir::GlobalVarId>,
     player_vars: HashMap<HirVarId, wir::PlayerVarId>,
     subroutines: HashMap<HirFuncId, wir::SubroutineId>,
     diagnostics: Vec<Diagnostic>,
@@ -423,6 +424,7 @@ impl<'a> Lowerer<'a> {
             out,
             global_vars: HashMap::new(),
             rule_local_globals: HashMap::new(),
+            parameter_slots: HashMap::new(),
             player_vars: HashMap::new(),
             subroutines: HashMap::new(),
             diagnostics: Vec::new(),
@@ -437,6 +439,7 @@ impl<'a> Lowerer<'a> {
     fn run(mut self) -> (wir::Program, Vec<Diagnostic>) {
         self.allocate_variables();
         self.allocate_subroutines();
+        self.allocate_parameter_slots();
         self.lower_initializers();
         for rule in &self.hir.rules {
             self.lower_rule(rule);
@@ -451,6 +454,36 @@ impl<'a> Lowerer<'a> {
             return (wir::Program::default(), self.diagnostics);
         }
         (self.out, self.diagnostics)
+    }
+
+    fn allocate_parameter_slots(&mut self) {
+        for (fid, func) in self.hir.funcs.iter().enumerate() {
+            if func.kind != crate::hir::FuncKind::Subroutine {
+                continue;
+            }
+            for (param_index, param) in func.params.iter().enumerate() {
+                let Some(var) = self
+                    .hir
+                    .param_vars
+                    .get(&(fid as HirFuncId, param.name.clone()))
+                    .copied()
+                else {
+                    self.unsupported(
+                        param.span,
+                        format!("subroutine parameter '{}' has no HIR variable binding", param.name),
+                    );
+                    continue;
+                };
+                let index = self.allocate_index(None, false, param.span);
+                let wir_id = self.out.global_variables.push(wir::WorkshopVariable {
+                    name: format!("__del_param_f{fid}_p{param_index}"),
+                    index,
+                    span: self.ws_span(param.span),
+                    name_span: self.ws_span(param.span),
+                });
+                self.parameter_slots.insert(var, wir_id);
+            }
+        }
     }
 
     fn allocate_variables(&mut self) {
@@ -657,6 +690,7 @@ impl<'a> Lowerer<'a> {
                 | wir::Event::Player { .. }
         );
         self.rule_local_globals.clear();
+        let parameter_calls_valid = self.validate_rule_parameter_calls(rule, &event);
         if matches!(&event, wir::Event::Global) {
             self.prepare_global_rule_locals(rule);
         }
@@ -666,7 +700,11 @@ impl<'a> Lowerer<'a> {
                 conditions.push(value);
             }
         }
-        let actions = self.lower_actions(&rule.body);
+        let actions = if parameter_calls_valid {
+            self.lower_rule_actions(&rule.body)
+        } else {
+            Vec::new()
+        };
         if self.has_new_errors(diagnostic_count) {
             self.player_context = previous_player_context;
             self.rule_local_globals.clear();
@@ -793,6 +831,153 @@ impl<'a> Lowerer<'a> {
             actions.extend(self.lower_stmt(stmt));
         }
         actions
+    }
+
+    fn lower_rule_actions(&mut self, block: &crate::hir::HirBlock) -> Vec<wir::ActionId> {
+        let mut actions = Vec::new();
+        for stmt in &block.stmts {
+            match &stmt.kind {
+                HirStmtKind::Block(inner) => actions.extend(self.lower_rule_actions(inner)),
+                HirStmtKind::Expr(expr) if self.is_parameter_call(*expr) => {
+                    actions.extend(self.lower_direct_parameter_call(*expr))
+                }
+                _ => actions.extend(self.lower_stmt(stmt)),
+            }
+        }
+        actions
+    }
+
+    fn validate_rule_parameter_calls(
+        &mut self,
+        rule: &crate::hir::HirRule,
+        event: &wir::Event,
+    ) -> bool {
+        let mut calls = Vec::new();
+        self.collect_direct_parameter_calls(&rule.body, &mut calls);
+        if calls.is_empty() && !self.block_contains_non_direct_parameter_call(&rule.body) {
+            return true;
+        }
+        let mut valid = matches!(event, wir::Event::Global);
+        if self.block_contains_non_direct_parameter_call(&rule.body) {
+            valid = false;
+            self.unsupported(
+                rule.span,
+                "parameter-runtime calls must be direct actions in a global rule",
+            );
+        }
+        if !valid {
+            self.unsupported(rule.span, "parameter-runtime subroutine calls require a global Workshop rule");
+        }
+        for expr in calls {
+            let Some(HirExprKind::Call { target: CallTarget::Func(fid), .. }) =
+                self.hir.expr(expr).map(|expr| &expr.kind)
+            else {
+                continue;
+            };
+            let Some(func) = self.hir.funcs.get(*fid as usize).cloned() else {
+                valid = false;
+                self.unsupported(rule.span, format!("call targets unknown HIR function {fid}"));
+                continue;
+            };
+            valid &= self.validate_parameter_subroutine(&func);
+        }
+        valid
+    }
+
+    fn collect_direct_parameter_calls(&self, block: &crate::hir::HirBlock, calls: &mut Vec<HirExprId>) {
+        for stmt in &block.stmts {
+            match &stmt.kind {
+                HirStmtKind::Block(inner) => self.collect_direct_parameter_calls(inner, calls),
+                HirStmtKind::Expr(expr) if self.is_parameter_call(*expr) => calls.push(*expr),
+                HirStmtKind::If { then, els, .. } => {
+                    if self.stmt_contains_parameter_call(then)
+                        || els.as_deref().is_some_and(|stmt| self.stmt_contains_parameter_call(stmt))
+                    {
+                        // The caller rejects control-flow parameter calls below.
+                    }
+                }
+                HirStmtKind::While { body, .. }
+                | HirStmtKind::AutoFor { body, .. }
+                | HirStmtKind::Foreach { body, .. } => {
+                    let _ = self.stmt_contains_parameter_call(body);
+                }
+                HirStmtKind::For { body, .. } => {
+                    let _ = self.stmt_contains_parameter_call(body);
+                }
+                HirStmtKind::Switch { arms, .. } => {
+                    let _ = arms.iter().any(|arm| arm.stmts.iter().any(|stmt| self.stmt_contains_parameter_call(stmt)));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn stmt_contains_parameter_call(&self, stmt: &HirStmt) -> bool {
+        match &stmt.kind {
+            HirStmtKind::Expr(expr) => self.is_parameter_call(*expr),
+            HirStmtKind::Block(block) => block.stmts.iter().any(|stmt| self.stmt_contains_parameter_call(stmt)),
+            HirStmtKind::If { then, els, .. } => self.stmt_contains_parameter_call(then)
+                || els.as_deref().is_some_and(|stmt| self.stmt_contains_parameter_call(stmt)),
+            HirStmtKind::While { body, .. }
+            | HirStmtKind::AutoFor { body, .. }
+            | HirStmtKind::Foreach { body, .. } => self.stmt_contains_parameter_call(body),
+            HirStmtKind::For { init, step, body, .. } => init.as_deref().is_some_and(|stmt| self.stmt_contains_parameter_call(stmt))
+                || step.as_deref().is_some_and(|stmt| self.stmt_contains_parameter_call(stmt))
+                || self.stmt_contains_parameter_call(body),
+            HirStmtKind::Switch { arms, .. } => arms.iter().any(|arm| arm.stmts.iter().any(|stmt| self.stmt_contains_parameter_call(stmt))),
+            _ => false,
+        }
+    }
+
+    fn is_parameter_call(&self, id: HirExprId) -> bool {
+        let Some(HirExprKind::Call { target: CallTarget::Func(fid), args }) =
+            self.hir.expr(id).map(|expr| &expr.kind)
+        else {
+            return false;
+        };
+        !args.is_empty()
+            && self
+                .hir
+                .funcs
+                .get(*fid as usize)
+                .is_some_and(|func| func.kind == crate::hir::FuncKind::Subroutine)
+    }
+
+    fn block_contains_non_direct_parameter_call(&self, block: &crate::hir::HirBlock) -> bool {
+        block.stmts.iter().any(|stmt| match &stmt.kind {
+            HirStmtKind::If { then, els, .. } => {
+                self.stmt_contains_parameter_call(then)
+                    || els.as_deref().is_some_and(|stmt| self.stmt_contains_parameter_call(stmt))
+            }
+            HirStmtKind::While { body, .. }
+            | HirStmtKind::AutoFor { body, .. }
+            | HirStmtKind::Foreach { body, .. } => self.stmt_contains_parameter_call(body),
+            HirStmtKind::For { init, step, body, .. } => init.as_deref().is_some_and(|stmt| self.stmt_contains_parameter_call(stmt))
+                || step.as_deref().is_some_and(|stmt| self.stmt_contains_parameter_call(stmt))
+                || self.stmt_contains_parameter_call(body),
+            HirStmtKind::Switch { arms, .. } => arms.iter().any(|arm| arm.stmts.iter().any(|stmt| self.stmt_contains_parameter_call(stmt))),
+            HirStmtKind::Block(inner) => self.block_contains_non_direct_parameter_call(inner),
+            _ => false,
+        })
+    }
+
+    fn validate_parameter_subroutine(&mut self, func: &crate::hir::HirFunc) -> bool {
+        let valid = func.kind == crate::hir::FuncKind::Subroutine
+            && func.ret == Type::Void
+            && !func.is_recursive
+            && !func.is_player_context
+            && func.params.iter().all(|param| {
+                param.mode == crate::syntax::ast::ParamMode::Value
+                    && matches!(param.ty, Type::Number | Type::String | Type::Bool | Type::Null)
+            })
+            && func.body.as_ref().is_some_and(|body| !self.block_contains_internal_call(body));
+        if !valid {
+            self.unsupported(
+                func.span,
+                "parameter-runtime requires a non-player, non-recursive, non-suspending void subroutine with scalar value parameters",
+            );
+        }
+        valid
     }
 
     fn prepare_global_rule_locals(&mut self, rule: &crate::hir::HirRule) {
@@ -1187,6 +1372,7 @@ impl<'a> Lowerer<'a> {
             .get(&var)
             .copied()
             .or_else(|| self.rule_local_globals.get(&var).copied())
+            .or_else(|| self.parameter_slots.get(&var).copied())
     }
 
     fn lower_stmt(&mut self, stmt: &HirStmt) -> Vec<wir::ActionId> {
@@ -1969,6 +2155,84 @@ impl<'a> Lowerer<'a> {
             self.unsupported(span, "call target is not a canonical Workshop subroutine");
             Vec::new()
         }
+    }
+
+    fn expr_is_scalar_parameter(&self, id: HirExprId) -> bool {
+        let Some(expr) = self.hir.expr(id) else { return false };
+        if !matches!(expr.ty, Type::Number | Type::String | Type::Bool | Type::Null) {
+            return false;
+        }
+        match &expr.kind {
+            HirExprKind::Literal(_) | HirExprKind::External { .. } | HirExprKind::VarRef { .. } => {
+                !self.expr_contains_internal_call(id)
+            }
+            HirExprKind::Binary { lhs, rhs, .. } => {
+                self.expr_is_scalar_parameter(*lhs) && self.expr_is_scalar_parameter(*rhs)
+            }
+            HirExprKind::Unary { operand, .. }
+            | HirExprKind::Convert { from: operand, .. }
+            | HirExprKind::Cast { expr: operand, .. } => self.expr_is_scalar_parameter(*operand),
+            HirExprKind::Ternary { cond, then, els } => {
+                self.expr_is_scalar_parameter(*cond)
+                    && self.expr_is_scalar_parameter(*then)
+                    && self.expr_is_scalar_parameter(*els)
+            }
+            _ => false,
+        }
+    }
+
+    fn lower_direct_parameter_call(&mut self, id: HirExprId) -> Vec<wir::ActionId> {
+        let Some(expr) = self.hir.expr(id).cloned() else { return Vec::new() };
+        let HirExprKind::Call { target: CallTarget::Func(fid), args } = expr.kind else {
+            self.unsupported(expr.span, "parameter-runtime call is not a direct subroutine call");
+            return Vec::new();
+        };
+        let Some(func) = self.hir.funcs.get(fid as usize).cloned() else { return Vec::new() };
+        if !self.validate_parameter_subroutine(&func) || args.len() != func.params.len() {
+            self.unsupported(expr.span, "parameter-runtime subroutine arguments do not match the declaration");
+            return Vec::new();
+        }
+        let mut bound = vec![None; func.params.len()];
+        let mut source_order = Vec::with_capacity(args.len());
+        let mut next = 0;
+        for arg in args {
+            let (index, value) = match arg {
+                HirArg::Pos(value) => {
+                    while next < bound.len() && bound[next].is_some() { next += 1; }
+                    if next >= bound.len() { return Vec::new(); }
+                    let index = next; next += 1; (index, value)
+                }
+                HirArg::Named { name, value } => {
+                    let Some(index) = func.params.iter().position(|param| param.name == name) else {
+                        self.unsupported(expr.span, format!("unknown subroutine parameter '{name}'"));
+                        return Vec::new();
+                    };
+                    (index, value)
+                }
+            };
+            if bound[index].replace(value).is_some() { return Vec::new(); }
+            source_order.push((index, value));
+        }
+        if bound.iter().any(Option::is_none) { return Vec::new(); }
+        let mut actions = Vec::with_capacity(source_order.len() + 1);
+        for (index, value) in source_order {
+            if !self.expr_is_scalar_parameter(value) {
+                self.unsupported(expr.span, "parameter-runtime arguments must be scalar, side-effect-free values");
+                return Vec::new();
+            }
+            let Some(var) = self.hir.param_vars.get(&(fid, func.params[index].name.clone())).copied() else { return Vec::new() };
+            let Some(variable) = self.parameter_slots.get(&var).copied() else { return Vec::new() };
+            let Ok(value_node) = self.lower_value(value) else { return Vec::new() };
+            let value_span = self.hir.expr(value).map(|value| value.span).unwrap_or(expr.span);
+            actions.push(self.out.actions.push(wir::Action::SetGlobalVariable {
+                variable,
+                value: value_node,
+                span: self.ws_span(value_span),
+                target_span: self.ws_span(func.params[index].span),
+            }));
+        }
+        actions.extend(self.call_subroutine(fid, expr.span));
+        actions
     }
 
     fn lower_assignment(

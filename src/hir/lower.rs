@@ -175,6 +175,11 @@ impl<'a> Lowerer<'a> {
                     ret: Type::Any,
                     body: None,
                     is_recursive: f.attrs.recursive,
+                    is_player_context: f
+                        .attrs
+                        .subroutine
+                        .as_ref()
+                        .is_some_and(|subroutine| subroutine.playervar),
                     is_virtual: f.attrs.virtual_,
                     captures: Vec::new(),
                     class: None,
@@ -1074,6 +1079,7 @@ impl<'a> Lowerer<'a> {
             ret: Type::Any,
             body,
             is_recursive: false,
+            is_player_context: false,
             is_virtual: false,
             captures: Vec::new(),
             class: None,
