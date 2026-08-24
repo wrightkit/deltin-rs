@@ -1,7 +1,7 @@
 # del-rs Compatibility Contract
 
 Status: **living reference** · Owner: Architecture. This document is the
-human-readable compatibility contract for the `del-rs` frontend. The
+human-readable compatibility contract for the `del-rs` parsing and semantic pipeline. The
 machine-readable declared surface is
 [`support-matrix.toml`](support-matrix.toml); every claim here is derived from
 that matrix and from the corpus evidence it references.
@@ -31,7 +31,7 @@ upstream oracle and the corpus, not as a single aggregate score.
 
 OSTW and DeltinScript are the same language: DeltinScript is the language
 implemented by the OSTW compiler (there is no separate reference
-implementation — see [`provenance.md`](provenance.md)). The frontend accepts
+implementation — see [`provenance.md`](provenance.md)). The parser accepts
 `.del`, `.ostw`, and `.workshop` source files interchangeably, and no
 semantic distinction between the extensions is asserted unless corpus
 evidence establishes one. The only dialect-like distinction in the corpus is
@@ -47,9 +47,9 @@ exactly one state, defined as follows:
 | State | Meaning |
 | --- | --- |
 | `planned` | Inventoried and evidenced upstream, but not yet implemented; not claimed as supported. |
-| `frontend-supported` | Lexed/parsed into documented AST structures with stable spans; no semantic claims. |
+| `source-supported` | Lexed/parsed into documented AST structures with stable spans; no semantic claims. |
 | `semantic-supported` | Resolved, type-checked, and diagnosed by the semantic model / HIR; no Workshop emission required. |
-| `lowering-dependent` | Requires concrete Workshop encoding owned by del-rs #30; the canonical WIR, catalog, and emission contracts remain owned by `workshop-rs`, while the frontend carries intent only. |
+| `lowering-dependent` | Requires concrete Workshop encoding owned by del-rs #30; the canonical WIR, catalog, and emission contracts remain owned by `workshop-rs`, while typed HIR carries intent only. |
 | `end-to-end-supported` | Fully supported through Workshop emission; currently unused (no end-to-end path exists in this crate). |
 | `out-of-scope` | Deliberately outside the `del-rs` language contract (e.g. editor behavior). |
 
@@ -61,9 +61,9 @@ Because states include `lowering-dependent` and `out-of-scope` capabilities,
 a percentage would misrepresent the declared support boundary. The matrix and
 its per-entry evidence are the source of truth.
 
-## Workshop-independent frontend vs. end-to-end compilation
+## Workshop-independent parsing and semantic analysis vs. end-to-end compilation
 
-`del-rs` supports the **Workshop-independent frontend**:
+`del-rs` supports Workshop-independent parsing and semantic analysis:
 
 - the full syntax, semantic, and runtime-semantics surface parses, resolves,
   type-checks, and lowers to typed HIR with provenance;

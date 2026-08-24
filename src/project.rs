@@ -243,7 +243,7 @@ impl Loader {
                 }
                 _ => {
                     // .json / .lobby settings imports: recorded, not loaded
-                    // by the frontend (workshop-lowering/compiler-utility).
+                    // by the source implementation (workshop-lowering/compiler-utility).
                     let import_abs = abs.parent().unwrap_or(&self.root).join(&imp.path);
                     let canonical = import_abs.canonicalize().unwrap_or(import_abs);
                     let imported = self.sources.by_name(&canonical).unwrap_or_else(|| {

@@ -1,4 +1,4 @@
-//! del-rs: a Workshop-independent OSTW/DeltinScript-compatible frontend.
+//! del-rs: a Workshop-independent OSTW/DeltinScript implementation.
 //!
 //! The crate owns DEL/OSTW lexical analysis, recoverable parsing, the source
 //! model with provenance, project/import loading, semantic analysis, the typed

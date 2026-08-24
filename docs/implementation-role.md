@@ -2,14 +2,14 @@
 
 `del-rs` is an independently usable Rust implementation of the
 DeltinScript/OSTW language surface. Its durable product boundary is larger than
-a parser/frontend and larger than an LPP provider process.
+parsing and semantic analysis, and larger than an LPP provider process.
 
 ## Durable model
 
 ```text
 DEL / OSTW source
   ↓
-del-rs frontend
+del-rs parsing / project loading / semantic analysis
   ↓
 DEL semantic model / typed HIR
   ↓
@@ -36,18 +36,7 @@ DEL / OSTW source
 Workshop boundary. It deliberately reuses `workshop-rs` instead of becoming a
 second raw Workshop implementation.
 
-## Terminology
-
-### Frontend
-
-A frontend is the internal Workshop-independent stage that turns authored
-source into project, semantic, and typed HIR representations. It exists so
-checking, inspection, source queries, and other semantic tooling can operate
-without requiring complete target lowering.
-
-Do not use **frontend** as the repository's overall product identity.
-
-### Provider
+## Provider
 
 A provider is an integration role through which an implementation can expose
 language intelligence to a tooling client such as Wright. LPP is one possible

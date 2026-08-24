@@ -2,9 +2,9 @@
 
 This directory is the durable documentation surface for `del-rs`. The root
 [`README.md`](../README.md) is the user-facing overview. `del-rs` is a
-standalone DEL/OSTW implementation; documents may use **frontend** for its
-internal Workshop-independent source-to-semantic stage, but not as the product
-identity of the repository.
+standalone DEL/OSTW implementation. Documents describe parsing, project loading,
+semantic analysis, HIR, tooling, and lowering directly; these capabilities are
+not a separate product identity.
 
 Implementation sequencing and acceptance criteria live in GitHub issues and
 pull requests. Durable ownership, architecture, interfaces, compatibility, and
@@ -24,10 +24,10 @@ implementation-role.md       repository identity and Wright/workshop-rs relation
 ### Ownership and architecture
 
 - [`implementation-role.md`](implementation-role.md) — standalone DEL/OSTW
-  implementation identity; meaning of frontend/provider; dependency on
+  implementation identity; provider meaning; dependency on
   `workshop-rs`; Wright as downstream tooling/integration consumer.
 - [`architecture.md`](architecture.md) — detailed implemented architecture of
-  the internal Workshop-independent frontend and the DEL-owned integration /
+  the internal Workshop-independent parsing/semantic pipeline and the DEL-owned integration /
   lowering seams: module layout, source model, parser/project/semantic/HIR,
   oracle, public API, CLI contract, and test strategy.
 - [`cli.md`](cli.md) — task-oriented command classification, migration aliases,
@@ -59,7 +59,7 @@ implementation-role.md       repository identity and Wright/workshop-rs relation
   and [`cli.md`](cli.md), and exercised by the integration tests.
 - [`decisions.md`](decisions.md) records ratified product/semantic decisions.
   Historical decisions do not redefine the repository as a Wright-owned
-  provider/frontend.
+  provider or language implementation.
 
 ## Development and testing
 
@@ -76,7 +76,7 @@ focused tests. Fixed test counts are not a substitute for behavioral coverage.
 | Contract | Document | Normative scope |
 | --- | --- | --- |
 | Repository/product role | [`implementation-role.md`](implementation-role.md) | Standalone implementation identity and cross-repo ownership. |
-| Internal architecture | [`architecture.md`](architecture.md) | Source/frontend/HIR/runtime/lowering organization. |
+| Internal architecture | [`architecture.md`](architecture.md) | Source/parsing/HIR/runtime/lowering organization. |
 | Compatibility | [`compatibility.md`](compatibility.md) | State meanings, methodology, oracle boundary. |
 | Declared surface | [`support-matrix.toml`](support-matrix.toml) | Per-capability current support states with evidence. |
 | Product decisions | [`decisions.md`](decisions.md) | Ratified semantic/product decisions. |

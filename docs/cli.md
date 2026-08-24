@@ -36,12 +36,12 @@ to Workshop; that remains outside this CLI contract.
 | `del-rs compatibility` | `del-rs maintainer compatibility` | Existing top-level form remains accepted and keeps report schema 1. |
 
 `check` and `inspect` keep their existing names. `inspect` is deliberately a
-best-effort query: it propagates frontend diagnostics in human output and in a
+best-effort query: it propagates parser and semantic diagnostics in human output and in a
 new `diagnostics` JSON field, but returns exit `0` when the query ran, even if
 the source has errors. Missing input remains exit `4`; malformed position input
 remains exit `2`. `LINE:COL` is one-based, uses the source file's Unicode scalar
 columns, accepts the exact end-of-file cursor boundary, and rejects zero,
-negative, or out-of-range line/column values before the frontend pipeline runs.
+negative, or out-of-range line/column values before the parsing pipeline runs.
 This preserves useful semantic queries for agent workflows without claiming that
 an inspect result validates its source.
 

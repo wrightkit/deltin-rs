@@ -1,5 +1,5 @@
 //! Workshop-facing name boundary: the single seam through which Workshop
-//! catalog names enter the frontend (architecture §12). `del-rs` owns the
+//! catalog names enter the source implementation (architecture §12). `del-rs` owns the
 //! trait, the permissive default, and the catalog-backed source-language
 //! adapter; canonical catalog data remains in `workshop-rs`.
 

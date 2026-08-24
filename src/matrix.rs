@@ -43,8 +43,8 @@ impl Category {
 #[serde(rename_all = "kebab-case")]
 pub enum State {
     Planned,
-    #[serde(rename = "frontend-supported")]
-    FrontendSupported,
+    #[serde(rename = "source-supported")]
+    SourceSupported,
     #[serde(rename = "semantic-supported")]
     SemanticSupported,
     #[serde(rename = "lowering-dependent")]
@@ -58,18 +58,18 @@ pub enum State {
 impl State {
     pub const ALL: &'static [State] = &[
         State::Planned,
-        State::FrontendSupported,
+        State::SourceSupported,
         State::SemanticSupported,
         State::LoweringDependent,
         State::EndToEndSupported,
         State::OutOfScope,
     ];
 
-    /// Whether this state represents implemented frontend/semantic support.
+    /// Whether this state represents implemented source/semantic support.
     pub fn is_supported(&self) -> bool {
         matches!(
             self,
-            State::FrontendSupported | State::SemanticSupported | State::EndToEndSupported
+            State::SourceSupported | State::SemanticSupported | State::EndToEndSupported
         )
     }
 }
@@ -146,7 +146,7 @@ pub fn load_and_validate() -> Result<SupportMatrix, Vec<String>> {
             ));
         }
         // State sanity: workshop-lowering category entries should not claim
-        // frontend support (the frontend does not lower to Workshop).
+        // source support (the source implementation does not lower to Workshop).
         if entry.category == Category::WorkshopLowering && entry.state.is_supported() {
             problems.push(format!(
                 "entry {}: workshop-lowering category cannot claim supported state {:?}",
