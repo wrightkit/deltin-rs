@@ -899,3 +899,66 @@ fn cross_file_lowering_preserves_source_provenance() {
         .expect("library action");
     assert_eq!(action.span().expect("action provenance").file.index(), 1);
 }
+
+#[test]
+fn chase_aliases_select_canonical_identity_from_resolved_target() {
+    let (program, diagnostics) = lower(
+        r#"
+globalvar Number globalTarget;
+playervar Number playerTarget;
+rule: "global-target" Event.OngoingGlobal {
+    ChasePlayerVariableAtRate(globalTarget, 1, 1, RateChaseReevaluation.DestinationAndRate);
+    StopChasingVariable(globalTarget);
+}
+rule: "player-target" Event.OngoingPlayer {
+    ChaseVariableAtRate(playerTarget, 1, 1, RateChaseReevaluation.DestinationAndRate);
+}
+"#,
+    );
+    assert!(diagnostics.iter().all(|diagnostic| !diagnostic.is_error()), "{diagnostics:?}");
+    program.validate().expect("structurally valid WIR");
+    let global = program.rules.iter().find(|rule| rule.name == "global-target").unwrap();
+    let player = program.rules.iter().find(|rule| rule.name == "player-target").unwrap();
+    for (rule, expected) in [(global, ["chaseAtRate", "stopChasingVariable"]), (player, ["chaseAtRate", ""])] {
+        assert_eq!(rule.actions.len(), if expected[1].is_empty() { 1 } else { 2 });
+        for (action, name) in rule.actions.iter().zip(expected) {
+            if name.is_empty() { break; }
+            let workshop_rs::wir::Action::Call { name: actual, args, .. } = program.actions.get(*action).unwrap() else { panic!("expected canonical action") };
+            assert_eq!(actual, name);
+            assert!(!args.is_empty());
+        }
+    }
+    let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
+    let locale = workshop_rs::catalog::Locale::new("en-US");
+    let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
+    let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
+    assert!(workshop_rs::roundtrip::equivalent(&program, &reparsed));
+}
+
+#[test]
+fn chase_aliases_fail_closed_for_unresolved_target_semantics() {
+    let (program, diagnostics) = lower(
+        r#"
+rule: "dynamic-target" Event.OngoingGlobal {
+    ChaseVariableAtRate(HostPlayer().target, 1, 1, RateChaseReevaluation.DestinationAndRate);
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "HI018"
+            && diagnostic.message.contains("resolved global or player variable")
+    }), "{diagnostics:?}");
+}
+
+#[test]
+fn player_stop_chase_remains_a_canonical_catalog_gap() {
+    let (program, diagnostics) = lower(
+        r#"
+playervar Number target;
+rule: "player-stop" Event.OngoingPlayer { StopChasingPlayerVariable(target); }
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(diagnostics.iter().any(|diagnostic| diagnostic.code == "SM003" || diagnostic.code == "HI018"), "{diagnostics:?}");
+}

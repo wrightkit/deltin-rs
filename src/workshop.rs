@@ -2105,8 +2105,12 @@ impl<'a> Lowerer<'a> {
                     namespace,
                     span: callee_span,
                 } => {
-                    let Some(binding) = self.external_binding(callee_span, &name, &namespace)
-                    else {
+                    let binding = if Self::is_chase_alias(&name) {
+                        self.chase_binding_for_target(callee_span, &name, &namespace, &args)
+                    } else {
+                        self.external_binding(callee_span, &name, &namespace)
+                    };
+                    let Some(binding) = binding else {
                         return Vec::new();
                     };
                     let ExternalBinding::Action(info) = binding else {
@@ -2142,6 +2146,56 @@ impl<'a> Lowerer<'a> {
                 Vec::new()
             }
         }
+    }
+
+    fn is_chase_alias(name: &str) -> bool {
+        matches!(
+            name,
+            "ChaseVariableAtRate"
+                | "ChaseVariableOverTime"
+                | "ChasePlayerVariableAtRate"
+                | "ChasePlayerVariableOverTime"
+                | "StopChasingVariable"
+                | "StopChasingPlayerVariable"
+        )
+    }
+
+    fn chase_binding_for_target(
+        &mut self,
+        span: Span,
+        name: &str,
+        namespace: &[String],
+        args: &[HirArg],
+    ) -> Option<ExternalBinding> {
+        let Some(HirArg::Pos(target) | HirArg::Named { value: target, .. }) = args.first() else {
+            self.unsupported(span, "chase target must be a resolved global or player variable");
+            return None;
+        };
+        let Some(HirExprKind::VarRef { var }) = self.hir.expr(*target).map(|expr| &expr.kind) else {
+            self.unsupported(span, "chase target must be a resolved global or player variable");
+            return None;
+        };
+        let player = self.player_vars.contains_key(var);
+        if !player && !self.global_variable(*var).is_some() {
+            self.unsupported(span, "chase target must be a resolved global or player variable");
+            return None;
+        }
+        let Some(ExternalBinding::Action(mut info)) =
+            self.external_binding(span, name, namespace)
+        else {
+            return None;
+        };
+        info.canonical_id = match name {
+            "ChaseVariableAtRate" | "ChasePlayerVariableAtRate" => "chaseAtRate",
+            "ChaseVariableOverTime" | "ChasePlayerVariableOverTime" => "chaseOverTime",
+            "StopChasingVariable" | "StopChasingPlayerVariable" if player => {
+                "stopChasingPlayerVariable"
+            }
+            "StopChasingVariable" | "StopChasingPlayerVariable" => "stopChasingVariable",
+            _ => info.canonical_id.as_str(),
+        }
+        .to_string();
+        Some(ExternalBinding::Action(info))
     }
 
     fn call_subroutine(&mut self, fid: HirFuncId, span: Span) -> Vec<wir::ActionId> {

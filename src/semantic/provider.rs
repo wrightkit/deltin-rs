@@ -187,8 +187,12 @@ impl CatalogProvider {
             match name {
                 "ChaseVariableAtRate" => "chaseAtRate",
                 "ChaseVariableOverTime" => "chaseOverTime",
-                "ChasePlayerVariableAtRate" => "chasePlayerVariableAtRate",
-                "ChasePlayerVariableOverTime" => "chasePlayerVariableOverTime",
+                // Both DEL chase spellings use the canonical chase action
+                // entry; resolved target semantics are represented by the
+                // WIR value (GlobalVariable vs PlayerVariable).
+                "ChasePlayerVariableAtRate" => "chaseAtRate",
+                "ChasePlayerVariableOverTime" => "chaseOverTime",
+                "StopChasingVariable" => "stopChasingVariable",
                 _ => name,
             }
         } else {
