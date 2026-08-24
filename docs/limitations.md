@@ -1,7 +1,7 @@
 # del-rs limitations and support boundary
 
 Status: **evergreen** · Owner: Architecture. This document states the current
-support boundary of the `del-rs` frontend: what is deliberately not
+support boundary of the `del-rs` language implementation: what is deliberately not
 implemented, and why. The authoritative declared surface is
 [`support-matrix.toml`](support-matrix.toml); state meanings are defined in
 [`compatibility.md`](compatibility.md). Capabilities are classified as
@@ -22,7 +22,7 @@ plus a short list of evidence-backed approximation areas.
   `NoopProvider` remains available for Workshop-independent workflows.
 - Vanilla Workshop superset bodies (`rule("...")`, `variables {}`,
   `subroutines {}`, `settings {}`, hooks): parsed as opaque token spans with
-  no frontend semantics.
+  no DEL/OSTW semantic interpretation.
 - Lobby-settings / custom-game-settings imports (`.json`, `.lobby`):
   recorded with provenance, not interpreted.
 - `ds.toml` keys other than `entry_point`: validated syntactically, never

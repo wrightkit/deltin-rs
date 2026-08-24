@@ -1,6 +1,6 @@
 # del-rs OSTW/DeltinScript compatibility support matrix (draft)
 #
-# states: planned | frontend-supported | semantic-supported | lowering-dependent | end-to-end-supported | out-of-scope
+# states: planned | source-supported | semantic-supported | lowering-dependent | end-to-end-supported | out-of-scope
 # categories: syntax | semantic | runtime-semantics | workshop-lowering | compiler-utility | decompiler | editor | project
 #
 # Generated from docs/inventory.md (pinned upstream: ItsDeltin/Overwatch-Script-To-Workshop@817c1db4bace52123f054ffe10d3d8a06052e687).
@@ -15,322 +15,322 @@ dialect = "ostw"
 id = "syntax.comments.line"
 name = "syntax.comments.line"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.comments.block"
 name = "syntax.comments.block"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.comments.action"
 name = "syntax.comments.action"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.identifiers"
 name = "syntax.identifiers"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.numbers"
 name = "syntax.numbers"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings"
 name = "syntax.strings"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings.localized"
 name = "syntax.strings.localized"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings.interpolated"
 name = "syntax.strings.interpolated"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/parser/interpolated-string.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings.classic-format"
 name = "syntax.strings.classic-format"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/pathfinding/Pathfinding.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.rules"
 name = "syntax.rules"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/parser/basic-rule.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.rules.events"
 name = "syntax.rules.events"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.vanilla-rule"
 name = "syntax.vanilla-rule"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/parser/vanilla-rule.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables"
 name = "syntax.variables"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables.id"
 name = "syntax.variables.id"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables.extended"
 name = "syntax.variables.extended"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables.reservation"
 name = "syntax.variables.reservation"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.functions"
 name = "syntax.functions"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.functions.attributes"
 name = "syntax.functions.attributes"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/semantic/ref-call-from-ref-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.functions.subroutine"
 name = "syntax.functions.subroutine"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/recursion-subroutine.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.macros"
 name = "syntax.macros"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/modules/Container.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.parameters"
 name = "syntax.parameters"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/semantic/ref-param-target.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.arguments"
 name = "syntax.arguments"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.types"
 name = "syntax.types"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/semantic/generic-parent-linking-subroutine-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.generics"
 name = "syntax.generics"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/semantic/generic-parent-linking-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.typealias"
 name = "syntax.typealias"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.classes"
 name = "syntax.classes"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/class-allocation.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.structs"
 name = "syntax.structs"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/nested-single-struct.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.structs.update"
 name = "syntax.structs.update"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/semantic/struct-variable-guard-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.enums"
 name = "syntax.enums"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/enum-basic.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.constructors"
 name = "syntax.constructors"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/modules/Container.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.inheritance"
 name = "syntax.inheritance"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/inheritance-overrides.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.virtual-override"
 name = "syntax.virtual-override"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/inheritance-overrides.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.static"
 name = "syntax.static"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.this-root"
 name = "syntax.this-root"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.new"
 name = "syntax.new"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/class-allocation.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.delete"
 name = "syntax.delete"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/reference-validation.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.imports"
 name = "syntax.imports"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/pathfinding/Pathfinding.del", "tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.lambdas"
 name = "syntax.lambdas"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/recursion-closure.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.functiontypes"
 name = "syntax.functiontypes"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.operators"
 name = "syntax.operators"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/semantic/immutable-struct-array-addassign-error.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.casts"
 name = "syntax.casts"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.arrays"
 name = "syntax.arrays"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.statements"
 name = "syntax.statements"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/highlevel/switch-fallthrough.del", "tests/corpus/highlevel/if-chain.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.async"
 name = "syntax.async"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.hooks"
 name = "syntax.hooks"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.vanilla-context"
 name = "syntax.vanilla-context"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/parser/vanilla-rule.del", "docs/inventory.md"]
 notes = "vanilla workshop lexing context"
 
@@ -338,7 +338,7 @@ notes = "vanilla workshop lexing context"
 id = "syntax.recovery"
 name = "syntax.recovery"
 category = "syntax"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/parser/enum-incomplete.del", "tests/corpus/parser/enum-incomplete-name.del", "docs/inventory.md"]
 notes = "recoverable parsing is a del-rs goal (issue #3); upstream supports incomplete constructs"
 
@@ -909,14 +909,14 @@ notes = "VS Code extension behavior; not a del-rs language-contract requirement 
 id = "project.import-resolution"
 name = "project.import-resolution"
 category = "project"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/pathfinding/Pathfinding.del", "docs/inventory.md"]
 
 [[features]]
 id = "project.modules-resolution"
 name = "project.modules-resolution"
 category = "project"
-state = "frontend-supported"
+state = "source-supported"
 evidence = ["tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]

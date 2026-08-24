@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
-description = "Workshop-independent OSTW/DeltinScript-compatible frontend: lexer, recoverable parser, project model, semantic analysis, typed HIR, and tooling APIs"
+description = "Workshop-independent OSTW/DeltinScript implementation: lexer, recoverable parser, project model, semantic analysis, typed HIR, and tooling APIs"
 repository = "https://github.com/wrightkit/del-rs"
 
 [dependencies]

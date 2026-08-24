@@ -130,7 +130,7 @@ Evidence: `ostw/Deltinteger/Deltinteger/Elements/*` (workshop element catalog `E
 `wiki/Lobby-Settings`, `wiki/Overwatch-Workshop-Superset`.
 
 > Per issue #2, these are **inventory-only until the integration stage**; they are the
-> `lowering-dependent` rows of the support matrix and do not block frontend work.
+> `lowering-dependent` rows of the support matrix and do not block source implementation work.
 
 | Feature | Description | Evidence |
 |---|---|---|

@@ -7,9 +7,7 @@ reconstructing supported `.del` / `.ostw` projects.
 
 Wright is a downstream consumer that integrates `del-rs` with broader tooling
 such as linting, analysis, validated source editing, agent workflows, CI, and
-language services. The word **frontend** describes only the internal
-Workshop-independent source-to-semantic stage inside `del-rs`; it is not the
-repository's product identity. Likewise, an LPP **provider** is an integration
+language services. An LPP **provider** is an integration
 role that `del-rs` may expose to Wright or other tooling clients.
 
 Canonical raw Workshop behavior is shared rather than duplicated. `del-rs`
@@ -22,7 +20,7 @@ Workshop parsing, and emission.
 ```text
 DEL / OSTW source
     ↓
-del-rs source frontend
+del-rs parsing / project loading / semantic analysis
     ↓
 DEL semantic model / typed HIR
     ↓

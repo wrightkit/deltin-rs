@@ -5,16 +5,14 @@ the workspace-level `AGENTS.md` first, then this repository's local ownership,
 architecture, validation, and delivery rules.
 
 `del-rs` is WrightKit's standalone Rust implementation of the DeltinScript /
-OSTW language surface. It is not an internal Wright frontend repository. Wright
+OSTW language surface. It is not an internal Wright language repository. Wright
 is a downstream tooling consumer that may integrate `del-rs` through native APIs
 or LPP.
 
-Terminology:
-
-- **frontend** means the internal source → syntax/project → semantic/HIR stage;
-- **provider** means an integration role exposed through a protocol such as LPP;
-- neither term replaces the repository's identity as an independent DEL/OSTW
-  implementation.
+Parsing, project loading, semantic/type analysis, HIR, and compiler lowering
+are capabilities owned by this repository. A **provider** is only an integration
+role exposed through a protocol such as LPP; it does not replace the repository's
+identity as an independent DEL/OSTW implementation.
 
 ## Ownership boundary
 

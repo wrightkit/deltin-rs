@@ -1,7 +1,7 @@
-# del-rs Architecture — Workshop-Independent OSTW/DeltinScript Frontend
+# del-rs Architecture — OSTW/DeltinScript Parsing, Semantics, and Lowering
 
 Status: **implemented baseline** · Owner: Architecture · Scope: the `del-rs` crate. This
-document is the authoritative design record for the implemented frontend (delivered by issues
+document is the authoritative design record for the implemented pipeline (delivered by issues
 #2–#7, merged via PRs #10–#15). Where it says "corpus decides", the compatibility inventory and
 corpus evidence is the authority, not this document.
 
@@ -24,7 +24,7 @@ surface), `provenance.md` (pinned upstream oracle), `syntax-notes.md` (parser re
    (`src/bin/del-rs.rs`). No workspace members. Dependencies: `serde`, `serde_json`, `toml`
    (diagnostics JSON, `ds.toml`/manifests/matrix), and the released registry
    `workshop-rs 0.1.1` catalog core.
-2. **Backend neutrality.** The frontend owns syntax, semantic analysis, diagnostics, provenance,
+2. **Backend neutrality.** Parsing and semantic analysis own syntax, diagnostics, provenance,
    and the typed HIR. It must never own canonical Workshop catalog data, WIR, localization, or
    emitter logic. Workshop-facing names bind through one narrow provider trait (§12).
 3. **Compatibility matrix is machine-checkable** (`docs/support-matrix.toml`, §3). A test
@@ -62,7 +62,7 @@ dialect = "ostw"
 id = "syntax.rules"
 name = "syntax.rules"
 category = "syntax"                     # one of the fixed category set
-state = "frontend-supported"            # one of the fixed state set
+state = "source-supported"              # one of the fixed state set
 evidence = ["tests/corpus/parser/basic-rule.del"]       # paths relative to repo root; must exist
 notes = "rule: \"name\" with optional sort order, event line, if-conditions; see syntax-notes.md"
 
@@ -96,7 +96,7 @@ Rules:
 
 - `category` ∈ {`syntax`, `semantic`, `runtime-semantics`, `workshop-lowering`,
   `compiler-utility`, `decompiler`, `editor`, `project`}.
-- `state` ∈ {`planned`, `frontend-supported`, `semantic-supported`, `lowering-dependent`,
+- `state` ∈ {`planned`, `source-supported`, `semantic-supported`, `lowering-dependent`,
   `end-to-end-supported`, `out-of-scope`}.
 - `tests/matrix.rs` asserts: file parses; ids unique; every `category`/`state` is in the
   fixed sets; every `evidence` path exists relative to the repo root; every feature has at
@@ -105,8 +105,8 @@ Rules:
 - The same validation is exposed at runtime via `del_rs::matrix::load_and_validate()` and the
   `del-rs support --check` CLI command; the matrix is embedded with `include_str!` so the CLI
   works from any directory.
-- Current state: the frontend surface (`syntax`, `semantic`, `runtime-semantics`) is fully at
-  `frontend-supported`/`semantic-supported`; the remaining `planned` features are explicitly
+- Current state: the parsing, semantic, and runtime-semantics surface is fully at
+  `source-supported`/`semantic-supported`; the remaining `planned` features are explicitly
   classified tooling/utility/project items (`compiler-utility`, `decompiler`, `editor` are
   out-of-scope or planned; see `limitations.md`).
 
@@ -193,7 +193,7 @@ docs/                      # architecture.md (this file), support-matrix.toml, +
 ```
 
 One-sentence justifications: `span.rs` owns the single source-of-truth coordinate system;
-`syntax/` is the closed front end (text in, AST + tokens + diagnostics out); `project.rs`
+`syntax/` is the closed parser (text in, AST + tokens + diagnostics out); `project.rs`
 assembles multi-file programs; `semantic/` owns everything name/type related and the provider
 boundary; `hir/` owns the typed program plus the oracle; `matrix.rs` keeps the compatibility
 contract checkable in-process; `api.rs` is the thin stable surface for Wright and other
@@ -331,11 +331,11 @@ pub fn lex(file: FileId, text: &str) -> (Vec<Token>, Vec<Diagnostic>);
   `variables { }` / `subroutines { }` / `settings { }` blocks, the lexer switches to
   workshop-context tokenization (workshop identifiers/keywords and `Global.x`/`Player.x`
   member syntax) and produces opaque `VanillaToken` tokens. The parser stores these as raw
-  token spans; the front end does not interpret them (semantic/HIR handling of vanilla bodies
+  token spans; the parser does not interpret them (semantic/HIR handling of vanilla bodies
   is `planned`, adjacent to `workshop-lowering`).
 - Diagnostics carry `phase: Phase::Lex` and the token span; no `line:col` in messages.
 
-## 8. Recovery strategy for the whole front end
+## 8. Recovery strategy for the whole source pipeline
 
 One policy for parser, project loader, and semantic analysis:
 
@@ -653,7 +653,7 @@ pub fn parse(tokens: &[Token]) -> (AstFile, Vec<Diagnostic>);
 - **Vanilla superset** (inventory `syntax.vanilla-rule`, `syntax.hooks`, `syntax.vanilla-context`):
   `rule("name") { event/conditions/actions }` blocks, `variables { }` / `subroutines { }` /
   `settings { }` blocks, and hook statements (`expr = expr;`) parse into
-  `VanillaRuleDecl`/`StmtKind::Hook` with opaque workshop-context token spans. The front end
+  `VanillaRuleDecl`/`StmtKind::Hook` with opaque workshop-context token spans. The parser
   never interprets their contents; semantic/HIR treatment is `planned`
   (`workshop-lowering`-adjacent).
 - `disabled rule:` / `disabled if (cond)` parse into `RuleDecl.disabled` /
@@ -694,7 +694,7 @@ pub fn load_project(opts: ProjectOptions) -> Project;    // total; errors become
   fallback (PM decision Q3). `"!path"` imports resolve against the bundled Modules directory
   (`ImportKind::BundledModule` — resolution target is a corpus/inventory question, Q-4).
   `.json` (custom game settings) and `.lobby` imports are recorded with their kinds and skipped
-  by the front end (matrix: `workshop-lowering`/`compiler-utility`). `import "x" as name`
+  by the source implementation (matrix: `workshop-lowering`/`compiler-utility`). `import "x" as name`
   parses; the `as` binding is inert for source imports (PM decision Q4) and its `.json`
   variable-binding semantics are corpus-gated (`planned`).
 - **Cycle detection**: DFS with an in-progress stack; a back edge emits `PJ001` "import cycle:
@@ -719,7 +719,7 @@ pub fn load_project(opts: ProjectOptions) -> Project;    // total; errors become
 
 ## 12. External provider boundary
 
-The single seam through which Workshop-facing names enter the front end. del-rs owns the trait,
+The single seam through which Workshop-facing names enter the source implementation. del-rs owns the trait,
 the permissive default, and the source-language adapter; `CatalogProvider` reads canonical
 identities and metadata from the released registry `workshop-rs 0.1.1` catalog. No catalog data,
 enum tables, event tables, or builtin signatures are copied into del-rs. The provider exposes
@@ -998,7 +998,7 @@ pub fn resolve_call(
 - Event context → rule-level variable storage: `Global` when the rule has no event line or the
   provider reports `EventContext::Global`; `Player` for `EventContext::Player`. Unknown →
   `Global`, no diagnostic (permissive).
-- Storage classification is frontend-resolvable and lands on HIR `StorageIntent` (§15).
+- Storage classification is resolved from source and lands on HIR `StorageIntent` (§15).
 
 ### 13.9 Member access
 
@@ -1627,8 +1627,8 @@ aliases.
 
 ## 20. Implementation history
 
-The frontend was delivered by issues #2–#7 as a strict dependency-ordered stack, merged into
-`main` via PRs #10–#15. The milestone plan (M0 inventory/corpus → M1 frontend bootstrap → M2
+The parsing and semantic pipeline was delivered by issues #2–#7 as a strict dependency-ordered stack, merged into
+`main` via PRs #10–#15. The milestone plan (M0 inventory/corpus → M1 parser bootstrap → M2
 semantic core → M3 advanced semantics → M4 typed HIR → M5 completeness/APIs/CLI), the
 parallelization windows, the branch plan, and the per-issue validation gates are historical
 implementation metadata preserved in GitHub issue/PR history; they are not part of the
@@ -1653,7 +1653,7 @@ the relevant sections above already reflect them. Highlights:
 
 ## 22. Durable decision record
 
-This document is the decision record for the implemented frontend. D1–D6 (§2) are the
+This document is the decision record for the implemented pipeline. D1–D6 (§2) are the
 architecture-level decisions. The #34 provider contract (§12) now consumes the released
 `workshop-rs 0.1.1` catalog through public APIs; the DEL-owned HIR-to-WIR lowering adapter
 at the HIR boundary (§15) is del-rs #30 work, while the canonical WIR/catalog contract

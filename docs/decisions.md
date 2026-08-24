@@ -52,7 +52,7 @@ Where evidence is absent, the permissive/`planned` default applies and is marked
    directory; `import "x"` (no extension) is `PJ002` unless a file literally named `x`
    exists. **Correction to architecture.md §11**: drop the proposed "try `.del` then
    `.ostw`" fallback — it is not upstream behavior.
-   Matrix: `project.import-resolution` stays `planned` (flips `frontend-supported` at M1
+   Matrix: `project.import-resolution` stays `planned` (flips `source-supported` at M1
    with exact-path semantics).
 
 4. **`import "x" as name` and `!` imports — `as` inert for source imports; `!` = modules
@@ -143,7 +143,7 @@ Where evidence is absent, the permissive/`planned` default applies and is marked
     Decision: **default-applied** — parse the implements list and record it (architecture
     `TypeDecl.implements`); no interface semantics (satisfaction, multi-interface
     resolution) — matrix `planned`; no `interface` keyword anywhere.
-    Matrix: `syntax.inheritance` stays `planned` (flips `frontend-supported` at M1 with
+    Matrix: `syntax.inheritance` stays `planned` (flips `source-supported` at M1 with
     parse+ignore semantics).
 
 11. **Union types `T | U` — parsed; assignability/member semantics `planned`.**
