@@ -405,6 +405,25 @@ rule: "dynamic-switch" Event.OngoingGlobal {
         panic!("switch comparison must read the synthetic global temp")
     };
     assert_eq!(materialized, variable);
+    let helper = program.global_variables.get(*variable).unwrap();
+    assert_eq!(helper.name, "__del_runtime_switch_1");
+    assert_eq!(helper.span, helper.name_span);
+    assert_eq!(helper.span.unwrap().file.index(), 0);
+    let Some(workshop_rs::wir::Action::SetGlobalVariable {
+        span,
+        target_span,
+        ..
+    }) = program.actions.get(rule.actions[0])
+    else {
+        panic!("dynamic switch must initialize a synthetic global temp")
+    };
+    assert_eq!(*span, helper.span);
+    assert_eq!(*target_span, helper.span);
+    let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
+    let locale = workshop_rs::catalog::Locale::new("en-US");
+    let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
+    let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
+    assert!(workshop_rs::roundtrip::equivalent(&program, &reparsed));
 }
 
 #[test]
@@ -475,6 +494,32 @@ rule: "recursive-dynamic-switch" Event.OngoingGlobal {
                 && diagnostic
                     .message
                     .contains("recursive switch materialization requires a runtime stack")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn subroutine_dynamic_switch_fails_closed_without_a_bounded_invocation_context() {
+    let (program, diagnostics) = lower(
+        r#"
+void Dynamic() "dynamic" {
+    switch (Add(1, 2)) {
+        case 3: break;
+    }
+}
+rule: "calls-dynamic" Event.OngoingGlobal {
+    Dynamic();
+}
+"#,
+    );
+    assert!(program.rules.is_empty());
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("subroutine switch materialization requires a bounded invocation context")
         }),
         "{diagnostics:?}"
     );

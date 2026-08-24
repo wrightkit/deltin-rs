@@ -400,6 +400,7 @@ struct Lowerer<'a> {
     used_player_indices: HashSet<u32>,
     player_context: bool,
     recursive_context: bool,
+    subroutine_context: bool,
 }
 
 impl<'a> Lowerer<'a> {
@@ -426,6 +427,7 @@ impl<'a> Lowerer<'a> {
             used_player_indices: HashSet::new(),
             player_context: false,
             recursive_context: false,
+            subroutine_context: false,
         }
     }
 
@@ -684,18 +686,22 @@ impl<'a> Lowerer<'a> {
         };
         let previous_recursive_context = self.recursive_context;
         let previous_player_context = self.player_context;
+        let previous_subroutine_context = self.subroutine_context;
         self.player_context = false;
         self.recursive_context = func.is_recursive;
+        self.subroutine_context = true;
         let diagnostic_count = self.diagnostics.len();
         let actions = self.lower_actions(body);
         if self.has_new_errors(diagnostic_count) {
             self.player_context = previous_player_context;
             self.recursive_context = previous_recursive_context;
+            self.subroutine_context = previous_subroutine_context;
             return;
         }
         let Some(subroutine) = self.subroutines.get(&fid).copied() else {
             self.player_context = previous_player_context;
             self.recursive_context = previous_recursive_context;
+            self.subroutine_context = previous_subroutine_context;
             return;
         };
         self.out.rules.push(wir::Rule {
@@ -709,6 +715,7 @@ impl<'a> Lowerer<'a> {
         });
         self.player_context = previous_player_context;
         self.recursive_context = previous_recursive_context;
+        self.subroutine_context = previous_subroutine_context;
     }
 
     fn lower_event(&mut self, id: HirExprId) -> Option<wir::Event> {
@@ -1239,6 +1246,13 @@ impl<'a> Lowerer<'a> {
                 self.unsupported(
                     scrutinee_span,
                     "recursive switch materialization requires a runtime stack",
+                );
+                return Vec::new();
+            }
+            if self.subroutine_context {
+                self.unsupported(
+                    scrutinee_span,
+                    "subroutine switch materialization requires a bounded invocation context",
                 );
                 return Vec::new();
             }
