@@ -206,7 +206,7 @@ Evidence: `tests/corpus/projects/`, `Parse/Import/Importer.cs`, `wiki/ds.toml`.
 | `project.modules-resolution` | `!`-prefixed imports resolve to a configured modules directory (upstream: the compiler's bundled `Modules/`) | `Extras.cs` (`CombinePathWithDotNotation`); corpus `tests/corpus/projects/modules/PathfindEditor.del` |
 | `project.lobby-settings-import` | importing `customGameSettings.json` merges lobby settings | `wiki/Lobby-Settings`; corpus `tests/corpus/projects/pathfinding/customGameSettings.json` |
 | `project.pathmap-loading` | `new Pathmap("Map.pathmap")` loads pathmap data at compile time | corpus `tests/corpus/projects/pathfinding/Map.pathmap`; `wiki/Pathfinding` |
-| `project.ds-toml` | `ds.toml` project configuration file (see `compiler-utility.ds-toml`) | `wiki/ds.toml` |
+| `project.ds-toml` | `ds.toml` project configuration discovery; this slice loads `entry_point` and syntax-validates other keys without interpreting compiler options | `wiki/ds.toml`; corpus `tests/corpus/projects/ds-toml/`; negative `tests/corpus/projects/invalid-ds-toml/` |
 
 ---
 

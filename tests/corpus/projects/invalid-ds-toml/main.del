@@ -1,0 +1,6 @@
+// source: https://github.com/wrightkit/del-rs/tree/3f655195e50321ae2c381b55fca03c770fb1a71c/tests/corpus/projects/invalid-ds-toml
+// license: MIT
+// expect: unknown
+// evidence: semantic-contract
+// status: known-gap
+rule: "fallback is diagnosed" { }

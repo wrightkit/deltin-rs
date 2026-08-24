@@ -671,7 +671,7 @@ pub fn parse(tokens: &[Token]) -> (AstFile, Vec<Diagnostic>);
 pub struct ProjectOptions {
     pub root: PathBuf,
     pub entry: Option<PathBuf>,        // file or ds.toml entry_point; default: entry passed by caller
-    pub config: Option<ProjectConfig>, // parsed ds.toml (fields we own: entry_point; rest recorded, unused)
+    pub config: Option<ProjectConfig>, // optional caller-provided ds.toml projection; otherwise root/ds.toml is discovered
 }
 
 pub struct Project {
@@ -710,10 +710,12 @@ pub fn load_project(opts: ProjectOptions) -> Project;    // total; errors become
   this file here" is answerable.
 - Missing import target: `PJ002` (with the import span); loading continues with remaining
   imports; the missing file's name records no items.
-- `ds.toml`: parsed with `toml`; only `entry_point` affects loading. Every other key
-  (`out_file`, `global_reference_validation`, `track_class_generations`, `reset_nonpersistent`,
-  `c_style_workshop_output`, `optimize_output`, ...) is validated syntactically and recorded in
-  the matrix as `workshop-lowering`; del-rs never interprets them.
+- `ds.toml`: when the caller does not provide a config, `root/ds.toml` is discovered and parsed
+  with `toml`; only `entry_point` affects loading. Every other key (`out_file`,
+  `global_reference_validation`, `track_class_generations`, `reset_nonpersistent`,
+  `c_style_workshop_output`, `optimize_output`, ...) is validated syntactically and remains
+  outside the DEL project model; del-rs never interprets those compiler options. Malformed
+  configuration emits `PJ004` with a span in the `ds.toml` source entry.
 - What the project API returns (§17): sources, entry, deterministic file order, import
   provenance, project-level diagnostics — nothing else. Semantic/HIR layers consume `Project`.
 
