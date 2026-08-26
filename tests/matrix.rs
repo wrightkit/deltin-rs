@@ -1,6 +1,6 @@
 //! Support-matrix mechanical validation (CI gate for docs/support-matrix.toml).
 
-use del_rs::matrix::{load_and_validate, state_counts, State};
+use deltin_rs::matrix::{load_and_validate, state_counts, State};
 
 #[test]
 fn matrix_validates() {

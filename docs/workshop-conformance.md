@@ -1,12 +1,12 @@
 # Workshop conformance boundary
 
-`del-rs` owns DEL/OSTW source fixtures and source-language expectations. The
+`deltin-rs` owns DEL/OSTW source fixtures and source-language expectations. The
 canonical Workshop feature identities, Workshop census, client captures, and
 Workshop-observable expectations belong to `workshop-rs` (issue #10).
 
 ## Evidence report
 
-`del-rs maintainer compatibility --json` runs the source corpus and emits report
+`deltin-rs maintainer compatibility --json` runs the source corpus and emits report
 schema 1. The legacy top-level `compatibility` alias remains accepted for CI
 scripts.
 Each fixture has an independent evidence classification:
@@ -16,7 +16,7 @@ Each fixture has an independent evidence classification:
 | `pinned-oracle` | Expected source behavior is pinned to the OSTW/DeltinScript reference. |
 | `real-project` | The fixture is preserved from a complete project corpus. |
 | `semantic-contract` | The expectation is defined by a documented DEL/OSTW semantic contract. |
-| `internal-invariant` | The assertion is explicitly about a del-rs representation invariant, not upstream compatibility. |
+| `internal-invariant` | The assertion is explicitly about a deltin-rs representation invariant, not upstream compatibility. |
 
 For `pinned-oracle` cases, the report requires the `// source:` URL to point at
 the repository and commit recorded in the support matrix. For `real-project`
@@ -53,7 +53,7 @@ while the project test also checks the complete import graph as one project.
 
 When `workshop-rs#10` publishes canonical feature identities, an integration
 adapter may add those IDs to the source fixture metadata and carry them with
-the lowering result. Until then, `del-rs` records only source constructs and
+the lowering result. Until then, `deltin-rs` records only source constructs and
 the `workshop-lowering` matrix state. It must not invent or vendor a second
 Workshop catalog. End-to-end assertions will compare normalized Workshop
 semantics and report failures by the canonical IDs supplied by `workshop-rs`,

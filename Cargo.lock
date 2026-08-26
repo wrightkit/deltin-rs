@@ -142,7 +142,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "del-rs"
+name = "deltin-rs"
 version = "0.1.1"
 dependencies = [
  "clap",

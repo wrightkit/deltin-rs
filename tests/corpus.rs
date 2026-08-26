@@ -9,9 +9,9 @@
 //! `projects/` fixtures are exercised by dedicated project tests, not the
 //! generic walker.
 
-use del_rs::project::{load_project, ProjectOptions};
-use del_rs::syntax::parse_source;
-use del_rs::SourceMap;
+use deltin_rs::project::{load_project, ProjectOptions};
+use deltin_rs::syntax::parse_source;
+use deltin_rs::SourceMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -79,32 +79,32 @@ fn run_case(path: &Path, text: &str, expect: Expect) -> CaseResult {
     let mut hir_errors = 0usize;
     if parse_errors == 0 {
         let root = path.parent().unwrap().to_path_buf();
-        let project = del_rs::project::load_project(del_rs::project::ProjectOptions {
+        let project = deltin_rs::project::load_project(deltin_rs::project::ProjectOptions {
             root,
             entry: Some(path.to_path_buf()),
             config: None,
         });
         let mut all = project.diagnostics.clone();
         if !project.diagnostics.iter().any(|d| d.is_error()) {
-            let program = del_rs::semantic::check_project(
+            let program = deltin_rs::semantic::check_project(
                 &project,
-                &del_rs::semantic::provider::NoopProvider::new(),
+                &deltin_rs::semantic::provider::NoopProvider::new(),
             );
             all.extend(program.diagnostics.clone());
             semantic_errors = program.diagnostics.iter().filter(|d| d.is_error()).count();
             if semantic_errors == 0 {
-                let (hir, lower_diags) = del_rs::hir::lower::lower(&program);
+                let (hir, lower_diags) = deltin_rs::hir::lower::lower(&program);
                 all.extend(lower_diags);
-                all.extend(del_rs::hir::validate::validate(&hir));
+                all.extend(deltin_rs::hir::validate::validate(&hir));
             }
         }
         hir_errors = all
             .iter()
-            .filter(|d| d.is_error() && matches!(d.phase, del_rs::diagnostics::Phase::Hir))
+            .filter(|d| d.is_error() && matches!(d.phase, deltin_rs::diagnostics::Phase::Hir))
             .count();
         semantic_errors = all
             .iter()
-            .filter(|d| d.is_error() && matches!(d.phase, del_rs::diagnostics::Phase::Semantic))
+            .filter(|d| d.is_error() && matches!(d.phase, deltin_rs::diagnostics::Phase::Semantic))
             .count();
     }
 
@@ -233,9 +233,9 @@ fn project_fixtures_load() {
             project.files.len()
         );
 
-        let semantic = del_rs::semantic::check_project(
+        let semantic = deltin_rs::semantic::check_project(
             &project,
-            &del_rs::semantic::provider::NoopProvider::new(),
+            &deltin_rs::semantic::provider::NoopProvider::new(),
         );
         let semantic_errors: Vec<String> = semantic
             .diagnostics
@@ -249,9 +249,9 @@ fn project_fixtures_load() {
             semantic_errors.join("\n")
         );
 
-        let (hir, lower_diagnostics) = del_rs::hir::lower::lower(&semantic);
+        let (hir, lower_diagnostics) = deltin_rs::hir::lower::lower(&semantic);
         let mut hir_diagnostics = lower_diagnostics;
-        hir_diagnostics.extend(del_rs::hir::validate::validate(&hir));
+        hir_diagnostics.extend(deltin_rs::hir::validate::validate(&hir));
         let hir_errors: Vec<String> = hir_diagnostics
             .iter()
             .filter(|diagnostic| diagnostic.is_error())
@@ -273,7 +273,7 @@ fn project_fixtures_load() {
 #[test]
 fn compatibility_report_classifies_evidence_and_gaps() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let report = del_rs::compatibility::run(&root).expect("corpus evidence must be valid");
+    let report = deltin_rs::compatibility::run(&root).expect("corpus evidence must be valid");
     assert_eq!(report.summary.total, report.cases.len());
     assert!(report.summary.matched > 0);
     assert!(report.summary.known_gaps > 0);
@@ -283,7 +283,7 @@ fn compatibility_report_classifies_evidence_and_gaps() {
         report
             .cases
             .iter()
-            .filter(|case| case.status == del_rs::compatibility::FixtureStatus::KnownGap)
+            .filter(|case| case.status == deltin_rs::compatibility::FixtureStatus::KnownGap)
             .count()
     );
     assert_eq!(
@@ -291,17 +291,17 @@ fn compatibility_report_classifies_evidence_and_gaps() {
         report
             .cases
             .iter()
-            .filter(|case| case.status == del_rs::compatibility::FixtureStatus::Inconclusive)
+            .filter(|case| case.status == deltin_rs::compatibility::FixtureStatus::Inconclusive)
             .count()
     );
     assert_eq!(report.summary.unexpected_regressions, 0);
     let counted = report.cases.iter().fold([0usize; 5], |mut counts, case| {
         let index = match case.status {
-            del_rs::compatibility::FixtureStatus::Matched => 0,
-            del_rs::compatibility::FixtureStatus::KnownGap => 1,
-            del_rs::compatibility::FixtureStatus::Unsupported => 2,
-            del_rs::compatibility::FixtureStatus::UnexpectedRegression => 3,
-            del_rs::compatibility::FixtureStatus::Inconclusive => 4,
+            deltin_rs::compatibility::FixtureStatus::Matched => 0,
+            deltin_rs::compatibility::FixtureStatus::KnownGap => 1,
+            deltin_rs::compatibility::FixtureStatus::Unsupported => 2,
+            deltin_rs::compatibility::FixtureStatus::UnexpectedRegression => 3,
+            deltin_rs::compatibility::FixtureStatus::Inconclusive => 4,
         };
         counts[index] += 1;
         counts
@@ -317,18 +317,18 @@ fn compatibility_report_classifies_evidence_and_gaps() {
         ]
     );
     assert!(report.cases.iter().any(|case| {
-        case.fixture.evidence == del_rs::compatibility::EvidenceSource::PinnedOracle
+        case.fixture.evidence == deltin_rs::compatibility::EvidenceSource::PinnedOracle
     }));
     assert!(report.cases.iter().all(|case| {
-        case.fixture.evidence != del_rs::compatibility::EvidenceSource::RealProject
+        case.fixture.evidence != deltin_rs::compatibility::EvidenceSource::RealProject
             || !case
                 .fixture
                 .source
                 .contains("ItsDeltin/Overwatch-Script-To-Workshop")
     }));
     for case in &report.cases {
-        if case.fixture.expect == del_rs::compatibility::ExpectedOutcome::Unknown {
-            assert_ne!(case.status, del_rs::compatibility::FixtureStatus::Matched);
+        if case.fixture.expect == deltin_rs::compatibility::ExpectedOutcome::Unknown {
+            assert_ne!(case.status, deltin_rs::compatibility::FixtureStatus::Matched);
         }
     }
 }

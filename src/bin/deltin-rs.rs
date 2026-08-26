@@ -3,10 +3,10 @@ mod cli;
 
 use clap::{error::ErrorKind, Args, CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
-use del_rs::diagnostics::Severity;
-use del_rs::matrix;
-use del_rs::syntax::parse_source;
-use del_rs::{Diagnostic, SourceMap};
+use deltin_rs::diagnostics::Severity;
+use deltin_rs::matrix;
+use deltin_rs::syntax::parse_source;
+use deltin_rs::{Diagnostic, SourceMap};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -15,7 +15,7 @@ use std::process::ExitCode;
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "del-rs",
+    name = "deltin-rs",
     version,
     about = "Workshop-independent OSTW/DeltinScript implementation"
 )]
@@ -136,7 +136,7 @@ fn main() -> ExitCode {
 
     if cli.command.is_none() {
         if let Err(error) = print_help() {
-            eprintln!("del-rs: internal error: {error}");
+            eprintln!("deltin-rs: internal error: {error}");
             return ExitCode::from(3);
         }
         return ExitCode::SUCCESS;
@@ -145,19 +145,19 @@ fn main() -> ExitCode {
     match std::panic::catch_unwind(|| execute(cli)) {
         Ok(Ok(code)) => ExitCode::from(code),
         Ok(Err(CliError::Usage(message))) => {
-            eprintln!("del-rs: {message}");
+            eprintln!("deltin-rs: {message}");
             ExitCode::from(2)
         }
         Ok(Err(CliError::Input(message))) => {
-            eprintln!("del-rs: {message}");
+            eprintln!("deltin-rs: {message}");
             ExitCode::from(4)
         }
         Ok(Err(CliError::Internal(message))) => {
-            eprintln!("del-rs: internal error: {message}");
+            eprintln!("deltin-rs: internal error: {message}");
             ExitCode::from(3)
         }
         Err(_) => {
-            eprintln!("del-rs: internal error: unexpected panic");
+            eprintln!("deltin-rs: internal error: unexpected panic");
             ExitCode::from(3)
         }
     }
@@ -247,7 +247,7 @@ fn parse_position(position: &str) -> Result<(u32, u32), CliError> {
 
 fn position_offset(
     sources: &SourceMap,
-    file: del_rs::FileId,
+    file: deltin_rs::FileId,
     line: u32,
     col: u32,
 ) -> Result<u32, CliError> {
@@ -291,8 +291,8 @@ fn position_offset(
     )))
 }
 
-fn check_path_for_cli(path: &std::path::Path, json: bool) -> del_rs::api::CheckReport {
-    let run = || del_rs::api::check_path(path, &del_rs::semantic::provider::NoopProvider::new());
+fn check_path_for_cli(path: &std::path::Path, json: bool) -> deltin_rs::api::CheckReport {
+    let run = || deltin_rs::api::check_path(path, &deltin_rs::semantic::provider::NoopProvider::new());
     if json {
         without_debug_output(run)
     } else {
@@ -433,9 +433,9 @@ fn cmd_inspect(args: InspectArgs) -> CliResult {
         return Ok(4);
     };
     let fid = file.id;
-    let symbol = del_rs::api::symbol_at(&report.semantic, fid, offset);
-    let ty = del_rs::api::type_at(&report.semantic, fid, offset);
-    let resolution = del_rs::api::resolution_at(&report.semantic, fid, offset);
+    let symbol = deltin_rs::api::symbol_at(&report.semantic, fid, offset);
+    let ty = deltin_rs::api::type_at(&report.semantic, fid, offset);
+    let resolution = deltin_rs::api::resolution_at(&report.semantic, fid, offset);
     let errors = error_count(&report.diagnostics);
     let json = serde_json::json!({
         "command": "inspect",
@@ -514,7 +514,7 @@ fn cmd_support(args: SupportArgs, legacy: bool) -> CliResult {
             } else {
                 renderer
                     .emit_summary(&format!(
-                        "del-rs support matrix (upstream pin: {})",
+                        "deltin-rs support matrix (upstream pin: {})",
                         matrix.meta.upstream_pin
                     ))
                     .map_err(internal_error)?;
@@ -550,7 +550,7 @@ fn cmd_support(args: SupportArgs, legacy: bool) -> CliResult {
 
 fn cmd_compatibility(output: cli::OutputArgs) -> CliResult {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    match del_rs::compatibility::run(root) {
+    match deltin_rs::compatibility::run(root) {
         Ok(report) => {
             if output.json {
                 return emit_json(serde_json::to_value(&report).map_err(internal_error)?)
@@ -570,7 +570,7 @@ fn cmd_compatibility(output: cli::OutputArgs) -> CliResult {
                 ))
                 .map_err(internal_error)?;
             for case in &report.cases {
-                if case.status != del_rs::compatibility::FixtureStatus::Matched {
+                if case.status != deltin_rs::compatibility::FixtureStatus::Matched {
                     renderer
                         .emit_text(&format!("  {:?}: {}", case.status, case.fixture.path))
                         .map_err(internal_error)?;
@@ -605,7 +605,7 @@ fn cmd_compatibility(output: cli::OutputArgs) -> CliResult {
 fn cmd_completion(args: CompletionArgs) -> CliResult {
     let mut command = Cli::command();
     let mut stdout = io::stdout().lock();
-    clap_complete::generate(args.shell, &mut command, "del-rs", &mut stdout);
+    clap_complete::generate(args.shell, &mut command, "deltin-rs", &mut stdout);
     stdout.flush().map_err(internal_error)?;
     Ok(0)
 }

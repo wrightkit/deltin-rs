@@ -4,8 +4,8 @@ use serde_json::Value;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
-fn del_rs_bin() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_del-rs"))
+fn deltin_rs_bin() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_deltin-rs"))
 }
 
 fn sample() -> PathBuf {
@@ -21,7 +21,7 @@ fn missing_sample() -> PathBuf {
 }
 
 fn run(args: &[&str]) -> Output {
-    del_rs_bin().args(args).output().unwrap()
+    deltin_rs_bin().args(args).output().unwrap()
 }
 
 fn json(stdout: &[u8]) -> Value {
@@ -83,7 +83,7 @@ fn check_json_stdout_is_pure_and_schema_is_preserved() {
 fn del_debug_does_not_pollute_machine_json_stderr() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/corpus/projects/modules/Debug Camera.del");
-    let out = del_rs_bin()
+    let out = deltin_rs_bin()
         .args(["check", "--json", path.to_str().unwrap()])
         .env("DEL_DEBUG", "1")
         .output()
@@ -152,7 +152,7 @@ fn inspect_rejects_zero_negative_and_out_of_range_positions() {
             String::from_utf8_lossy(&out.stderr)
         );
         let stderr = String::from_utf8_lossy(&out.stderr);
-        assert!(stderr.contains("del-rs:"));
+        assert!(stderr.contains("deltin-rs:"));
         assert!(!stderr.to_ascii_lowercase().contains("panicked"));
         assert!(out.stdout.is_empty());
     }
@@ -254,7 +254,7 @@ fn github_actions_annotations_escape_source_properties_and_write_summary() {
     let summary = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join(format!("target/cli-summary-{}.md", std::process::id()));
     let _ = std::fs::remove_file(&summary);
-    let out = del_rs_bin()
+    let out = deltin_rs_bin()
         .args([
             "check",
             invalid_sample().to_str().unwrap(),
@@ -271,13 +271,13 @@ fn github_actions_annotations_escape_source_properties_and_write_summary() {
     assert!(stderr.contains("%2C"), "stderr: {stderr}");
     assert!(std::fs::read_to_string(&summary)
         .unwrap()
-        .contains("### del-rs"));
+        .contains("### deltin-rs"));
     std::fs::remove_file(summary).unwrap();
 }
 
 #[test]
 fn explicit_plain_presentation_isolated_from_github_environment() {
-    let out = del_rs_bin()
+    let out = deltin_rs_bin()
         .args([
             "check",
             invalid_sample().to_str().unwrap(),
@@ -295,7 +295,7 @@ fn explicit_plain_presentation_isolated_from_github_environment() {
 
 #[test]
 fn no_color_is_honored_unless_color_is_explicitly_forced() {
-    let automatic = del_rs_bin()
+    let automatic = deltin_rs_bin()
         .args([
             "check",
             invalid_sample().to_str().unwrap(),
@@ -309,7 +309,7 @@ fn no_color_is_honored_unless_color_is_explicitly_forced() {
         .unwrap();
     assert!(!String::from_utf8_lossy(&automatic.stderr).contains("\x1b["));
 
-    let forced = del_rs_bin()
+    let forced = deltin_rs_bin()
         .args([
             "check",
             invalid_sample().to_str().unwrap(),
@@ -326,7 +326,7 @@ fn no_color_is_honored_unless_color_is_explicitly_forced() {
 
 #[test]
 fn machine_json_overrides_workflow_presentation() {
-    let out = del_rs_bin()
+    let out = deltin_rs_bin()
         .args([
             "check",
             "--json",

@@ -1,6 +1,6 @@
 # Release automation
 
-`release-plz` maintains the release PR, publishes `del-rs` to crates.io, and
+`release-plz` maintains the release PR, publishes `deltin-rs` to crates.io, and
 creates the canonical `vX.Y.Z` tag.
 
 The release PR updates the package version and generated changelog. Merging
@@ -8,7 +8,7 @@ that PR into `main` runs `release-plz release`; pull-request heads do not
 publish packages.
 
 The protected GitHub Actions `release` environment must provide
-`CARGO_REGISTRY_TOKEN`, able to publish `del-rs`. The repository Actions secrets
+`CARGO_REGISTRY_TOKEN`, able to publish `deltin-rs`. The repository Actions secrets
 must provide `GH_TOKEN`, a fine-grained token with repository Contents and
 pull-request read/write access for release PR and tag operations. Credentials
 must never be committed.

@@ -2,15 +2,15 @@
 //! conversions, calls, defaults, named args, overloads, constants, rules,
 //! provider boundary, and diagnostics provenance.
 
-use del_rs::project::{load_project, ProjectOptions};
-use del_rs::semantic::check_project;
-use del_rs::semantic::provider::NoopProvider;
+use deltin_rs::project::{load_project, ProjectOptions};
+use deltin_rs::semantic::check_project;
+use deltin_rs::semantic::provider::NoopProvider;
 use std::path::PathBuf;
 
-fn check(text: &str) -> (Vec<del_rs::Diagnostic>, del_rs::semantic::SemanticProgram) {
+fn check(text: &str) -> (Vec<deltin_rs::Diagnostic>, deltin_rs::semantic::SemanticProgram) {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("del-rs-semantic-{}-{n}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("deltin-rs-semantic-{}-{n}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("t.del");
     std::fs::write(&file, text).unwrap();
@@ -24,7 +24,7 @@ fn check(text: &str) -> (Vec<del_rs::Diagnostic>, del_rs::semantic::SemanticProg
     (errs, program)
 }
 
-fn codes(diags: &[del_rs::Diagnostic]) -> Vec<String> {
+fn codes(diags: &[deltin_rs::Diagnostic]) -> Vec<String> {
     diags
         .iter()
         .filter(|d| d.is_error())
@@ -32,7 +32,7 @@ fn codes(diags: &[del_rs::Diagnostic]) -> Vec<String> {
         .collect()
 }
 
-fn has_code(diags: &[del_rs::Diagnostic], code: &str) -> bool {
+fn has_code(diags: &[deltin_rs::Diagnostic], code: &str) -> bool {
     codes(diags).iter().any(|c| c == code)
 }
 
@@ -48,7 +48,7 @@ fn basic_program_resolves() {
         .iter()
         .find(|s| s.name == "x")
         .expect("x declared");
-    assert_eq!(x.ty, del_rs::semantic::types::Type::Number);
+    assert_eq!(x.ty, deltin_rs::semantic::types::Type::Number);
     assert!(!program.types.is_empty(), "expression types recorded");
     assert!(!program.resolution.is_empty(), "resolutions recorded");
 }
@@ -148,14 +148,14 @@ fn diagnostics_have_provenance() {
     assert!(!diags.is_empty());
     assert!(has_code(&diags, "SM004"));
     for d in &diags {
-        assert_eq!(d.phase, del_rs::diagnostics::Phase::Semantic);
+        assert_eq!(d.phase, deltin_rs::diagnostics::Phase::Semantic);
         assert!(d.primary.start < d.primary.end || d.primary.start == d.primary.end);
     }
 }
 
 #[test]
 fn provider_definite_error_sm049() {
-    use del_rs::semantic::provider::*;
+    use deltin_rs::semantic::provider::*;
     struct Strict;
     impl WorkshopProvider for Strict {
         fn resolve(&self, query: &NameQuery) -> ExternalResolution {
@@ -166,7 +166,7 @@ fn provider_definite_error_sm049() {
             }
         }
     }
-    let dir = std::env::temp_dir().join(format!("del-rs-semantic-prov-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("deltin-rs-semantic-prov-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("t.del");
     std::fs::write(&file, "rule: \"\" {\n    define x = BadValue;\n}\n").unwrap();
@@ -181,7 +181,7 @@ fn provider_definite_error_sm049() {
 
 #[test]
 fn cross_file_resolution() {
-    let dir = std::env::temp_dir().join(format!("del-rs-semantic-multi-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("deltin-rs-semantic-multi-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("lib.del"), "globalvar Number shared = 7;\n").unwrap();
     std::fs::write(

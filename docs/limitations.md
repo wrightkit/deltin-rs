@@ -1,23 +1,23 @@
-# del-rs limitations and support boundary
+# deltin-rs limitations and support boundary
 
 Status: **evergreen** · Owner: Architecture. This document states the current
-support boundary of the `del-rs` language implementation: what is deliberately not
+support boundary of the `deltin-rs` language implementation: what is deliberately not
 implemented, and why. The authoritative declared surface is
 [`support-matrix.toml`](support-matrix.toml); state meanings are defined in
 [`compatibility.md`](compatibility.md). Capabilities are classified as
-**lowering-dependent** (concrete Workshop encoding is del-rs #30 work; the
+**lowering-dependent** (concrete Workshop encoding is deltin-rs #30 work; the
 canonical WIR/catalog contract remains owned by `workshop-rs`) or
 **intentionally unsupported** (editor-only or outside the language contract),
 plus a short list of evidence-backed approximation areas.
 
-## Lowering-dependent (del-rs #30 / workshop-rs canonical contract boundary)
+## Lowering-dependent (deltin-rs #30 / workshop-rs canonical contract boundary)
 
-- Concrete Workshop emission (del-rs #30): actions, values, events, variable slots,
+- Concrete Workshop emission (deltin-rs #30): actions, values, events, variable slots,
   helper rules, dispatch tables, recursion stacks, reference layouts,
   optimizer choices. The typed HIR expresses intent only
   (`architecture.md` §15).
 - Canonical Workshop catalog data (actions/values/events/constants):
-  `del-rs` never vendors it; `CatalogProvider` reads the released
+  `deltin-rs` never vendors it; `CatalogProvider` reads the released
   `workshop-rs` catalog through the documented `WorkshopProvider` seam.
   `NoopProvider` remains available for Workshop-independent workflows.
 - Vanilla Workshop superset bodies (`rule("...")`, `variables {}`,
@@ -26,7 +26,7 @@ plus a short list of evidence-backed approximation areas.
 - Lobby-settings / custom-game-settings imports (`.json`, `.lobby`):
   recorded with provenance, not interpreted.
 - `ds.toml`: root-project discovery loads `entry_point`; all other keys are
-  validated syntactically but never interpreted by del-rs.
+  validated syntactically but never interpreted by deltin-rs.
 - Decompiler, optimizer, emulator, pathfinding tooling: inventory entries,
   not implemented (matrix `compiler-utility` / `decompiler`).
 - `foreach` is a DEL-owned lowering/runtime strategy. The bounded #31 slice
@@ -83,7 +83,7 @@ plus a short list of evidence-backed approximation areas.
 
 ## Known approximation areas (evidence-backed)
 
-- Unknown-type rejection: upstream rejects undeclared type names; del-rs
+- Unknown-type rejection: upstream rejects undeclared type names; deltin-rs
   treats them as external by the provider contract. Two corpus fixtures were
   reclassified `unknown` with rationale (`struct-ref-inline-*`).
 - Struct literal `{0}` single-value form: modeled as a single-value struct
@@ -101,7 +101,7 @@ plus a short list of evidence-backed approximation areas.
   `tests/corpus/`, asserts each fixture's `// expect:` outcome, and fails on
   missing `// source:`/`// license:` provenance headers. This is the standing
   accept/reject record.
-- `tests/matrix.rs` and `del-rs support --check` mechanically validate
+- `tests/matrix.rs` and `deltin-rs support --check` mechanically validate
   `support-matrix.toml` (schema, ids, states, evidence paths, rationale
   notes) on every CI run.
 - Differential comparison against a pinned upstream build is the defined

@@ -1,8 +1,8 @@
-use del_rs::semantic::provider::{
+use deltin_rs::semantic::provider::{
     CatalogProvider, EventContext, ExternalBinding, ExternalCategory, ExternalPosition,
     ExternalResolution, NameQuery, WorkshopProvider,
 };
-use del_rs::{FileId, Span};
+use deltin_rs::{FileId, Span};
 
 fn query(namespace: &[&str], name: &str, position: ExternalPosition, arity: usize) -> NameQuery {
     NameQuery {

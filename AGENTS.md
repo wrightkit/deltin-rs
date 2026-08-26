@@ -4,9 +4,9 @@ This repository is part of the **WrightKit** multi-repository workspace. Apply
 the workspace-level `AGENTS.md` first, then this repository's local ownership,
 architecture, validation, and delivery rules.
 
-`del-rs` is WrightKit's standalone Rust implementation of the DeltinScript /
+`deltin-rs` is WrightKit's standalone Rust implementation of the DeltinScript /
 OSTW language surface. It is not an internal Wright language repository. Wright
-is a downstream tooling consumer that may integrate `del-rs` through native APIs
+is a downstream tooling consumer that may integrate `deltin-rs` through native APIs
 or LPP.
 
 Parsing, project loading, semantic/type analysis, HIR, and compiler lowering
@@ -16,7 +16,7 @@ identity as an independent DEL/OSTW implementation.
 
 ## Ownership boundary
 
-`del-rs` owns:
+`deltin-rs` owns:
 
 - DEL/OSTW syntax, parsing, project loading/imports, source model, and trivia;
 - semantic/type resolution, diagnostics, provenance, and typed HIR;
@@ -33,7 +33,7 @@ identity as an independent DEL/OSTW implementation.
 The durable dependency direction is:
 
 ```text
-del-rs → workshop-rs
+deltin-rs → workshop-rs
 ```
 
 Do not copy canonical Workshop data, WIR, emitter, settings, or localization into
@@ -58,7 +58,7 @@ for implementation details.
 Prioritize real project usability over architecture polish. When a real
 DEL/OSTW project exposes a blocker:
 
-1. reproduce it with standalone `del-rs` tooling;
+1. reproduce it with standalone `deltin-rs` tooling;
 2. fix DEL/OSTW-owned behavior here;
 3. route genuine canonical Workshop gaps to `workshop-rs`;
 4. retain full-project evidence and add a minimized regression where practical;

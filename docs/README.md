@@ -1,7 +1,7 @@
-# del-rs Documentation
+# deltin-rs Documentation
 
-This directory is the durable documentation surface for `del-rs`. The root
-[`README.md`](../README.md) is the user-facing overview. `del-rs` is a
+This directory is the durable documentation surface for `deltin-rs`. The root
+[`README.md`](../README.md) is the user-facing overview. `deltin-rs` is a
 standalone DEL/OSTW implementation. Documents describe parsing, project loading,
 semantic analysis, HIR, tooling, and lowering directly; these capabilities are
 not a separate product identity.
@@ -40,7 +40,7 @@ implementation-role.md       repository identity and Wright/workshop-rs relation
   between Workshop-independent semantic support and end-to-end Workshop
   support.
 - [`support-matrix.toml`](support-matrix.toml) — machine-readable declared
-  support surface, validated by tests and `del-rs support --check`. This is the
+  support surface, validated by tests and `deltin-rs support --check`. This is the
   source of truth for current feature states.
 - [`inventory.md`](inventory.md) — declared language/compiler surface with
   per-feature evidence.

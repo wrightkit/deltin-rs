@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use del_rs::{FileId, SourceBridgeError, SourceMap, Span, WorkshopSourceBridge};
+use deltin_rs::{FileId, SourceBridgeError, SourceMap, Span, WorkshopSourceBridge};
 use workshop_rs::source::{Position, SourceFile};
 
 #[test]
