@@ -1,0 +1,15 @@
+[workspace]
+changelog_update = true
+dependencies_update = true
+git_release_enable = false
+git_tag_enable = false
+pr_labels = ["release"]
+publish_timeout = "10m"
+release_always = false
+semver_check = false
+
+[[package]]
+name = "del-rs"
+version_group = "del-rs"
+git_tag_enable = true
+git_tag_name = "v{{ version }}"
