@@ -1,7 +1,7 @@
-# del-rs Compatibility Contract
+# deltin-rs Compatibility Contract
 
 Status: **living reference** · Owner: Architecture. This document is the
-human-readable compatibility contract for the `del-rs` parsing and semantic pipeline. The
+human-readable compatibility contract for the `deltin-rs` parsing and semantic pipeline. The
 machine-readable declared surface is
 [`support-matrix.toml`](support-matrix.toml); every claim here is derived from
 that matrix and from the corpus evidence it references.
@@ -49,9 +49,9 @@ exactly one state, defined as follows:
 | `planned` | Inventoried and evidenced upstream, but not yet implemented; not claimed as supported. |
 | `source-supported` | Lexed/parsed into documented AST structures with stable spans; no semantic claims. |
 | `semantic-supported` | Resolved, type-checked, and diagnosed by the semantic model / HIR; no Workshop emission required. |
-| `lowering-dependent` | Requires concrete Workshop encoding owned by del-rs #30; the canonical WIR, catalog, and emission contracts remain owned by `workshop-rs`, while typed HIR carries intent only. |
+| `lowering-dependent` | Requires concrete Workshop encoding owned by deltin-rs #30; the canonical WIR, catalog, and emission contracts remain owned by `workshop-rs`, while typed HIR carries intent only. |
 | `end-to-end-supported` | Fully supported through Workshop emission; currently unused (no end-to-end path exists in this crate). |
-| `out-of-scope` | Deliberately outside the `del-rs` language contract (e.g. editor behavior). |
+| `out-of-scope` | Deliberately outside the `deltin-rs` language contract (e.g. editor behavior). |
 
 Categories: `syntax`, `semantic`, `runtime-semantics`, `workshop-lowering`,
 `compiler-utility`, `decompiler`, `editor`, `project`.
@@ -63,7 +63,7 @@ its per-entry evidence are the source of truth.
 
 ## Workshop-independent parsing and semantic analysis vs. end-to-end compilation
 
-`del-rs` supports Workshop-independent parsing and semantic analysis:
+`deltin-rs` supports Workshop-independent parsing and semantic analysis:
 
 - the full syntax, semantic, and runtime-semantics surface parses, resolves,
   type-checks, and lowers to typed HIR with provenance;
@@ -78,7 +78,7 @@ its per-entry evidence are the source of truth.
 End-to-end Workshop compilation (`DEL/OSTW -> Workshop text`) is
 **`lowering-dependent`**: the concrete encoding (variable slots, helper
 rules, dispatch tables, recursion stacks, reference layouts, emitter) is
-del-rs #30 work. It consumes typed HIR across the documented boundary; the
+deltin-rs #30 work. It consumes typed HIR across the documented boundary; the
 canonical WIR, catalog, and emission contracts remain owned by `workshop-rs`.
 Decompilation (`Workshop -> DEL/OSTW`) is `planned` (issue #9).
 
@@ -96,16 +96,16 @@ the pinned upstream compiler.
 - **Accept/reject agreement.** The primary compatibility record is
   accept/reject and diagnostic-presence agreement per fixture, expressed as
   `// expect:` outcomes — never output-text identity.
-- **Differential comparison.** Comparing del-rs against a pinned upstream
+- **Differential comparison.** Comparing deltin-rs against a pinned upstream
   build is the defined gap-discovery methodology for matrix entries; it is
   gated on the availability of a pinned upstream build and is not a CI merge
   gate. Divergences are tracked against the matrix entries they affect.
 - **Matrix validation.** `tests/matrix.rs` (CI gate) and the
-  `del-rs support --check` command validate `support-matrix.toml`: schema,
+  `deltin-rs support --check` command validate `support-matrix.toml`: schema,
   unique ids, fixed category/state sets, existing evidence paths, and a
   rationale note on every `lowering-dependent`/`out-of-scope` entry.
 - **Evidence report.** `tests/corpus.rs` and
-  `del-rs maintainer compatibility --json`
+  `deltin-rs maintainer compatibility --json`
   classify each source case by independent evidence and separate matched
   behavior, known gaps, unsupported cases, unexpected regressions, and
   inconclusive evidence. Unknown expectations require an explicit non-passing
@@ -127,7 +127,7 @@ recorded in [`provenance.md`](provenance.md):
 - upstream fixtures are imported under the MIT license with attribution
   headers; re-pinning is a deliberate compatibility-contract decision owned
   by the architect/PM;
-- the `docs/` analysis is original del-rs work quoting small upstream
+- the `docs/` analysis is original deltin-rs work quoting small upstream
   examples for evidence.
 
 ## Related documents

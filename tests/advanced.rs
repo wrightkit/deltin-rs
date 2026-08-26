@@ -1,15 +1,15 @@
 //! Advanced-semantics integration tests (issue #5): classes, inheritance,
 //! generics, lambdas, patterns, recursion — positive and negative cases.
 
-use del_rs::project::{load_project, ProjectOptions};
-use del_rs::semantic::check_project;
-use del_rs::semantic::provider::NoopProvider;
+use deltin_rs::project::{load_project, ProjectOptions};
+use deltin_rs::semantic::check_project;
+use deltin_rs::semantic::provider::NoopProvider;
 use std::path::PathBuf;
 
-fn check(text: &str) -> Vec<del_rs::Diagnostic> {
+fn check(text: &str) -> Vec<deltin_rs::Diagnostic> {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("del-rs-advanced-{}-{n}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("deltin-rs-advanced-{}-{n}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("t.del");
     std::fs::write(&file, text).unwrap();
@@ -21,7 +21,7 @@ fn check(text: &str) -> Vec<del_rs::Diagnostic> {
     check_project(&p, &NoopProvider::new()).diagnostics
 }
 
-fn codes(diags: &[del_rs::Diagnostic]) -> Vec<String> {
+fn codes(diags: &[deltin_rs::Diagnostic]) -> Vec<String> {
     diags
         .iter()
         .filter(|d| d.is_error())
@@ -29,7 +29,7 @@ fn codes(diags: &[del_rs::Diagnostic]) -> Vec<String> {
         .collect()
 }
 
-fn has_code(diags: &[del_rs::Diagnostic], code: &str) -> bool {
+fn has_code(diags: &[deltin_rs::Diagnostic], code: &str) -> bool {
     codes(diags).iter().any(|c| c == code)
 }
 

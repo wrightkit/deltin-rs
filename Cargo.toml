@@ -1,11 +1,11 @@
 [package]
-name = "del-rs"
+name = "deltin-rs"
 version = "0.1.1"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 description = "Workshop-independent OSTW/DeltinScript implementation: lexer, recoverable parser, project model, semantic analysis, typed HIR, and tooling APIs"
-repository = "https://github.com/wrightkit/del-rs"
+repository = "https://github.com/wrightkit/deltin-rs"
 exclude = ["tests/fixtures/cli,source:case.del"]
 
 [dependencies]
@@ -17,8 +17,8 @@ toml = "1.1"
 workshop-rs = "=0.1.9"
 
 [[bin]]
-name = "del-rs"
-path = "src/bin/del-rs.rs"
+name = "deltin-rs"
+path = "src/bin/deltin-rs.rs"
 
 [profile.release]
 lto = true

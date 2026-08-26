@@ -1,6 +1,6 @@
 # Provenance
 
-This file records the pinned upstream references that define what `del-rs` means by
+This file records the pinned upstream references that define what `deltin-rs` means by
 OSTW/DeltinScript compatibility, and the licensing guardrails for the compatibility corpus.
 
 ## Pinned references
@@ -47,7 +47,7 @@ No other upstream clone failures. Both clones succeeded; commit SHAs above were 
   for the corpus conventions).
 - `tests/corpus/projects/*/*.json` and `*.pathmap` have no comment syntax; their provenance is
   recorded in the per-project `.manifest.md` files.
-- The `docs/` files themselves are original del-rs analysis and are not copied upstream content,
+- The `docs/` files themselves are original deltin-rs analysis and are not copied upstream content,
   but they quote small upstream examples for evidence. Quotes retain their `path@commit`
   references.
 - Do not import additional upstream files into the corpus without updating this file and the

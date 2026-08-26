@@ -1,6 +1,6 @@
-# del-rs CLI contract
+# deltin-rs CLI contract
 
-Status: **living reference** · Owner: `del-rs` CLI. This document records the
+Status: **living reference** · Owner: `deltin-rs` CLI. This document records the
 task-oriented command rebaseline and the CLI-local presentation boundary. The
 library diagnostics, semantic APIs, HIR, and evidence schemas remain owned by
 their existing modules and contracts.
@@ -30,10 +30,10 @@ to Workshop; that remains outside this CLI contract.
 
 | Existing invocation | Preferred invocation | Compatibility |
 | --- | --- | --- |
-| `del-rs parse FILE` | `del-rs dev parse FILE` | Existing top-level form remains accepted. |
-| `del-rs hir PATH` | `del-rs dev hir PATH` | Existing top-level form remains accepted. |
-| `del-rs matrix` | `del-rs support` | Existing top-level form remains accepted; JSON keeps `command: "matrix"`. |
-| `del-rs compatibility` | `del-rs maintainer compatibility` | Existing top-level form remains accepted and keeps report schema 1. |
+| `deltin-rs parse FILE` | `deltin-rs dev parse FILE` | Existing top-level form remains accepted. |
+| `deltin-rs hir PATH` | `deltin-rs dev hir PATH` | Existing top-level form remains accepted. |
+| `deltin-rs matrix` | `deltin-rs support` | Existing top-level form remains accepted; JSON keeps `command: "matrix"`. |
+| `deltin-rs compatibility` | `deltin-rs maintainer compatibility` | Existing top-level form remains accepted and keeps report schema 1. |
 
 `check` and `inspect` keep their existing names. `inspect` is deliberately a
 best-effort query: it propagates parser and semantic diagnostics in human output and in a
@@ -92,10 +92,10 @@ Completion is generated from the same structured `clap` command model used for
 parsing and help. It is static output, not a dynamic shell completion protocol:
 
 ```sh
-del-rs completion bash > del-rs.bash
-del-rs completion zsh > _del-rs
-del-rs completion fish > del-rs.fish
-del-rs completion powershell > del-rs.ps1
+deltin-rs completion bash > deltin-rs.bash
+deltin-rs completion zsh > _deltin-rs
+deltin-rs completion fish > deltin-rs.fish
+deltin-rs completion powershell > deltin-rs.ps1
 ```
 
 The generated scripts include the documented stable commands and the accepted

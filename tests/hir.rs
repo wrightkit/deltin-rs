@@ -1,17 +1,17 @@
 //! HIR lowering + validation + oracle tests (issue #6).
 
-use del_rs::hir::lower::lower;
-use del_rs::hir::oracle::{run_oracle, OracleEntry, OracleOptions, OracleValue};
-use del_rs::hir::validate::validate;
-use del_rs::project::{load_project, ProjectOptions};
-use del_rs::semantic::check_project;
-use del_rs::semantic::provider::NoopProvider;
+use deltin_rs::hir::lower::lower;
+use deltin_rs::hir::oracle::{run_oracle, OracleEntry, OracleOptions, OracleValue};
+use deltin_rs::hir::validate::validate;
+use deltin_rs::project::{load_project, ProjectOptions};
+use deltin_rs::semantic::check_project;
+use deltin_rs::semantic::provider::NoopProvider;
 use std::path::PathBuf;
 
-fn pipeline(text: &str) -> (del_rs::hir::HirProgram, Vec<del_rs::Diagnostic>) {
+fn pipeline(text: &str) -> (deltin_rs::hir::HirProgram, Vec<deltin_rs::Diagnostic>) {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("del-rs-hir-{}-{n}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("deltin-rs-hir-{}-{n}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("t.del");
     std::fs::write(&file, text).unwrap();
@@ -27,11 +27,11 @@ fn pipeline(text: &str) -> (del_rs::hir::HirProgram, Vec<del_rs::Diagnostic>) {
     (hir, all)
 }
 
-fn find_func(hir: &del_rs::hir::HirProgram, name: &str) -> del_rs::hir::HirFuncId {
+fn find_func(hir: &deltin_rs::hir::HirProgram, name: &str) -> deltin_rs::hir::HirFuncId {
     hir.funcs
         .iter()
         .position(|f| f.name == name)
-        .expect("function exists") as del_rs::hir::HirFuncId
+        .expect("function exists") as deltin_rs::hir::HirFuncId
 }
 
 #[test]
@@ -187,7 +187,7 @@ fn oracle_loop_limit() {
     );
     assert!(matches!(
         result.error,
-        Some(del_rs::hir::oracle::OracleError::LoopLimit { .. })
+        Some(deltin_rs::hir::oracle::OracleError::LoopLimit { .. })
     ));
 }
 

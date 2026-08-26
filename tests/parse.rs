@@ -1,13 +1,13 @@
 //! Lexer/parser integration tests: token correctness, recovery, trivia,
 //! provenance spans, and representative syntax from the corpus.
 
-use del_rs::syntax::ast::{ExprKind, ItemKind, StmtKind};
-use del_rs::syntax::lexer;
-use del_rs::syntax::parser;
-use del_rs::{SourceMap, Span};
+use deltin_rs::syntax::ast::{ExprKind, ItemKind, StmtKind};
+use deltin_rs::syntax::lexer;
+use deltin_rs::syntax::parser;
+use deltin_rs::{SourceMap, Span};
 use std::path::PathBuf;
 
-fn parse(text: &str) -> (del_rs::syntax::ast::AstFile, Vec<del_rs::Diagnostic>) {
+fn parse(text: &str) -> (deltin_rs::syntax::ast::AstFile, Vec<deltin_rs::Diagnostic>) {
     let mut sources = SourceMap::new();
     let id = sources.add_file(PathBuf::from("t.del"), text.to_string());
     let (tokens, lex_diags) = lexer::lex(id, text);
@@ -17,7 +17,7 @@ fn parse(text: &str) -> (del_rs::syntax::ast::AstFile, Vec<del_rs::Diagnostic>) 
     (ast, diags)
 }
 
-fn errors(diags: &[del_rs::Diagnostic]) -> Vec<String> {
+fn errors(diags: &[deltin_rs::Diagnostic]) -> Vec<String> {
     diags
         .iter()
         .filter(|d| d.is_error())
@@ -35,11 +35,11 @@ fn lexer_tokens_and_trivia() {
     let (tokens, diags) = lexer::lex(id, sources.text(id));
     assert!(diags.is_empty());
     let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
-    assert!(kinds.contains(&del_rs::TokenKind::LineComment));
-    assert!(kinds.contains(&del_rs::TokenKind::DocComment));
-    assert!(kinds.contains(&del_rs::TokenKind::BlockComment));
-    assert!(kinds.contains(&del_rs::TokenKind::KwRule));
-    assert_eq!(kinds.last(), Some(&del_rs::TokenKind::Eof));
+    assert!(kinds.contains(&deltin_rs::TokenKind::LineComment));
+    assert!(kinds.contains(&deltin_rs::TokenKind::DocComment));
+    assert!(kinds.contains(&deltin_rs::TokenKind::BlockComment));
+    assert!(kinds.contains(&deltin_rs::TokenKind::KwRule));
+    assert_eq!(kinds.last(), Some(&deltin_rs::TokenKind::Eof));
 }
 
 #[test]
@@ -59,10 +59,10 @@ fn lexer_recovery_codes() {
             diags.iter().map(|d| d.code.clone()).collect::<Vec<_>>()
         );
         // Recovery never panics and always terminates with Eof.
-        assert_eq!(tokens.last().unwrap().kind, del_rs::TokenKind::Eof);
+        assert_eq!(tokens.last().unwrap().kind, deltin_rs::TokenKind::Eof);
         // Error tokens are never merged into valid ones (LX001/LX004 cases).
         if code == "LX001" || code == "LX004" {
-            assert!(tokens.iter().any(|t| t.kind == del_rs::TokenKind::Error));
+            assert!(tokens.iter().any(|t| t.kind == deltin_rs::TokenKind::Error));
         }
     }
 }
@@ -314,10 +314,10 @@ fn parser_hook_and_lambda_function_types() {
     assert!(errors(&diags).is_empty(), "{:?}", errors(&diags));
     match &ast.items[0].kind {
         ItemKind::Var(v) => match &v.kind {
-            del_rs::syntax::ast::VarDeclKind::Typed(ty) => {
+            deltin_rs::syntax::ast::VarDeclKind::Typed(ty) => {
                 assert!(matches!(
                     ty.kind,
-                    del_rs::syntax::ast::TypeRefKind::Function(_)
+                    deltin_rs::syntax::ast::TypeRefKind::Function(_)
                 ));
             }
             _ => panic!(),
@@ -361,12 +361,12 @@ fn lexer_locale_and_quote_forms() {
     let (tokens, _) = lexer::lex(id, text);
     let forms: Vec<_> = tokens
         .iter()
-        .filter(|t| t.kind == del_rs::TokenKind::Str)
+        .filter(|t| t.kind == deltin_rs::TokenKind::Str)
         .map(|t| t.str_form)
         .collect();
-    assert!(forms.contains(&Some(del_rs::StrForm::Plain)));
-    assert!(forms.contains(&Some(del_rs::StrForm::Localized)));
-    assert!(forms.contains(&Some(del_rs::StrForm::Interpolated)));
+    assert!(forms.contains(&Some(deltin_rs::StrForm::Plain)));
+    assert!(forms.contains(&Some(deltin_rs::StrForm::Localized)));
+    assert!(forms.contains(&Some(deltin_rs::StrForm::Interpolated)));
 }
 
 #[test]

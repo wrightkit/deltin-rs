@@ -1,4 +1,4 @@
-# del-rs OSTW/DeltinScript compatibility support matrix (draft)
+# deltin-rs OSTW/DeltinScript compatibility support matrix (draft)
 #
 # states: planned | source-supported | semantic-supported | lowering-dependent | end-to-end-supported | out-of-scope
 # categories: syntax | semantic | runtime-semantics | workshop-lowering | compiler-utility | decompiler | editor | project
@@ -340,7 +340,7 @@ name = "syntax.recovery"
 category = "syntax"
 state = "source-supported"
 evidence = ["tests/corpus/parser/enum-incomplete.del", "tests/corpus/parser/enum-incomplete-name.del", "docs/inventory.md"]
-notes = "recoverable parsing is a del-rs goal (issue #3); upstream supports incomplete constructs"
+notes = "recoverable parsing is a deltin-rs goal (issue #3); upstream supports incomplete constructs"
 
 [[features]]
 id = "semantic.scoping"
@@ -602,7 +602,7 @@ name = "workshop-lowering.workshop-catalog"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_provider.rs", "tests/workshop_source.rs"]
-notes = "#34 covers CatalogProvider, canonical catalog identity, and the DEL-owned source/provenance bridge through released workshop-rs 0.1.9; the DEL-owned HIR-to-WIR lowering adapter is del-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs. del-rs must not vendor catalog data."
+notes = "#34 covers CatalogProvider, canonical catalog identity, and the DEL-owned source/provenance bridge through released workshop-rs 0.1.9; the DEL-owned HIR-to-WIR lowering adapter is deltin-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs. deltin-rs must not vendor catalog data."
 
 [[features]]
 id = "workshop-lowering.events"
@@ -610,7 +610,7 @@ name = "workshop-lowering.events"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.actions"
@@ -618,7 +618,7 @@ name = "workshop-lowering.actions"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.values"
@@ -626,7 +626,7 @@ name = "workshop-lowering.values"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.constants"
@@ -634,7 +634,7 @@ name = "workshop-lowering.constants"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.variables"
@@ -642,7 +642,7 @@ name = "workshop-lowering.variables"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.extended-collection"
@@ -650,7 +650,7 @@ name = "workshop-lowering.extended-collection"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.classes"
@@ -658,7 +658,7 @@ name = "workshop-lowering.classes"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.structs"
@@ -666,7 +666,7 @@ name = "workshop-lowering.structs"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.enums"
@@ -674,7 +674,7 @@ name = "workshop-lowering.enums"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.vanilla-superset"
@@ -682,7 +682,7 @@ name = "workshop-lowering.vanilla-superset"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.auto-for"
@@ -690,7 +690,7 @@ name = "workshop-lowering.auto-for"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.chase-modify"
@@ -706,7 +706,7 @@ name = "workshop-lowering.subroutines"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.strings"
@@ -714,7 +714,7 @@ name = "workshop-lowering.strings"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.lobby-settings"
@@ -722,7 +722,7 @@ name = "workshop-lowering.lobby-settings"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.workshop-comments"
@@ -730,7 +730,7 @@ name = "workshop-lowering.workshop-comments"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.output-formats"
@@ -738,7 +738,7 @@ name = "workshop-lowering.output-formats"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is del-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
 
 [[features]]
 id = "compiler-utility.optimizer"
@@ -831,7 +831,7 @@ name = "editor.language-server"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.incremental-parse"
@@ -839,7 +839,7 @@ name = "editor.incremental-parse"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.completions"
@@ -847,7 +847,7 @@ name = "editor.completions"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.semantic-tokens"
@@ -855,7 +855,7 @@ name = "editor.semantic-tokens"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.codelens"
@@ -863,7 +863,7 @@ name = "editor.codelens"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.snippets"
@@ -871,7 +871,7 @@ name = "editor.snippets"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.extension"
@@ -879,7 +879,7 @@ name = "editor.extension"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.tmlanguage"
@@ -895,7 +895,7 @@ name = "editor.debugger"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "editor.element-count-ui"
@@ -903,7 +903,7 @@ name = "editor.element-count-ui"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs language-contract requirement (#2)"
+notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
 id = "project.import-resolution"

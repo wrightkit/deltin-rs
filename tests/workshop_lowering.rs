@@ -1,17 +1,17 @@
 //! Core DEL HIR -> canonical Workshop WIR lowering evidence for #30.
 
-use del_rs::hir;
-use del_rs::project::{ProjectOptions, load_project};
-use del_rs::semantic::check_project;
-use del_rs::semantic::provider::CatalogProvider;
-use del_rs::workshop::{lower_project_to_wir, lower_to_wir};
+use deltin_rs::hir;
+use deltin_rs::project::{ProjectOptions, load_project};
+use deltin_rs::semantic::check_project;
+use deltin_rs::semantic::provider::CatalogProvider;
+use deltin_rs::workshop::{lower_project_to_wir, lower_to_wir};
 use std::path::PathBuf;
 
-fn lower(text: &str) -> (workshop_rs::wir::Program, Vec<del_rs::Diagnostic>) {
+fn lower(text: &str) -> (workshop_rs::wir::Program, Vec<deltin_rs::Diagnostic>) {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
-        "del-rs-workshop-lowering-{}-{n}",
+        "deltin-rs-workshop-lowering-{}-{n}",
         std::process::id()
     ));
     std::fs::create_dir_all(&root).unwrap();
@@ -29,11 +29,11 @@ fn lower(text: &str) -> (workshop_rs::wir::Program, Vec<del_rs::Diagnostic>) {
     (program, diagnostics)
 }
 
-fn lower_files(files: &[(&str, &str)]) -> (workshop_rs::wir::Program, Vec<del_rs::Diagnostic>) {
+fn lower_files(files: &[(&str, &str)]) -> (workshop_rs::wir::Program, Vec<deltin_rs::Diagnostic>) {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(10_000);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
-        "del-rs-workshop-lowering-files-{}-{n}",
+        "deltin-rs-workshop-lowering-files-{}-{n}",
         std::process::id()
     ));
     std::fs::create_dir_all(&root).unwrap();
@@ -58,7 +58,7 @@ fn hir_is_backend_neutral_and_hir_only_external_lowering_fails_closed() {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1000);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
-        "del-rs-workshop-lowering-hir-only-{}-{n}",
+        "deltin-rs-workshop-lowering-hir-only-{}-{n}",
         std::process::id()
     ));
     std::fs::create_dir_all(&root).unwrap();

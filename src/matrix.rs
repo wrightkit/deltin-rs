@@ -1,7 +1,7 @@
 //! Compatibility support matrix: schema, loading, and mechanical validation.
 //!
 //! The matrix lives in `docs/support-matrix.toml` and is embedded with
-//! `include_str!`, so `del_rs::matrix::load_and_validate()` works from any
+//! `include_str!`, so `deltin_rs::matrix::load_and_validate()` works from any
 //! directory and the CLI can check it without reading the repo layout.
 
 use serde::{Deserialize, Serialize};

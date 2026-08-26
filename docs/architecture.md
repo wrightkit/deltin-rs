@@ -1,6 +1,6 @@
-# del-rs Architecture — OSTW/DeltinScript Parsing, Semantics, and Lowering
+# deltin-rs Architecture — OSTW/DeltinScript Parsing, Semantics, and Lowering
 
-Status: **implemented baseline** · Owner: Architecture · Scope: the `del-rs` crate. This
+Status: **implemented baseline** · Owner: Architecture · Scope: the `deltin-rs` crate. This
 document is the authoritative design record for the implemented pipeline (delivered by issues
 #2–#7, merged via PRs #10–#15). Where it says "corpus decides", the compatibility inventory and
 corpus evidence is the authority, not this document.
@@ -20,8 +20,8 @@ surface), `provenance.md` (pinned upstream oracle), `syntax-notes.md` (parser re
 
 ## 1. Governing constraints
 
-1. **Single crate at repo root.** Package `del-rs`, library `del_rs`, binary `del-rs`
-   (`src/bin/del-rs.rs`). No workspace members. Dependencies: `serde`, `serde_json`, `toml`
+1. **Single crate at repo root.** Package `deltin-rs`, library `deltin_rs`, binary `deltin-rs`
+   (`src/bin/deltin-rs.rs`). No workspace members. Dependencies: `serde`, `serde_json`, `toml`
    (diagnostics JSON, `ds.toml`/manifests/matrix), and the released registry
    `workshop-rs 0.1.9` catalog core.
 2. **Backend neutrality.** Parsing and semantic analysis own syntax, diagnostics, provenance,
@@ -81,7 +81,7 @@ name = "workshop-lowering.workshop-catalog"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]        # rationale in notes
-notes = "#34 provides CatalogProvider and canonical catalog identity through workshop-rs 0.1.9; the DEL-owned HIR-to-WIR lowering adapter is del-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs."
+notes = "#34 provides CatalogProvider and canonical catalog identity through workshop-rs 0.1.9; the DEL-owned HIR-to-WIR lowering adapter is deltin-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs."
 
 [[features]]
 id = "editor.codelens"
@@ -89,7 +89,7 @@ name = "editor.codelens"
 category = "editor"
 state = "out-of-scope"
 evidence = ["docs/inventory.md"]
-notes = "VS Code extension behavior; not a del-rs requirement."
+notes = "VS Code extension behavior; not a deltin-rs requirement."
 ```
 
 Rules:
@@ -102,8 +102,8 @@ Rules:
   fixed sets; every `evidence` path exists relative to the repo root; every feature has at
   least one evidence path; `lowering-dependent` and `out-of-scope` features carry a rationale
   in `notes`; `workshop-lowering` features never claim a supported state.
-- The same validation is exposed at runtime via `del_rs::matrix::load_and_validate()` and the
-  `del-rs support --check` CLI command; the matrix is embedded with `include_str!` so the CLI
+- The same validation is exposed at runtime via `deltin_rs::matrix::load_and_validate()` and the
+  `deltin-rs support --check` CLI command; the matrix is embedded with `include_str!` so the CLI
   works from any directory.
 - Current state: the parsing, semantic, and runtime-semantics surface is fully at
   `source-supported`/`semantic-supported`; the remaining `planned` features are explicitly
@@ -114,7 +114,7 @@ Evidence/provenance guardrails: upstream fixtures are MIT-licensed; every corpus
 carries the header directives `// source: <url@commit>`, `// license: MIT`, and
 `// expect: <outcome>` (established convention in `tests/corpus/`); the corpus harness test
 fails on missing source/license directives. Upstream files are copied verbatim with headers;
-del-rs-authored fixtures follow the same header format.
+deltin-rs-authored fixtures follow the same header format.
 
 ## 4. Diagnostics
 
@@ -152,7 +152,7 @@ semantic pass may run in the presence of earlier-phase errors; later phases degr
 ## 5. Crate/module layout
 
 ```text
-Cargo.toml                 # package del-rs; [lib] name = "del_rs"; [[bin]] name = "del-rs"
+Cargo.toml                 # package deltin-rs; [lib] name = "deltin_rs"; [[bin]] name = "deltin-rs"
 src/
   lib.rs                   # crate root: module declarations + public re-exports
   span.rs                  # FileId, Span, LineCol, SourceFile, SourceMap, line/col mapping
@@ -179,7 +179,7 @@ src/
     validate.rs            # HIR invariant checks (HI codes)
     oracle.rs              # semantic oracle interpreter (OR codes)
   api.rs                   # public library API facade (all phases + queries)
-  bin/del-rs.rs            # CLI command model and task-oriented surfaces
+  bin/deltin-rs.rs            # CLI command model and task-oriented surfaces
 tests/
   parse.rs                 # lexer/parser/AST unit-ish integration tests
   semantic.rs              # symbol/type/resolution fixtures
@@ -197,7 +197,7 @@ One-sentence justifications: `span.rs` owns the single source-of-truth coordinat
 assembles multi-file programs; `semantic/` owns everything name/type related and the provider
 boundary; `hir/` owns the typed program plus the oracle; `matrix.rs` keeps the compatibility
 contract checkable in-process; `api.rs` is the thin stable surface for Wright and other
-consumers; `bin/del-rs.rs` makes the pipeline exercisable standalone.
+consumers; `bin/deltin-rs.rs` makes the pipeline exercisable standalone.
 
 ## 6. Source model
 
@@ -252,8 +252,8 @@ half-open byte offsets to workshop-rs's 1-based `Position` and typed `Span`.
 The bridge checks file existence, byte bounds, UTF-8 scalar boundaries, reversed spans, and
 non-UTF-8 paths rather than clamping or lossy-converting provenance. The Workshop source entries
 carry paths only; DEL source text remains owned by the DEL `SourceMap`. This module has no HIR,
-lowering, backend encoding, provider-specific state, or catalog data, so del-rs #36 can reuse or
-extend it later. The DEL-owned HIR-to-WIR lowering adapter is del-rs #30 work, while the
+lowering, backend encoding, provider-specific state, or catalog data, so deltin-rs #36 can reuse or
+extend it later. The DEL-owned HIR-to-WIR lowering adapter is deltin-rs #30 work, while the
 canonical WIR/catalog contract remains owned by workshop-rs.
 
 ## 7. Lexer
@@ -661,7 +661,7 @@ pub fn parse(tokens: &[Token]) -> (AstFile, Vec<Diagnostic>);
 - **Doc comments** (`DocComment` tokens) immediately preceding a declaration are associated
   with that declaration's `NodeId` in `AstFile::doc_comments` (tooling surface; not semantic
   input).
-- Parse diagnostics flow: `parse()` returns them alongside the AST; `del_rs::api::parse_source`
+- Parse diagnostics flow: `parse()` returns them alongside the AST; `deltin_rs::api::parse_source`
   wraps both. Later phases never re-parse; they degrade on `Error` nodes.
 
 ## 11. Project model
@@ -714,17 +714,17 @@ pub fn load_project(opts: ProjectOptions) -> Project;    // total; errors become
   with `toml`; only `entry_point` affects loading. Every other key (`out_file`,
   `global_reference_validation`, `track_class_generations`, `reset_nonpersistent`,
   `c_style_workshop_output`, `optimize_output`, ...) is validated syntactically and remains
-  outside the DEL project model; del-rs never interprets those compiler options. Malformed
+  outside the DEL project model; deltin-rs never interprets those compiler options. Malformed
   configuration emits `PJ004` with a span in the `ds.toml` source entry.
 - What the project API returns (§17): sources, entry, deterministic file order, import
   provenance, project-level diagnostics — nothing else. Semantic/HIR layers consume `Project`.
 
 ## 12. External provider boundary
 
-The single seam through which Workshop-facing names enter the source implementation. del-rs owns the trait,
+The single seam through which Workshop-facing names enter the source implementation. deltin-rs owns the trait,
 the permissive default, and the source-language adapter; `CatalogProvider` reads canonical
 identities and metadata from the released registry `workshop-rs 0.1.9` catalog. No catalog data,
-enum tables, event tables, or builtin signatures are copied into del-rs. The provider exposes
+enum tables, event tables, or builtin signatures are copied into deltin-rs. The provider exposes
 the catalog identity for reproducible diagnostics and tests.
 
 ```rust
@@ -779,7 +779,7 @@ pub struct NoopProvider;
 impl WorkshopProvider for NoopProvider { /* NotFound for all queries */ }
 ```
 
-**Semantic interaction contract** (implemented by `del-rs`'s provider seam and the
+**Semantic interaction contract** (implemented by `deltin-rs`'s provider seam and the
 `workshop-rs 0.1.9` catalog API):
 
 1. Name resolution order (§13) tries user scopes first; only failures reach the provider.
@@ -806,7 +806,7 @@ permissive).
 
 Playervar member access (`EventPlayer().lives`, `AllPlayers().isBoss`): a language-level rule
 in the semantic layer, not a provider query (§13.9) — but the builtin `Player` type itself is a
-del-rs primitive (fixed type list).
+deltin-rs primitive (fixed type list).
 
 ## 13. Semantic model
 
@@ -915,7 +915,7 @@ pub struct EnumMemberInfo {
 
 - `Bool` is the internal name; corpus spellings (`Boolean`) map to it at resolution.
 - `Players` is reserved in the type list (task-fixed) but its existence is corpus-gated (Q-9).
-- Primitives are del-rs-owned (fixed list). Every other type name (`Effect`, `Icon`,
+- Primitives are deltin-rs-owned (fixed list). Every other type name (`Effect`, `Icon`,
   `HudTextRev`, `Location`, ...) is provider territory (`ExternalPosition::Type`).
 
 ### 13.4 Name resolution
@@ -1025,7 +1025,7 @@ target must be a mutable lvalue (value semantics, §14). `SM020` for unknown mem
 
 ### 13.10 Language-owned builtin members
 
-del-rs owns a small fixed table (not provider data): array members (`Length`, `IndexOf`,
+deltin-rs owns a small fixed table (not provider data): array members (`Length`, `IndexOf`,
 `Map`, `FilteredArray`, `Random`, `First`, `ModAppend`, `ModRemoveByIndex`, ...), function
 values (`.Invoke`), `root`, `this`, `.Key`. The exact member set/arities are inventory entries
 (`semantic` category) in the matrix; adding members is a matrix update, not new architecture.
@@ -1472,9 +1472,9 @@ impl<'a> Oracle<'a> {
 
 ```rust
 // api.rs — the stable, documented surface for Wright and other consumers.
-// The facade lives in del_rs::api; the underlying phases are also reachable
-// directly (del_rs::syntax::parse_source, del_rs::project::load_project,
-// del_rs::semantic::check_project, del_rs::hir::lower::lower).
+// The facade lives in deltin_rs::api; the underlying phases are also reachable
+// directly (deltin_rs::syntax::parse_source, deltin_rs::project::load_project,
+// deltin_rs::semantic::check_project, deltin_rs::hir::lower::lower).
 
 // ---- parsing ----
 pub fn parse_source_file(file: FileId, text: &str) -> ParseOutput;
@@ -1511,7 +1511,7 @@ pub fn check_path(path: &Path, provider: &dyn WorkshopProvider) -> CheckReport; 
 // ---- matrix ----
 pub fn load_matrix() -> Result<SupportMatrix, toml::de::Error>;    // include_str!("../docs/support-matrix.toml")
 pub fn matrix_status(matrix: &SupportMatrix, category: Category) -> Vec<&MatrixEntry>;
-// del_rs::matrix::load_and_validate() performs the mechanical validation used by the CLI.
+// deltin_rs::matrix::load_and_validate() performs the mechanical validation used by the CLI.
 ```
 
 `diagnostics(program: &SemanticProgram) -> &[Diagnostic]` and `diagnostics(hir) -> ...` are
@@ -1594,7 +1594,7 @@ Semantics of `expect`:
   `source` + `license` are present, and validates every optional `// matrix:` id against the
   support matrix. Pinned source URLs and project paths provide the legacy classifications when
   `// evidence:` is omitted.
-- `del-rs maintainer compatibility --json` emits report schema 1 with separate `matched`, `known-gaps`,
+- `deltin-rs maintainer compatibility --json` emits report schema 1 with separate `matched`, `known-gaps`,
   `unsupported`, `unexpected-regressions`, and `inconclusive` counts plus per-fixture results.
   An `unknown` fixture must declare an explicit non-passing status, so current native agreement
   cannot silently turn a known gap into compatibility.
@@ -1658,7 +1658,7 @@ the relevant sections above already reflect them. Highlights:
 This document is the decision record for the implemented pipeline. D1–D6 (§2) are the
 architecture-level decisions. The #34 provider contract (§12) now consumes the released
 `workshop-rs 0.1.9` catalog through public APIs; the DEL-owned HIR-to-WIR lowering adapter
-at the HIR boundary (§15) is del-rs #30 work, while the canonical WIR/catalog contract
+at the HIR boundary (§15) is deltin-rs #30 work, while the canonical WIR/catalog contract
 remains owned by workshop-rs. Nothing in this document requires a private Workshop revision or duplicated
 canonical catalog semantics.
 

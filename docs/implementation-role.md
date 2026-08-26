@@ -1,6 +1,6 @@
-# del-rs implementation role
+# deltin-rs implementation role
 
-`del-rs` is an independently usable Rust implementation of the
+`deltin-rs` is an independently usable Rust implementation of the
 DeltinScript/OSTW language surface. Its durable product boundary includes
 parsing, project loading, semantic/type analysis, typed HIR, diagnostics,
 tooling, and compiler integration, in addition to any LPP provider process.
@@ -10,11 +10,11 @@ tooling, and compiler integration, in addition to any LPP provider process.
 ```text
 DEL / OSTW source
   ↓
-del-rs parsing / project loading / semantic analysis
+deltin-rs parsing / project loading / semantic analysis
   ↓
 DEL semantic model / typed HIR
   ↓
-del-rs runtime + compiler lowering
+deltin-rs runtime + compiler lowering
   ↓
 workshop-rs canonical WIR / validation / emission
   ↓
@@ -28,12 +28,12 @@ Workshop text
   ↓
 workshop-rs parser / canonical WIR
   ↓
-del-rs reconstruction
+deltin-rs reconstruction
   ↓
 DEL / OSTW source
 ```
 
-`del-rs` therefore owns the language-specific semantics on both sides of the
+`deltin-rs` therefore owns the language-specific semantics on both sides of the
 Workshop boundary. It deliberately reuses `workshop-rs` instead of becoming a
 second raw Workshop implementation.
 
@@ -46,21 +46,21 @@ Wright.
 
 ### Wright
 
-Wright is a downstream integration/tooling product. It combines `del-rs`,
+Wright is a downstream integration/tooling product. It combines `deltin-rs`,
 `opy-rs`, and `workshop-rs` with additional cross-language capabilities such as
 lint, analysis, validated source edits, agent tooling, CI/embedding, and
 language services.
 
 ## Ownership
 
-`del-rs` owns DEL/OSTW syntax/project behavior, semantic/type rules, runtime
+`deltin-rs` owns DEL/OSTW syntax/project behavior, semantic/type rules, runtime
 semantics, language-specific lowering, diagnostics/provenance, standalone
 tooling, compatibility evidence, and Workshop→DEL reconstruction.
 
 `workshop-rs` owns raw Workshop parsing, canonical Workshop identities and
 semantics, WIR, validation, settings/localization, and emission.
 
-The dependency direction is `del-rs → workshop-rs`; `workshop-rs` does not
+The dependency direction is `deltin-rs → workshop-rs`; `workshop-rs` does not
 depend back on DEL semantics.
 
 ## Current reality

@@ -1,16 +1,16 @@
-# del-rs
+# deltin-rs
 
-`del-rs` is WrightKit's standalone Rust implementation of the DeltinScript /
+`deltin-rs` is WrightKit's standalone Rust implementation of the DeltinScript /
 OSTW language surface. It is intended to be useful on its own as a library and
 CLI for parsing, loading, type-checking, inspecting, compiling, and eventually
 reconstructing supported `.del` / `.ostw` projects.
 
-Wright is a downstream consumer that integrates `del-rs` with broader tooling
+Wright is a downstream consumer that integrates `deltin-rs` with broader tooling
 such as linting, analysis, validated source editing, agent workflows, CI, and
 language services. An LPP **provider** is an integration
-role that `del-rs` may expose to Wright or other tooling clients.
+role that `deltin-rs` may expose to Wright or other tooling clients.
 
-Canonical raw Workshop behavior is shared rather than duplicated. `del-rs`
+Canonical raw Workshop behavior is shared rather than duplicated. `deltin-rs`
 owns DEL/OSTW syntax, project loading, semantic/type behavior, runtime lowering,
 compiler behavior, diagnostics/provenance, standalone tooling, compatibility
 evidence, and Workshop-to-DEL reconstruction. `workshop-rs` owns canonical
@@ -20,11 +20,11 @@ Workshop parsing, and emission.
 ```text
 DEL / OSTW source
     ↓
-del-rs parsing / project loading / semantic analysis
+deltin-rs parsing / project loading / semantic analysis
     ↓
 DEL semantic model / typed HIR
     ↓
-del-rs runtime + compiler lowering
+deltin-rs runtime + compiler lowering
     ↓
 workshop-rs canonical WIR / validation / emission
     ↓
@@ -32,7 +32,7 @@ Workshop text
 ```
 
 The reverse direction starts with Workshop parsed by `workshop-rs` and uses
-`del-rs`-owned reconstruction logic to produce useful DEL/OSTW source.
+`deltin-rs`-owned reconstruction logic to produce useful DEL/OSTW source.
 
 ## Features
 
@@ -69,7 +69,7 @@ temporary variables, or output-text identity.
 | Embedded Workshop / lobby data | 🟡 Partial | Canonical Workshop contracts are still being integrated |
 | Workshop builtins | 🟡 Partial | Canonical catalog binding exists; breadth and lowering continue to expand |
 | DEL/OSTW → Workshop compilation | 🟡 Partial | Core HIR→WIR lowering exists; advanced runtime/project surfaces are incomplete |
-| Workshop → DEL/OSTW reconstruction | ⏳ Not yet | Will consume canonical `workshop-rs` semantics and remain owned by `del-rs` |
+| Workshop → DEL/OSTW reconstruction | ⏳ Not yet | Will consume canonical `workshop-rs` semantics and remain owned by `deltin-rs` |
 
 Exact feature evidence lives in the
 [machine-readable support matrix](docs/support-matrix.toml); see
@@ -79,13 +79,13 @@ meanings.
 ## CLI and library
 
 ```text
-del-rs check <file-or-dir> [--json]
-del-rs inspect <file> <line>:<col> [--json]
-del-rs support [--check] [--json]
-del-rs dev parse <file> [--json]
-del-rs dev hir <file-or-dir> [--json]
-del-rs completion <bash|zsh|fish|powershell>
-del-rs maintainer compatibility [--json]
+deltin-rs check <file-or-dir> [--json]
+deltin-rs inspect <file> <line>:<col> [--json]
+deltin-rs support [--check] [--json]
+deltin-rs dev parse <file> [--json]
+deltin-rs dev hir <file-or-dir> [--json]
+deltin-rs completion <bash|zsh|fish|powershell>
+deltin-rs maintainer compatibility [--json]
 ```
 
 The standalone semantic/tooling path does not require Wright. Workshop-dependent
@@ -96,7 +96,7 @@ implementation details.
 
 ## Relationship with Wright
 
-Wright is not the owner of DEL/OSTW language semantics. It consumes `del-rs`
+Wright is not the owner of DEL/OSTW language semantics. It consumes `deltin-rs`
 and adds a unified product layer across DEL/OSTW, OverPy, and raw Workshop,
 including cross-language lint, analysis, source-edit transactions, agent
 interfaces, CI/embedding, and language services.
@@ -138,5 +138,5 @@ workspace-level `AGENTS.md` first, then this repository's local `AGENTS.md`.
 
 ## License
 
-`del-rs` is distributed under the [MIT license](https://opensource.org/licenses/MIT).
+`deltin-rs` is distributed under the [MIT license](https://opensource.org/licenses/MIT).
 Compatibility fixtures retain their recorded upstream provenance and licensing.

@@ -1,6 +1,6 @@
 # OSTW / DeltinScript feature inventory
 
-This inventory defines the declared compatibility surface of `del-rs` as of the pinned
+This inventory defines the declared compatibility surface of `deltin-rs` as of the pinned
 upstream references (see [provenance.md](provenance.md)):
 
 - **ostw** = `.upstream-refs/ostw` @ `817c1db4bace52123f054ffe10d3d8a06052e687`
@@ -8,7 +8,7 @@ upstream references (see [provenance.md](provenance.md)):
 - **wiki** = `.upstream-refs/ostw-wiki` @ `e8894b972fae3fa9fd81dab0bb3672cc740a771e`
 
 Every entry names its upstream evidence location (`path@commit`, `wiki/<page>`). Entries are
-the contract: anything not listed here is not a del-rs compatibility requirement. Upstream
+the contract: anything not listed here is not a deltin-rs compatibility requirement. Upstream
 internals are only relevant where observable behavior requires them (per issue #2 non-goals).
 
 File extensions accepted as OSTW source upstream: `.del`, `.ostw`, `.workshop`
@@ -134,7 +134,7 @@ Evidence: `ostw/Deltinteger/Deltinteger/Elements/*` (workshop element catalog `E
 
 | Feature | Description | Evidence |
 |---|---|---|
-| `workshop-lowering.workshop-catalog` | the canonical workshop elements/actions/values catalog (vendor data, e.g. `Elements.json`); del-rs does **not** copy it into the repository (issue #3 non-goal) | `ostw/Deltinteger/Deltinteger/Elements/Elements.json`; `LoadData.cs` |
+| `workshop-lowering.workshop-catalog` | the canonical workshop elements/actions/values catalog (vendor data, e.g. `Elements.json`); deltin-rs does **not** copy it into the repository (issue #3 non-goal) | `ostw/Deltinteger/Deltinteger/Elements/Elements.json`; `LoadData.cs` |
 | `workshop-lowering.events` | 11 event types (`OngoingGlobal`, `OngoingPlayer`, `OnElimination`, `OnFinalBlow`, `OnDamageDealt`, `OnDamageTaken`, `OnDeath`, `OnHealingDealt`, `OnHealingTaken`, `OnPlayerJoin`, `OnPlayerLeave`) plus subroutines; player/assault/heal contexts | `wiki/Rules` |
 | `workshop-lowering.actions` | workshop actions called from OSTW (e.g. `SmallMessage`, `CreateHudText`, `CreateEffect`, `Kill`, `Wait`) | `wiki/Rules`; `wiki/Getting-Started`; corpus `projects/modules/*.del` |
 | `workshop-lowering.values` | workshop values (`TotalTimeElapsed()`, `EventPlayer()`, `EyePosition()`, ...) usable as OSTW expressions | `wiki/Workshop-Functions-in-OSTW`; corpus `projects/*/*.del` |
@@ -155,7 +155,7 @@ Evidence: `ostw/Deltinteger/Deltinteger/Elements/*` (workshop element catalog `E
 
 ## 5. Compiler utility (NOT part of the language contract)
 
-These are upstream compiler-side capabilities del-rs may provide as utilities, but they are
+These are upstream compiler-side capabilities deltin-rs may provide as utilities, but they are
 **not** OSTW language features and do not define compatibility:
 
 | Feature | Description | Evidence |
@@ -178,9 +178,9 @@ These are upstream compiler-side capabilities del-rs may provide as utilities, b
 | `decompiler.settings` | lobby settings extracted during decompile | `Decompiler/Json/DecompilerMeta.cs`; `wiki/Decompiling` |
 | `decompiler.editor-commands` | clipboard/insert commands are editor integration (see editor section) | `wiki/Decompiling`; `overwatch-script-to-workshop/src/decompile.ts` |
 
-## 7. Editor (VS Code extension / language server — **out of scope for the del-rs language contract**)
+## 7. Editor (VS Code extension / language server — **out of scope for the deltin-rs language contract**)
 
-Everything in this category is explicitly **not** a del-rs compatibility requirement. It is
+Everything in this category is explicitly **not** a deltin-rs compatibility requirement. It is
 listed so the matrix can mark it `out-of-scope` rather than silently dropping it.
 
 | Feature | Description | Evidence |

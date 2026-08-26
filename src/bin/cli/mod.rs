@@ -1,6 +1,6 @@
 use clap::{Args, ValueEnum};
-use del_rs::diagnostics::{Diagnostic, Severity};
-use del_rs::SourceMap;
+use deltin_rs::diagnostics::{Diagnostic, Severity};
+use deltin_rs::SourceMap;
 use std::env;
 use std::fs::OpenOptions;
 use std::io::{self, IsTerminal, Write};
@@ -156,7 +156,7 @@ impl Renderer {
             };
             writeln!(
                 stderr,
-                "::{level} title=del-rs::{}",
+                "::{level} title=deltin-rs::{}",
                 escape_message(message)
             )
         } else {
@@ -175,7 +175,7 @@ impl Renderer {
         if self.mode == PresentationMode::GithubActions {
             if let Some(path) = env::var_os("GITHUB_STEP_SUMMARY") {
                 let mut file = OpenOptions::new().create(true).append(true).open(path)?;
-                writeln!(file, "### del-rs\n\n{summary}")?;
+                writeln!(file, "### deltin-rs\n\n{summary}")?;
             }
         }
         Ok(())

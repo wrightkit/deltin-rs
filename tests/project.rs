@@ -1,6 +1,6 @@
 //! Project loading tests for the independently supported project slice.
 
-use del_rs::project::{load_project, ProjectConfig, ProjectOptions};
+use deltin_rs::project::{load_project, ProjectConfig, ProjectOptions};
 use std::path::PathBuf;
 
 fn fixture(name: &str) -> PathBuf {
@@ -101,8 +101,8 @@ fn invalid_ds_toml_is_a_project_diagnostic_with_config_provenance() {
         .find(|diagnostic| diagnostic.code == "PJ004")
         .expect("invalid ds.toml must be diagnosed");
     assert_eq!(project.diagnostics.len(), 1);
-    assert_eq!(diagnostic.phase, del_rs::Phase::Project);
-    assert_eq!(diagnostic.severity, del_rs::Severity::Error);
+    assert_eq!(diagnostic.phase, deltin_rs::Phase::Project);
+    assert_eq!(diagnostic.severity, deltin_rs::Severity::Error);
     assert_eq!(diagnostic.primary.start, 0);
     assert_eq!(
         project.sources.get(diagnostic.primary.file).name,
