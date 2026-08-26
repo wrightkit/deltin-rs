@@ -28,7 +28,12 @@ pub fn validate(hir: &HirProgram) -> Vec<Diagnostic> {
             }
             HirExprKind::New { class, .. } => {
                 if *class as usize >= hir.classes.len() {
-                    err("HI010", e.span, format!("new targets unknown class {class}"), &mut diags);
+                    err(
+                        "HI010",
+                        e.span,
+                        format!("new targets unknown class {class}"),
+                        &mut diags,
+                    );
                 }
             }
             _ => {}
@@ -111,8 +116,15 @@ fn check_block_delete_operands(
             HirStmtKind::Delete { target } => {
                 let ty = hir.expr(*target).map(|t| &t.ty);
                 match ty {
-                    Some(Type::Class(_)) | Some(Type::Any) | Some(Type::External(_)) | Some(Type::Error) => {}
-                    _ => err("HI010", s.span, "delete operand must be a class type".into()),
+                    Some(Type::Class(_))
+                    | Some(Type::Any)
+                    | Some(Type::External(_))
+                    | Some(Type::Error) => {}
+                    _ => err(
+                        "HI010",
+                        s.span,
+                        "delete operand must be a class type".into(),
+                    ),
                 }
             }
             HirStmtKind::Block(b) => check_block_delete_operands(b, hir, err),
@@ -138,7 +150,9 @@ fn check_stmt_returns(s: &HirStmt, saw: &mut bool) {
             }
         }
         HirStmtKind::While { body, .. } => check_stmt_returns(body, saw),
-        HirStmtKind::For { init, step, body, .. } => {
+        HirStmtKind::For {
+            init, step, body, ..
+        } => {
             if let Some(i) = init {
                 check_stmt_returns(i, saw);
             }
@@ -160,18 +174,30 @@ fn check_stmt_returns(s: &HirStmt, saw: &mut bool) {
     }
 }
 
-fn check_block_break(block: &HirBlock, depth: &mut u32, err: &mut dyn FnMut(&str, crate::span::Span, String)) {
+fn check_block_break(
+    block: &HirBlock,
+    depth: &mut u32,
+    err: &mut dyn FnMut(&str, crate::span::Span, String),
+) {
     for s in &block.stmts {
         check_stmt_break(s, depth, err);
     }
 }
 
-fn check_stmt_break(s: &HirStmt, depth: &mut u32, err: &mut dyn FnMut(&str, crate::span::Span, String)) {
+fn check_stmt_break(
+    s: &HirStmt,
+    depth: &mut u32,
+    err: &mut dyn FnMut(&str, crate::span::Span, String),
+) {
     match &s.kind {
         HirStmtKind::Block(b) => check_block_break(b, depth, err),
         HirStmtKind::Break | HirStmtKind::Continue => {
             if *depth == 0 {
-                err("HI007", s.span, "break/continue outside a loop or switch".into());
+                err(
+                    "HI007",
+                    s.span,
+                    "break/continue outside a loop or switch".into(),
+                );
             }
         }
         HirStmtKind::While { body, .. } => {
@@ -179,7 +205,9 @@ fn check_stmt_break(s: &HirStmt, depth: &mut u32, err: &mut dyn FnMut(&str, crat
             check_stmt_break(body, depth, err);
             *depth -= 1;
         }
-        HirStmtKind::For { init, step, body, .. } => {
+        HirStmtKind::For {
+            init, step, body, ..
+        } => {
             *depth += 1;
             if let Some(i) = init {
                 check_stmt_break(i, depth, err);

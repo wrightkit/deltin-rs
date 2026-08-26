@@ -602,7 +602,7 @@ name = "workshop-lowering.workshop-catalog"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md", "tests/workshop_provider.rs", "tests/workshop_source.rs"]
-notes = "#34 covers CatalogProvider, canonical catalog identity, and the DEL-owned source/provenance bridge through released workshop-rs 0.1.1; the DEL-owned HIR-to-WIR lowering adapter is del-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs. del-rs must not vendor catalog data."
+notes = "#34 covers CatalogProvider, canonical catalog identity, and the DEL-owned source/provenance bridge through released workshop-rs 0.1.9; the DEL-owned HIR-to-WIR lowering adapter is del-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs. del-rs must not vendor catalog data."
 
 [[features]]
 id = "workshop-lowering.events"

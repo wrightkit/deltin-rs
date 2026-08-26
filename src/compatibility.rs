@@ -5,11 +5,11 @@
 //! or it is reported as a known gap/inconclusive case; an implementation that
 //! happens to agree with an unproven case cannot turn that case into a pass.
 
-use crate::SourceMap;
 use crate::diagnostics::Phase;
 use crate::matrix;
-use crate::project::{ProjectOptions, load_project};
+use crate::project::{load_project, ProjectOptions};
 use crate::syntax::parse_source;
+use crate::SourceMap;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -498,14 +498,12 @@ mod tests {
             )
             .is_ok()
         );
-        assert!(
-            validate_source(
-                "https://github.com/example/ostw/blob/deadbeef/tests/Parser.cs",
-                EvidenceSource::PinnedOracle,
-                &meta,
-            )
-            .is_err()
-        );
+        assert!(validate_source(
+            "https://github.com/example/ostw/blob/deadbeef/tests/Parser.cs",
+            EvidenceSource::PinnedOracle,
+            &meta,
+        )
+        .is_err());
     }
 
     #[test]

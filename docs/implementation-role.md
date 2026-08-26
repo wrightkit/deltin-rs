@@ -1,8 +1,9 @@
 # del-rs implementation role
 
 `del-rs` is an independently usable Rust implementation of the
-DeltinScript/OSTW language surface. Its durable product boundary is larger than
-parsing and semantic analysis, and larger than an LPP provider process.
+DeltinScript/OSTW language surface. Its durable product boundary includes
+parsing, project loading, semantic/type analysis, typed HIR, diagnostics,
+tooling, and compiler integration, in addition to any LPP provider process.
 
 ## Durable model
 

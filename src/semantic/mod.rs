@@ -12,8 +12,8 @@ pub mod types;
 use crate::diagnostics::{error, Diagnostic, Phase};
 use crate::project::Project;
 use crate::semantic::provider::{ExternalCategory, WorkshopProvider};
-use crate::semantic::types::ExternalType as ExtTy;
 use crate::semantic::symbols::*;
+use crate::semantic::types::ExternalType as ExtTy;
 use crate::semantic::types::*;
 use crate::span::{FileId, Span};
 use crate::syntax::ast::{self, *};
@@ -138,8 +138,11 @@ impl<'a> Builder<'a> {
     }
 
     pub fn err(&mut self, code: &str, span: Span, msg: impl Into<String>) {
-        if self.diagnostics.iter().filter(|d| d.is_error()).count() < crate::diagnostics::DIAGNOSTIC_CAP {
-            self.diagnostics.push(error(Phase::Semantic, code, span, msg));
+        if self.diagnostics.iter().filter(|d| d.is_error()).count()
+            < crate::diagnostics::DIAGNOSTIC_CAP
+        {
+            self.diagnostics
+                .push(error(Phase::Semantic, code, span, msg));
         }
     }
 
@@ -165,7 +168,12 @@ impl<'a> Builder<'a> {
             var_symbols: self.var_symbols,
             function_symbols: self.function_symbols,
             type_symbols: self.type_symbols,
-            asts: self.file_asts.into_iter().zip(project.files.iter().copied()).map(|(a, f)| (f, a)).collect(),
+            asts: self
+                .file_asts
+                .into_iter()
+                .zip(project.files.iter().copied())
+                .map(|(a, f)| (f, a))
+                .collect(),
         }
     }
 
@@ -178,10 +186,17 @@ impl<'a> Builder<'a> {
             let text = project.sources.text(file).to_string();
             let out = crate::syntax::parse_source(file, &text);
             self.file_asts.push(out.ast.clone());
-            let scope = self.tables.push_scope(self.tables.root_scope, ScopeKind::File);
+            // Imported source files share the project namespace. Keep one
+            // root scope so declarations in one reachable file resolve from
+            // rules and functions in another file.
+            let scope = self.tables.root_scope;
             for item in &out.ast.items {
                 if std::env::var("DEL_DEBUG").is_ok() {
-                    eprintln!("collect item {} kind={:?}", item.id.0, std::mem::discriminant(&item.kind));
+                    eprintln!(
+                        "collect item {} kind={:?}",
+                        item.id.0,
+                        std::mem::discriminant(&item.kind)
+                    );
                 }
                 self.collect_item(item, file, scope);
             }
@@ -194,7 +209,8 @@ impl<'a> Builder<'a> {
             ItemKind::Function(f) => self.collect_function(f, file, scope, None),
             ItemKind::TypeDecl(t) => self.collect_type_decl(t, file, scope),
             ItemKind::TypeAlias(a) => {
-                self.pending_aliases.push((a.name.name.clone(), a.target.clone()));
+                self.pending_aliases
+                    .push((a.name.name.clone(), a.target.clone()));
             }
             ItemKind::Rule(r) => {
                 // Rule scope for rule-level `define` variables.
@@ -207,12 +223,22 @@ impl<'a> Builder<'a> {
                     }
                 }
             }
-            ItemKind::VanillaRule(_) | ItemKind::VanillaBlock(_) | ItemKind::Import(_)
-            | ItemKind::VarReservation(_) | ItemKind::Hook { .. } | ItemKind::Error { .. } => {}
+            ItemKind::VanillaRule(_)
+            | ItemKind::VanillaBlock(_)
+            | ItemKind::Import(_)
+            | ItemKind::VarReservation(_)
+            | ItemKind::Hook { .. }
+            | ItemKind::Error { .. } => {}
         }
     }
 
-    pub fn collect_var(&mut self, v: &VarDecl, _file: FileId, scope: ScopeId, owner: Option<SymbolId>) {
+    pub fn collect_var(
+        &mut self,
+        v: &VarDecl,
+        _file: FileId,
+        scope: ScopeId,
+        owner: Option<SymbolId>,
+    ) {
         let ty = match &v.kind {
             VarDeclKind::Define => Type::Any,
             VarDeclKind::Typed(_) => Type::Error, // resolved in phase B
@@ -262,7 +288,12 @@ impl<'a> Builder<'a> {
         }
     }
 
-    fn declare_after_error(&mut self, scope: ScopeId, v: &VarDecl, owner: Option<SymbolId>) -> SymbolId {
+    fn declare_after_error(
+        &mut self,
+        scope: ScopeId,
+        v: &VarDecl,
+        owner: Option<SymbolId>,
+    ) -> SymbolId {
         let ty = match &v.kind {
             VarDeclKind::Define => Type::Any,
             VarDeclKind::Typed(_) => Type::Error,
@@ -289,7 +320,13 @@ impl<'a> Builder<'a> {
         id
     }
 
-    pub fn collect_function(&mut self, f: &FunctionDecl, _file: FileId, scope: ScopeId, owner: Option<SymbolId>) {
+    pub fn collect_function(
+        &mut self,
+        f: &FunctionDecl,
+        _file: FileId,
+        scope: ScopeId,
+        owner: Option<SymbolId>,
+    ) {
         let is_macro = matches!(f.body, FuncBody::Expr(_));
         let kind = if is_macro {
             SymbolKind::Macro
@@ -368,7 +405,8 @@ impl<'a> Builder<'a> {
                 let body_node = f.name.id;
                 self.bodies.push((body_node, fscope));
                 self.function_of_body.insert(body_node, id);
-                self.class_of_body.insert(body_node, owner.unwrap_or(u32::MAX));
+                self.class_of_body
+                    .insert(body_node, owner.unwrap_or(u32::MAX));
                 self.ref_of_body.insert(body_node, f.attrs.ref_);
             }
             FuncBody::None => {}
@@ -423,8 +461,7 @@ impl<'a> Builder<'a> {
                 },
             };
             self.tables.symbols.push(sym);
-            self.tables
-                .scopes[scope as usize]
+            self.tables.scopes[scope as usize]
                 .entries
                 .entry(t.name.name.clone())
                 .or_default()
@@ -569,9 +606,7 @@ impl<'a> Builder<'a> {
         let vars: Vec<(NodeId, SymbolId, VarDeclKind)> = self
             .var_symbols
             .iter()
-            .filter_map(|(nid, sid)| {
-                self.var_decls.get(nid).map(|k| (*nid, *sid, k.clone()))
-            })
+            .filter_map(|(nid, sid)| self.var_decls.get(nid).map(|k| (*nid, *sid, k.clone())))
             .collect();
         for (nid, sid, kind) in vars {
             let ty = match kind {
@@ -607,13 +642,16 @@ impl<'a> Builder<'a> {
                     None => Type::Any,
                 })
                 .collect();
-            let ret = f.ret.as_ref().map(|t| self.type_of(t, scope)).unwrap_or(Type::Void);
-            self.tables.symbols[sid as usize].ty =
-                Type::FunctionValue(FunctionType {
-                    params,
-                    ret: Box::new(ret.clone()),
-                    constant: false,
-                });
+            let ret = f
+                .ret
+                .as_ref()
+                .map(|t| self.type_of(t, scope))
+                .unwrap_or(Type::Void);
+            self.tables.symbols[sid as usize].ty = Type::FunctionValue(FunctionType {
+                params,
+                ret: Box::new(ret.clone()),
+                constant: false,
+            });
             if let FuncBody::Block(_) | FuncBody::Expr(_) = &f.body {
                 self.ret_of_body.insert(f.name.id, ret.clone());
             }
@@ -651,10 +689,7 @@ impl<'a> Builder<'a> {
                         None => Vec::new(),
                     };
                     let scope = self.type_scope_of(tid);
-                    let fts: Vec<Type> = fields
-                        .iter()
-                        .map(|ft| self.type_of(ft, scope))
-                        .collect();
+                    let fts: Vec<Type> = fields.iter().map(|ft| self.type_of(ft, scope)).collect();
                     if let Some(info) = self.enum_members.get_mut(&mid) {
                         info.field_types = fts;
                     }
@@ -740,11 +775,10 @@ impl<'a> Builder<'a> {
         }
     }
 
-    /// Project-wide lookup for a function/macro by name (file scopes are
-    /// children of the project scope).
+    /// Project-wide lookup for a function/macro by name.
     fn project_function(&self, name: &str) -> Option<SymbolId> {
         for scope in &self.tables.scopes {
-            if scope.kind == ScopeKind::File {
+            if matches!(scope.kind, ScopeKind::File | ScopeKind::Project) {
                 if let Some(ids) = scope.entries.get(name) {
                     if let Some(id) = ids.iter().copied().find(|i| {
                         matches!(
@@ -795,12 +829,7 @@ impl<'a> Builder<'a> {
         for start in &func_ids {
             let mut state: HashMap<SymbolId, u8> = HashMap::new();
             let mut stack: Vec<SymbolId> = Vec::new();
-            self.dfs_cycles(
-                *start,
-                &resolved,
-                &mut state,
-                &mut stack,
-            );
+            self.dfs_cycles(*start, &resolved, &mut state, &mut stack);
         }
     }
 
@@ -816,7 +845,9 @@ impl<'a> Builder<'a> {
             Some(1) => {
                 if let Some(pos) = stack.iter().position(|s| *s == cur) {
                     let cycle = stack[pos..].to_vec();
-                    let has_macro = cycle.iter().any(|s| self.tables.symbol(*s).kind == SymbolKind::Macro);
+                    let has_macro = cycle
+                        .iter()
+                        .any(|s| self.tables.symbol(*s).kind == SymbolKind::Macro);
                     let has_nonrec = cycle.iter().any(|s| {
                         let sym = self.tables.symbol(*s);
                         !sym.flags.recursive && sym.flags.subroutine.is_none()
@@ -825,7 +856,10 @@ impl<'a> Builder<'a> {
                         self.err(
                             "SM036",
                             self.tables.symbol(cur).span,
-                            format!("macro '{}' cannot be recursive", self.tables.symbol(cur).name),
+                            format!(
+                                "macro '{}' cannot be recursive",
+                                self.tables.symbol(cur).name
+                            ),
                         );
                     } else if has_nonrec {
                         self.err(
@@ -888,7 +922,10 @@ impl<'a> Builder<'a> {
     /// The scope of a type symbol (its type-parameter scope).
     fn type_scope_of(&self, tid: SymbolId) -> ScopeId {
         let decl = self.tables.symbol(tid).decl;
-        self.node_scopes.get(&decl).copied().unwrap_or(self.tables.root_scope)
+        self.node_scopes
+            .get(&decl)
+            .copied()
+            .unwrap_or(self.tables.root_scope)
     }
 
     fn check_value_recursion(&mut self) {
@@ -1280,7 +1317,9 @@ fn collect_call_names(body: &FuncBody, out: &mut Vec<String>) {
                 }
                 walk_stmt(&f.body, out);
             }
-            StmtKind::Foreach { collection, body, .. } => {
+            StmtKind::Foreach {
+                collection, body, ..
+            } => {
                 walk_expr(collection, out);
                 walk_stmt(body, out);
             }

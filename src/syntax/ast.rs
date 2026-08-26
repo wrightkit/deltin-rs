@@ -36,8 +36,13 @@ pub enum ItemKind {
     Import(ImportDecl),
     VarReservation(VarReservation),
     /// Top-level hook: `Ident(.Ident)* = expr;` (static member assignment).
-    Hook { target: Expr, value: Expr },
-    Error { consumed: Span },
+    Hook {
+        target: Expr,
+        value: Expr,
+    },
+    Error {
+        consumed: Span,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -63,7 +68,7 @@ pub struct RuleCondition {
 }
 
 /// Vanilla Workshop superset rule: `rule("name") { event/conditions/actions }`.
-/// Body sections are opaque token spans; the parser never interprets them.
+/// Body sections are opaque token spans; the source implementation never interprets them.
 #[derive(Clone, Debug)]
 pub struct VanillaRuleDecl {
     pub name: Option<Expr>,
@@ -342,7 +347,7 @@ pub enum StmtKind {
     Delete {
         target: Expr,
     },
-    /// Vanilla target assignment (`{'var'}[..] = expr;`) — no DEL/OSTW semantics.
+    /// Vanilla target assignment (`{'var'}[..] = expr;`) — no source implementation semantics.
     Hook {
         target: Expr,
         value: Expr,
@@ -397,7 +402,10 @@ pub enum QuoteKind {
 pub enum ExprKind {
     Number(LitNumber),
     Str(StrLit),
-    StrInterp { parts: Vec<InterpPart>, args: Vec<Expr> },
+    StrInterp {
+        parts: Vec<InterpPart>,
+        args: Vec<Expr>,
+    },
     Bool(bool),
     Null,
     Ident(Ident),
@@ -563,7 +571,7 @@ pub enum PostfixOp {
 pub enum UnaryOp {
     Negate,
     Not,
-    /// `~` workshop-value indirection (superset; no DEL/OSTW semantics).
+    /// `~` workshop-value indirection (superset; no source implementation semantics).
     Indirect,
 }
 

@@ -4,16 +4,16 @@
 //! event shapes, variable/action/value nodes, validation, and emission remain
 //! owned by `workshop-rs`.
 
-use crate::diagnostics::{error, Diagnostic, Phase};
+use crate::diagnostics::{Diagnostic, Phase, error};
 use crate::hir::{
-    CallTarget, HirArg, HirExprId, HirExprKind, HirFuncId, HirProgram, HirStmt, HirStmtKind,
-    HirVarId, LiteralValue, StorageIntent,
+    CallTarget, HirArg, HirExprId, HirExprKind, HirFuncId, HirInterpPart, HirProgram, HirStmt,
+    HirStmtKind, HirVarId, LiteralValue, StorageIntent,
 };
 use crate::project::Project;
+use crate::semantic::SemanticProgram;
 use crate::semantic::provider::{ExternalBinding, ExternalParam};
 use crate::semantic::resolve::Resolution;
 use crate::semantic::types::Type;
-use crate::semantic::SemanticProgram;
 use crate::span::{FileId, SourceMap, Span};
 use crate::syntax::ast::{
     self, AssignOp, BinaryOp, Expr, ExprKind, FuncBody, Item, ItemKind, Stmt, StmtKind, UnaryOp,
@@ -441,13 +441,13 @@ impl<'a> Lowerer<'a> {
         self.allocate_subroutines();
         self.allocate_parameter_slots();
         self.lower_initializers();
-        for rule in &self.hir.rules {
-            self.lower_rule(rule);
-        }
         for (fid, func) in self.hir.funcs.iter().enumerate() {
             if func.kind == crate::hir::FuncKind::Subroutine {
                 self.lower_subroutine(fid as HirFuncId);
             }
+        }
+        for rule in &self.hir.rules {
+            self.lower_rule(rule);
         }
         self.validate_output();
         if self.diagnostics.iter().any(Diagnostic::is_error) {
@@ -676,11 +676,16 @@ impl<'a> Lowerer<'a> {
 
     fn lower_rule(&mut self, rule: &crate::hir::HirRule) {
         let diagnostic_count = self.diagnostics.len();
-        let Some(event) = rule.event.and_then(|id| self.lower_event(id)) else {
-            if rule.event.is_none() {
-                self.unsupported(rule.span, "rule has no canonical Workshop event");
+        let event = match rule.event {
+            Some(id) => {
+                let Some(event) = self.lower_event(id) else {
+                    return;
+                };
+                event
             }
-            return;
+            // DEL's `rule: "name" { ... }` form is the canonical global rule
+            // form used by the source reconstructor.
+            None => wir::Event::Global,
         };
         let previous_player_context = self.player_context;
         self.player_context = matches!(
@@ -752,7 +757,10 @@ impl<'a> Lowerer<'a> {
             return;
         };
         self.out.rules.push(wir::Rule {
-            name: func.name.clone(),
+            name: func
+                .subroutine_name
+                .clone()
+                .unwrap_or_else(|| func.name.clone()),
             span: self.ws_span(func.span),
             name_span: self.ws_span(func.span),
             disabled: false,
@@ -1386,16 +1394,31 @@ impl<'a> Lowerer<'a> {
                 self.lower_assignment(*target, *op, *value, stmt.span)
             }
             HirStmtKind::If { cond, then, els } => {
-                let Ok(condition) = self.lower_value(*cond) else {
-                    return Vec::new();
-                };
-                let then_body = self.lower_stmt(then);
-                let else_body = els.as_ref().map(|body| self.lower_stmt(body));
-                vec![self.out.actions.push(wir::Action::If {
-                    branches: vec![wir::IfBranch {
+                let mut branches = Vec::new();
+                let mut next = Some((cond, then.as_ref(), els.as_deref()));
+                let mut else_body = None;
+                while let Some((condition, then, els)) = next {
+                    let Ok(condition) = self.lower_value(*condition) else {
+                        return Vec::new();
+                    };
+                    branches.push(wir::IfBranch {
                         condition,
-                        body: then_body,
-                    }],
+                        body: self.lower_stmt(then),
+                    });
+                    next = match els {
+                        Some(HirStmt {
+                            kind: HirStmtKind::If { cond, then, els },
+                            ..
+                        }) => Some((cond, then.as_ref(), els.as_deref())),
+                        Some(body) => {
+                            else_body = Some(self.lower_stmt(body));
+                            None
+                        }
+                        None => None,
+                    };
+                }
+                vec![self.out.actions.push(wir::Action::If {
+                    branches,
                     else_body,
                     span: self.ws_span(stmt.span),
                 })]
@@ -1426,11 +1449,6 @@ impl<'a> Lowerer<'a> {
                         return self
                             .lower_condition_auto_for(stmt.span, *var, *start, *end, *step, body);
                     }
-                    self.unsupported(
-                        stmt.span,
-                        "condition-based auto-for requires a postfix step for core Workshop lowering",
-                    );
-                    return Vec::new();
                 }
                 let Ok(start) = self.lower_value(*start) else {
                     return Vec::new();
@@ -1447,19 +1465,21 @@ impl<'a> Lowerer<'a> {
                     self.player_vars.get(var).copied(),
                 ) {
                     (Some(variable), _) => {
-                        vec![self.out.actions.push(wir::Action::ForGlobalVariable {
-                            variable,
-                            start,
-                            stop,
-                            step,
-                            body,
-                            span: self.ws_span(stmt.span),
-                            target_span: self
-                                .hir
-                                .vars
-                                .get(*var as usize)
-                                .and_then(|v| self.ws_span(v.span)),
-                        })]
+                        vec![
+                            self.out.actions.push(wir::Action::ForGlobalVariable {
+                                variable,
+                                start,
+                                stop,
+                                step,
+                                body,
+                                span: self.ws_span(stmt.span),
+                                target_span: self
+                                    .hir
+                                    .vars
+                                    .get(*var as usize)
+                                    .and_then(|v| self.ws_span(v.span)),
+                            }),
+                        ]
                     }
                     (None, Some(variable)) => {
                         let player = self.out.values.push(wir::ValueNode::new(
@@ -1532,7 +1552,14 @@ impl<'a> Lowerer<'a> {
                 };
                 self.lower_foreach(stmt.span, *var, *collection, body)
             }
-            HirStmtKind::Return { .. }
+            HirStmtKind::Return { value: None } => {
+                vec![self.out.actions.push(wir::Action::Call {
+                    name: "abort".to_string(),
+                    args: Vec::new(),
+                    span: self.ws_span(stmt.span),
+                })]
+            }
+            HirStmtKind::Return { value: Some(_) }
             | HirStmtKind::Break
             | HirStmtKind::Continue
             | HirStmtKind::Delete { .. }
@@ -2130,6 +2157,10 @@ impl<'a> Lowerer<'a> {
                     })]
                 }
                 CallTarget::Func(fid) => self.call_subroutine(fid, expr.span),
+                CallTarget::BuiltinArrayMethod {
+                    member: crate::hir::BuiltinArrayMember::Append,
+                    base,
+                } => self.lower_array_append(base, &args, expr.span),
                 _ => {
                     self.unsupported(
                         expr.span,
@@ -2240,6 +2271,60 @@ impl<'a> Lowerer<'a> {
         None
     }
 
+    fn lower_array_append(
+        &mut self,
+        base: HirExprId,
+        args: &[HirArg],
+        span: Span,
+    ) -> Vec<wir::ActionId> {
+        let Some(HirExprKind::VarRef { var }) = self.hir.expr(base).map(|expr| &expr.kind) else {
+            self.unsupported(span, "array append target is not a Workshop variable");
+            return Vec::new();
+        };
+        let Ok(mut values) = self.lower_args(args, None) else {
+            return Vec::new();
+        };
+        if values.len() != 1 {
+            self.unsupported(span, "array append requires one value");
+            return Vec::new();
+        }
+        let value = values.remove(0);
+        let target_span = self.hir.expr(base).and_then(|expr| self.ws_span(expr.span));
+        match (
+            self.global_vars.get(var).copied(),
+            self.player_vars.get(var).copied(),
+        ) {
+            (Some(variable), _) => vec![self.out.actions.push(wir::Action::ModifyGlobalVariable {
+                variable,
+                op: wir::ModifyOp::AppendToArray,
+                value,
+                span: self.ws_span(span),
+                target_span,
+            })],
+            (None, Some(variable)) => {
+                let player = self.out.values.push(wir::ValueNode::new(
+                    wir::Value::EventPlayer,
+                    self.ws_span(span),
+                ));
+                vec![self.out.actions.push(wir::Action::ModifyPlayerVariable {
+                    player,
+                    variable,
+                    op: wir::ModifyOp::AppendToArray,
+                    value,
+                    span: self.ws_span(span),
+                    target_span,
+                })]
+            }
+            _ => {
+                self.unsupported(
+                    span,
+                    "array append target has no canonical Workshop storage",
+                );
+                Vec::new()
+            }
+        }
+    }
+
     fn call_subroutine(&mut self, fid: HirFuncId, span: Span) -> Vec<wir::ActionId> {
         if let Some(subroutine) = self.subroutines.get(&fid).copied() {
             vec![self.out.actions.push(wir::Action::CallSubroutine {
@@ -2342,6 +2427,7 @@ impl<'a> Lowerer<'a> {
             self.unsupported(span, "assignment target is not a known HIR expression");
             return Vec::new();
         };
+        let target_span = self.ws_span(target_expr.span);
         let HirExprKind::VarRef { var } = target_expr.kind else {
             self.unsupported(span, "assignment target is not a Workshop variable");
             return Vec::new();
@@ -2349,11 +2435,6 @@ impl<'a> Lowerer<'a> {
         let Ok(value) = self.lower_value(value) else {
             return Vec::new();
         };
-        let target_span = self
-            .hir
-            .vars
-            .get(var as usize)
-            .and_then(|v| self.ws_span(v.span));
         let modify = self.modify_op(op, span);
         match (
             self.global_variable(var),
@@ -2721,8 +2802,58 @@ impl<'a> Lowerer<'a> {
             HirExprKind::Convert { from, .. } | HirExprKind::Cast { expr: from, .. } => {
                 return self.lower_value(from);
             }
-            HirExprKind::StrInterp { .. }
-            | HirExprKind::Assign { .. }
+            HirExprKind::StrInterp { parts, args } => {
+                if parts.len() == 1 && args.is_empty() {
+                    if let HirInterpPart::Hole(base) = &parts[0] {
+                        wir::Value::Call {
+                            name: "customString".to_string(),
+                            args: vec![self.lower_value(*base)?],
+                        }
+                    } else {
+                        self.unsupported(
+                            expr.span,
+                            "formatted value has no canonical string template",
+                        );
+                        return Err(());
+                    }
+                } else if parts.len() == 1 && matches!(&parts[0], HirInterpPart::Hole(_)) {
+                    let HirInterpPart::Hole(base) = &parts[0] else {
+                        unreachable!();
+                    };
+                    let mut values = vec![self.lower_value(*base)?];
+                    values.extend(
+                        args.into_iter()
+                            .map(|arg| self.lower_value(arg))
+                            .collect::<Result<Vec<_>, _>>()?,
+                    );
+                    wir::Value::Call {
+                        name: "customString".to_string(),
+                        args: values,
+                    }
+                } else {
+                    let mut template = String::new();
+                    let mut values = Vec::new();
+                    for part in parts {
+                        match part {
+                            HirInterpPart::Text(text) => template.push_str(&text),
+                            HirInterpPart::Hole(value) => {
+                                template.push_str(&format!("<{}>", values.len()));
+                                values.push(self.lower_value(value)?);
+                            }
+                        }
+                    }
+                    let template = self
+                        .out
+                        .values
+                        .push(wir::ValueNode::new(wir::Value::String(template), span));
+                    values.insert(0, template);
+                    wir::Value::Call {
+                        name: "customString".to_string(),
+                        args: values,
+                    }
+                }
+            }
+            HirExprKind::Assign { .. }
             | HirExprKind::Member { .. }
             | HirExprKind::FunctionValue { .. }
             | HirExprKind::New { .. }

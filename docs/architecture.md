@@ -23,7 +23,7 @@ surface), `provenance.md` (pinned upstream oracle), `syntax-notes.md` (parser re
 1. **Single crate at repo root.** Package `del-rs`, library `del_rs`, binary `del-rs`
    (`src/bin/del-rs.rs`). No workspace members. Dependencies: `serde`, `serde_json`, `toml`
    (diagnostics JSON, `ds.toml`/manifests/matrix), and the released registry
-   `workshop-rs 0.1.1` catalog core.
+   `workshop-rs 0.1.9` catalog core.
 2. **Backend neutrality.** Parsing and semantic analysis own syntax, diagnostics, provenance,
    and the typed HIR. It must never own canonical Workshop catalog data, WIR, localization, or
    emitter logic. Workshop-facing names bind through one narrow provider trait (§12).
@@ -62,7 +62,7 @@ dialect = "ostw"
 id = "syntax.rules"
 name = "syntax.rules"
 category = "syntax"                     # one of the fixed category set
-state = "source-supported"              # one of the fixed state set
+state = "source-supported"            # one of the fixed state set
 evidence = ["tests/corpus/parser/basic-rule.del"]       # paths relative to repo root; must exist
 notes = "rule: \"name\" with optional sort order, event line, if-conditions; see syntax-notes.md"
 
@@ -81,7 +81,7 @@ name = "workshop-lowering.workshop-catalog"
 category = "workshop-lowering"
 state = "lowering-dependent"
 evidence = ["docs/inventory.md"]        # rationale in notes
-notes = "#34 provides CatalogProvider and canonical catalog identity through workshop-rs 0.1.1; the DEL-owned HIR-to-WIR lowering adapter is del-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs."
+notes = "#34 provides CatalogProvider and canonical catalog identity through workshop-rs 0.1.9; the DEL-owned HIR-to-WIR lowering adapter is del-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs."
 
 [[features]]
 id = "editor.codelens"
@@ -723,7 +723,7 @@ pub fn load_project(opts: ProjectOptions) -> Project;    // total; errors become
 
 The single seam through which Workshop-facing names enter the source implementation. del-rs owns the trait,
 the permissive default, and the source-language adapter; `CatalogProvider` reads canonical
-identities and metadata from the released registry `workshop-rs 0.1.1` catalog. No catalog data,
+identities and metadata from the released registry `workshop-rs 0.1.9` catalog. No catalog data,
 enum tables, event tables, or builtin signatures are copied into del-rs. The provider exposes
 the catalog identity for reproducible diagnostics and tests.
 
@@ -780,7 +780,7 @@ impl WorkshopProvider for NoopProvider { /* NotFound for all queries */ }
 ```
 
 **Semantic interaction contract** (implemented by `del-rs`'s provider seam and the
-`workshop-rs 0.1.1` catalog API):
+`workshop-rs 0.1.9` catalog API):
 
 1. Name resolution order (§13) tries user scopes first; only failures reach the provider.
 2. `NotFound` ⇒ the name is typed `Type::External(ExternalType::Unknown)` (or
@@ -1657,7 +1657,7 @@ the relevant sections above already reflect them. Highlights:
 
 This document is the decision record for the implemented pipeline. D1–D6 (§2) are the
 architecture-level decisions. The #34 provider contract (§12) now consumes the released
-`workshop-rs 0.1.1` catalog through public APIs; the DEL-owned HIR-to-WIR lowering adapter
+`workshop-rs 0.1.9` catalog through public APIs; the DEL-owned HIR-to-WIR lowering adapter
 at the HIR boundary (§15) is del-rs #30 work, while the canonical WIR/catalog contract
 remains owned by workshop-rs. Nothing in this document requires a private Workshop revision or duplicated
 canonical catalog semantics.

@@ -25,7 +25,11 @@ fn check(text: &str) -> (Vec<del_rs::Diagnostic>, del_rs::semantic::SemanticProg
 }
 
 fn codes(diags: &[del_rs::Diagnostic]) -> Vec<String> {
-    diags.iter().filter(|d| d.is_error()).map(|d| d.code.clone()).collect()
+    diags
+        .iter()
+        .filter(|d| d.is_error())
+        .map(|d| d.code.clone())
+        .collect()
 }
 
 fn has_code(diags: &[del_rs::Diagnostic], code: &str) -> bool {
@@ -34,7 +38,8 @@ fn has_code(diags: &[del_rs::Diagnostic], code: &str) -> bool {
 
 #[test]
 fn basic_program_resolves() {
-    let (diags, program) = check("globalvar Number x = 5;\nrule: \"\" {\n    define y = x + 1;\n}\n");
+    let (diags, program) =
+        check("globalvar Number x = 5;\nrule: \"\" {\n    define y = x + 1;\n}\n");
     assert!(codes(&diags).is_empty(), "{:?}", codes(&diags));
     // x and y resolve as symbols with Number types.
     let x = program
@@ -57,7 +62,8 @@ fn duplicate_declaration_sm001() {
 #[test]
 fn unknown_type_is_external_not_error() {
     // Provider contract: Workshop-facing names stay externally bound.
-    let (diags, program) = check("rule: \"\" {\n    Effect e = Effect.GoodAura;\n    define x = e;\n}\n");
+    let (diags, program) =
+        check("rule: \"\" {\n    Effect e = Effect.GoodAura;\n    define x = e;\n}\n");
     assert!(codes(&diags).is_empty(), "{:?}", codes(&diags));
     assert!(!program.types.is_empty());
 }
@@ -70,9 +76,7 @@ fn immutable_variable_assignment_sm048() {
 
 #[test]
 fn named_argument_must_precede_no_positional_argument_sm053() {
-    let (diags, _) = check(
-        "void f(Number a, Number b) { }\nrule: \"\" {\n    f(b: 2, 1);\n}\n",
-    );
+    let (diags, _) = check("void f(Number a, Number b) { }\nrule: \"\" {\n    f(b: 2, 1);\n}\n");
     assert!(has_code(&diags, "SM053"), "{:?}", codes(&diags));
 }
 
@@ -200,7 +204,8 @@ fn cross_file_resolution() {
 
 #[test]
 fn struct_literal_typed_against_declared_struct() {
-    let text = "struct S { public Number X; }\nrule: \"\" {\n    S s: { X: 0 };\n    define v = s.X;\n}\n";
+    let text =
+        "struct S { public Number X; }\nrule: \"\" {\n    S s: { X: 0 };\n    define v = s.X;\n}\n";
     let (diags, _) = check(text);
     assert!(codes(&diags).is_empty(), "{:?}", codes(&diags));
 }

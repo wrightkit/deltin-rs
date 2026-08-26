@@ -58,14 +58,33 @@ impl Default for OracleOptions {
 
 #[derive(Clone, Debug)]
 pub enum OracleError {
-    StepsLimit { span: Span },
-    RecursionLimit { span: Span },
-    LoopLimit { span: Span },
-    StaleReference { span: Span },
-    ExternalBoundary { span: Span },
-    TypeError { span: Span, expected: String, found: String },
-    Undefined { span: Span },
-    Other { span: Span, message: String },
+    StepsLimit {
+        span: Span,
+    },
+    RecursionLimit {
+        span: Span,
+    },
+    LoopLimit {
+        span: Span,
+    },
+    StaleReference {
+        span: Span,
+    },
+    ExternalBoundary {
+        span: Span,
+    },
+    TypeError {
+        span: Span,
+        expected: String,
+        found: String,
+    },
+    Undefined {
+        span: Span,
+    },
+    Other {
+        span: Span,
+        message: String,
+    },
 }
 
 pub struct Oracle<'a> {
@@ -136,9 +155,11 @@ impl<'a> Oracle<'a> {
                 LiteralValue::Null => OracleValue::Null,
             }),
             HirExprKind::VarRef { var } => {
-                let v = self.globals.get(var).cloned().ok_or_else(|| OracleError::Undefined {
-                    span: e.span,
-                })?;
+                let v = self
+                    .globals
+                    .get(var)
+                    .cloned()
+                    .ok_or_else(|| OracleError::Undefined { span: e.span })?;
                 Ok(v)
             }
             HirExprKind::Member { base, member } => {
@@ -210,7 +231,11 @@ impl<'a> Oracle<'a> {
                 }
                 Ok(OracleValue::Array(items))
             }
-            HirExprKind::StructLit { fields, base, single_value } => {
+            HirExprKind::StructLit {
+                fields,
+                base,
+                single_value,
+            } => {
                 let mut out = Vec::new();
                 for (_, fid) in fields {
                     let v = self.expr(*fid)?;
@@ -255,7 +280,9 @@ impl<'a> Oracle<'a> {
             }
             HirExprKind::Async { call, .. } => self.expr(*call),
             HirExprKind::This { .. } => Ok(OracleValue::Null),
-            HirExprKind::External { name, namespace, .. } => Ok(OracleValue::External {
+            HirExprKind::External {
+                name, namespace, ..
+            } => Ok(OracleValue::External {
                 name: name.clone(),
                 namespace: namespace.clone(),
             }),
@@ -313,7 +340,12 @@ impl<'a> Oracle<'a> {
         Ok(out)
     }
 
-    fn member_value(&mut self, base: OracleValue, member: HirMemberTarget, span: Span) -> Result<OracleValue, OracleError> {
+    fn member_value(
+        &mut self,
+        base: OracleValue,
+        member: HirMemberTarget,
+        span: Span,
+    ) -> Result<OracleValue, OracleError> {
         match member {
             HirMemberTarget::Field(_) | HirMemberTarget::Invoke => Ok(base),
             HirMemberTarget::Key => match base {
@@ -352,7 +384,13 @@ impl<'a> Oracle<'a> {
         self.binary(bop, l, r, span)
     }
 
-    fn binary(&mut self, op: crate::syntax::ast::BinaryOp, l: OracleValue, r: OracleValue, span: Span) -> Result<OracleValue, OracleError> {
+    fn binary(
+        &mut self,
+        op: crate::syntax::ast::BinaryOp,
+        l: OracleValue,
+        r: OracleValue,
+        span: Span,
+    ) -> Result<OracleValue, OracleError> {
         use crate::syntax::ast::BinaryOp::*;
         match (op, l, r) {
             (Add, OracleValue::Number(a), OracleValue::Number(b)) => Ok(OracleValue::Number(a + b)),
@@ -360,8 +398,12 @@ impl<'a> Oracle<'a> {
             (Mul, OracleValue::Number(a), OracleValue::Number(b)) => Ok(OracleValue::Number(a * b)),
             (Div, OracleValue::Number(a), OracleValue::Number(b)) => Ok(OracleValue::Number(a / b)),
             (Mod, OracleValue::Number(a), OracleValue::Number(b)) => Ok(OracleValue::Number(a % b)),
-            (Pow, OracleValue::Number(a), OracleValue::Number(b)) => Ok(OracleValue::Number(a.powf(b))),
-            (Add, OracleValue::String(a), OracleValue::String(b)) => Ok(OracleValue::String(a + &b)),
+            (Pow, OracleValue::Number(a), OracleValue::Number(b)) => {
+                Ok(OracleValue::Number(a.powf(b)))
+            }
+            (Add, OracleValue::String(a), OracleValue::String(b)) => {
+                Ok(OracleValue::String(a + &b))
+            }
             (Eq, a, b) => Ok(OracleValue::Bool(a == b)),
             (Ne, a, b) => Ok(OracleValue::Bool(a != b)),
             (Lt, OracleValue::Number(a), OracleValue::Number(b)) => Ok(OracleValue::Bool(a < b)),
@@ -378,11 +420,20 @@ impl<'a> Oracle<'a> {
         }
     }
 
-    fn assign(&mut self, target: HirExprId, value: OracleValue, span: Span) -> Result<OracleValue, OracleError> {
-        let t = self.hir.expr(target).cloned().ok_or_else(|| OracleError::Other {
-            span,
-            message: "unknown assignment target".into(),
-        })?;
+    fn assign(
+        &mut self,
+        target: HirExprId,
+        value: OracleValue,
+        span: Span,
+    ) -> Result<OracleValue, OracleError> {
+        let t = self
+            .hir
+            .expr(target)
+            .cloned()
+            .ok_or_else(|| OracleError::Other {
+                span,
+                message: "unknown assignment target".into(),
+            })?;
         match t.kind {
             HirExprKind::VarRef { var } => {
                 self.globals.insert(var, value.clone());
@@ -393,7 +444,12 @@ impl<'a> Oracle<'a> {
                 // (fields are stored on the value; class fields are kept on
                 // the object).
                 match self.expr(base)? {
-                    OracleValue::Object { class, generation, deleted, .. } => {
+                    OracleValue::Object {
+                        class,
+                        generation,
+                        deleted,
+                        ..
+                    } => {
                         let _ = (class, generation, deleted);
                         Ok(value)
                     }
@@ -404,7 +460,12 @@ impl<'a> Oracle<'a> {
         }
     }
 
-    fn alloc(&mut self, class: HirClassId, args: Vec<OracleValue>, _span: Span) -> Result<OracleValue, OracleError> {
+    fn alloc(
+        &mut self,
+        class: HirClassId,
+        args: Vec<OracleValue>,
+        _span: Span,
+    ) -> Result<OracleValue, OracleError> {
         let fields = self
             .hir
             .classes
@@ -439,26 +500,29 @@ impl<'a> Oracle<'a> {
         })
     }
 
-    fn call(&mut self, target: CallTarget, args: Vec<OracleValue>, span: Span) -> Result<OracleValue, OracleError> {
+    fn call(
+        &mut self,
+        target: CallTarget,
+        args: Vec<OracleValue>,
+        span: Span,
+    ) -> Result<OracleValue, OracleError> {
         match target {
             CallTarget::Func(fid) | CallTarget::Method { method: fid, .. } => {
                 self.call_func(fid, args, span)
             }
             CallTarget::Constructor(class) => self.alloc(class, args, span),
-            CallTarget::FunctionValue(expr) => {
-                match self.expr(expr)? {
-                    OracleValue::Func { func, .. } => self.call_func(func, args, span),
-                    OracleValue::External { .. } => Ok(OracleValue::External {
-                        name: String::new(),
-                        namespace: Vec::new(),
-                    }),
-                    _ => Err(OracleError::TypeError {
-                        span,
-                        expected: "function".into(),
-                        found: "value".into(),
-                    }),
-                }
-            }
+            CallTarget::FunctionValue(expr) => match self.expr(expr)? {
+                OracleValue::Func { func, .. } => self.call_func(func, args, span),
+                OracleValue::External { .. } => Ok(OracleValue::External {
+                    name: String::new(),
+                    namespace: Vec::new(),
+                }),
+                _ => Err(OracleError::TypeError {
+                    span,
+                    expected: "function".into(),
+                    found: "value".into(),
+                }),
+            },
             CallTarget::BuiltinArrayMethod { member, base } => {
                 let b = self.expr(base)?;
                 match (member, b) {
@@ -477,8 +541,15 @@ impl<'a> Oracle<'a> {
                     }
                     (BuiltinArrayMember::IndexOf, OracleValue::Array(items)) => {
                         let needle = args.first().cloned().unwrap_or(OracleValue::Null);
-                        let idx = items.iter().position(|i| *i == needle).unwrap_or(usize::MAX);
-                        Ok(OracleValue::Number(if idx == usize::MAX { -1.0 } else { idx as f64 }))
+                        let idx = items
+                            .iter()
+                            .position(|i| *i == needle)
+                            .unwrap_or(usize::MAX);
+                        Ok(OracleValue::Number(if idx == usize::MAX {
+                            -1.0
+                        } else {
+                            idx as f64
+                        }))
                     }
                     (BuiltinArrayMember::ModAppend, OracleValue::Array(mut items)) => {
                         items.extend(args);
@@ -488,10 +559,9 @@ impl<'a> Oracle<'a> {
                     _ => Err(OracleError::ExternalBoundary { span }),
                 }
             }
-            CallTarget::External { name, namespace, .. } => Ok(OracleValue::External {
-                name,
-                namespace,
-            }),
+            CallTarget::External {
+                name, namespace, ..
+            } => Ok(OracleValue::External { name, namespace }),
         }
     }
 
@@ -501,16 +571,26 @@ impl<'a> Oracle<'a> {
         }
     }
 
-    fn call_func(&mut self, fid: HirFuncId, args: Vec<OracleValue>, span: Span) -> Result<OracleValue, OracleError> {
+    fn call_func(
+        &mut self,
+        fid: HirFuncId,
+        args: Vec<OracleValue>,
+        span: Span,
+    ) -> Result<OracleValue, OracleError> {
         self.depth += 1;
         if self.depth > self.options.max_depth {
             self.depth -= 1;
             return Err(OracleError::RecursionLimit { span });
         }
-        let func = self.hir.funcs.get(fid as usize).cloned().ok_or_else(|| OracleError::Other {
-            span,
-            message: format!("unknown function {fid}"),
-        })?;
+        let func = self
+            .hir
+            .funcs
+            .get(fid as usize)
+            .cloned()
+            .ok_or_else(|| OracleError::Other {
+                span,
+                message: format!("unknown function {fid}"),
+            })?;
         let saved = self.globals.clone();
         // Bind params by name (param vars were registered at lowering).
         for (i, p) in func.params.iter().enumerate() {
@@ -539,14 +619,18 @@ impl<'a> Oracle<'a> {
     }
 
     fn param_var(&self, fid: HirFuncId, name: &str) -> Option<HirVarId> {
-        self.hir.param_vars.get(&(fid, name.to_string())).copied().or_else(|| {
-            self.hir
-                .vars
-                .iter()
-                .enumerate()
-                .find(|(_, v)| v.name == name && v.storage == StorageIntent::Parameter)
-                .map(|(i, _)| i as HirVarId)
-        })
+        self.hir
+            .param_vars
+            .get(&(fid, name.to_string()))
+            .copied()
+            .or_else(|| {
+                self.hir
+                    .vars
+                    .iter()
+                    .enumerate()
+                    .find(|(_, v)| v.name == name && v.storage == StorageIntent::Parameter)
+                    .map(|(i, _)| i as HirVarId)
+            })
     }
 
     fn exec_block(&mut self, block: &HirBlock) -> Result<Flow, OracleError> {
@@ -564,7 +648,10 @@ impl<'a> Oracle<'a> {
         match &s.kind {
             HirStmtKind::Block(b) => self.exec_block(b),
             HirStmtKind::VarDecl { var, init } => {
-                let v = init.map(|e| self.expr(e)).transpose()?.unwrap_or(OracleValue::Null);
+                let v = init
+                    .map(|e| self.expr(e))
+                    .transpose()?
+                    .unwrap_or(OracleValue::Null);
                 self.globals.insert(*var, v);
                 Ok(Flow::Normal)
             }
@@ -605,7 +692,12 @@ impl<'a> Oracle<'a> {
                 }
                 Ok(Flow::Normal)
             }
-            HirStmtKind::For { init, cond, step, body } => {
+            HirStmtKind::For {
+                init,
+                cond,
+                step,
+                body,
+            } => {
                 let saved = self.globals.clone();
                 if let Some(i) = init {
                     if let Flow::Return(v) = self.exec_stmt(i)? {
@@ -637,7 +729,13 @@ impl<'a> Oracle<'a> {
                 self.globals = saved;
                 Ok(Flow::Normal)
             }
-            HirStmtKind::AutoFor { var, start, end, step, body } => {
+            HirStmtKind::AutoFor {
+                var,
+                start,
+                end,
+                step,
+                body,
+            } => {
                 let mut cur = match self.expr(*start)? {
                     OracleValue::Number(n) => n,
                     _ => 0.0,
@@ -672,7 +770,11 @@ impl<'a> Oracle<'a> {
                 }
                 Ok(Flow::Normal)
             }
-            HirStmtKind::Foreach { var, collection, body } => {
+            HirStmtKind::Foreach {
+                var,
+                collection,
+                body,
+            } => {
                 let coll = self.expr(*collection)?;
                 let items = match coll {
                     OracleValue::Array(items) => items,
@@ -763,7 +865,11 @@ pub fn run_oracle(hir: &HirProgram, entry: OracleEntry, opts: OracleOptions) -> 
     }
     let mut o = Oracle::new(hir);
     o.options = opts;
-    match o.call_func(entry.func, entry.args, Span::new(crate::span::FileId(0), 0, 0)) {
+    match o.call_func(
+        entry.func,
+        entry.args,
+        Span::new(crate::span::FileId(0), 0, 0),
+    ) {
         Ok(v) => OracleResult {
             value: Some(v),
             error: None,
