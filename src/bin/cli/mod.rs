@@ -226,3 +226,13 @@ fn escape_message(value: &str) -> String {
         .replace('\r', "%0D")
         .replace('\n', "%0A")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::escape_property;
+
+    #[test]
+    fn escape_property_encodes_github_actions_delimiters() {
+        assert_eq!(escape_property("cli,source:case"), "cli%2Csource%3Acase");
+    }
+}

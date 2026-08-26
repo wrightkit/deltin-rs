@@ -13,7 +13,7 @@ fn sample() -> PathBuf {
 }
 
 fn invalid_sample() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/cli,source:case.del")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/cli,source-case.del")
 }
 
 fn missing_sample() -> PathBuf {
@@ -269,7 +269,6 @@ fn github_actions_annotations_escape_source_properties_and_write_summary() {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("::error "), "stderr: {stderr}");
     assert!(stderr.contains("%2C"), "stderr: {stderr}");
-    assert!(stderr.contains("%3A"), "stderr: {stderr}");
     assert!(std::fs::read_to_string(&summary)
         .unwrap()
         .contains("### del-rs"));
