@@ -4,7 +4,7 @@
 //! lives here alongside checking (documented simplification of the module
 //! layout in docs/architecture.md §5).
 
-use crate::diagnostics::{Phase, error};
+use crate::diagnostics::{error, Phase};
 use crate::semantic::provider::*;
 use crate::semantic::resolve::{BuiltinMember, Resolution};
 use crate::semantic::symbols::*;

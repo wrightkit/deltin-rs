@@ -7,7 +7,12 @@ use deltin_rs::semantic::check_project;
 use deltin_rs::semantic::provider::NoopProvider;
 use std::path::PathBuf;
 
-fn check(text: &str) -> (Vec<deltin_rs::Diagnostic>, deltin_rs::semantic::SemanticProgram) {
+fn check(
+    text: &str,
+) -> (
+    Vec<deltin_rs::Diagnostic>,
+    deltin_rs::semantic::SemanticProgram,
+) {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!("deltin-rs-semantic-{}-{n}", std::process::id()));
