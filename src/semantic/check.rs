@@ -510,7 +510,7 @@ impl<'a> Checker<'a> {
                             ..Default::default()
                         },
                     };
-                    if let Err(_) = self.program.tables.declare(self.scope(), sym) {
+                    if self.program.tables.declare(self.scope(), sym).is_err() {
                         self.err(
                             "SM001",
                             v.name.span,
@@ -679,7 +679,7 @@ impl<'a> Checker<'a> {
                             && !scrut.is_external()
                             && !lt.is_error()
                             && !lt.is_external()
-                            && self.conversion(&lt, &scrut).rank() >= 255
+                            && self.conversion(&lt, &scrut).rank() == 255
                         {
                             self.err(
                                 "SM026",
@@ -1017,9 +1017,10 @@ impl<'a> Checker<'a> {
                     tt
                 } else if self.conversion(&tt, &et).rank() < 255 {
                     et
-                } else if self.conversion(&et, &tt).rank() < 255 {
-                    tt
-                } else if tt.is_external() || et.is_external() {
+                } else if self.conversion(&et, &tt).rank() < 255
+                    || tt.is_external()
+                    || et.is_external()
+                {
                     tt
                 } else {
                     Type::Any
@@ -1267,8 +1268,8 @@ impl<'a> Checker<'a> {
     fn check_binary_op(&mut self, op: &BinaryOp, lt: &Type, rt: &Type, span: Span) -> Type {
         match op {
             BinaryOp::Eq | BinaryOp::Ne => {
-                if self.conversion(lt, rt).rank() >= 255
-                    && self.conversion(rt, lt).rank() >= 255
+                if self.conversion(lt, rt).rank() == 255
+                    && self.conversion(rt, lt).rank() == 255
                     && !lt.is_external()
                     && !rt.is_external()
                     && !lt.is_error()
@@ -1559,12 +1560,14 @@ impl<'a> Checker<'a> {
                 {
                     return true;
                 }
-                match self.program.types.get(&base.id) {
-                    Some(Type::Class(_)) => true,
-                    Some(Type::Player) => true,
-                    Some(Type::External(_)) | Some(Type::Any) | None => true,
-                    _ => false,
-                }
+                matches!(
+                    self.program.types.get(&base.id),
+                    Some(Type::Class(_))
+                        | Some(Type::Player)
+                        | Some(Type::External(_))
+                        | Some(Type::Any)
+                        | None
+                )
             }
             _ => self
                 .program
@@ -1669,15 +1672,13 @@ impl<'a> Checker<'a> {
             self.record(expr, ty.clone(), Some(Resolution::Symbol(mid)));
             return ty;
         }
-        if matches!(base_ty, Type::Enum(_)) {
-            if name.name == "Key" || name.name == "Name" {
-                self.record(
-                    expr,
-                    Type::Number,
-                    Some(Resolution::BuiltinMember(BuiltinMember::Key)),
-                );
-                return Type::Number;
-            }
+        if matches!(base_ty, Type::Enum(_)) && (name.name == "Key" || name.name == "Name") {
+            self.record(
+                expr,
+                Type::Number,
+                Some(Resolution::BuiltinMember(BuiltinMember::Key)),
+            );
+            return Type::Number;
         }
         if let Type::Array(elem) = base_ty {
             let bm = match name.name.as_str() {
@@ -2268,14 +2269,13 @@ impl<'a> Checker<'a> {
                 if matches!(
                     bm,
                     BuiltinMember::ArrayModAppend | BuiltinMember::ArrayModRemoveByIndex
-                ) {
-                    if !self.check_lvalue(base) {
-                        self.err(
+                ) && !self.check_lvalue(base)
+                {
+                    self.err(
                             "SM017",
                             base.span,
                             "functions that directly modify arrays require a mutable variable as the source",
                         );
-                    }
                 }
                 Type::Any
             }
@@ -2427,13 +2427,13 @@ impl<'a> Checker<'a> {
                 } else {
                     self.conversion(at, pt)
                 };
-                if c.rank() >= 255 && !pt.is_external() {
+                if c.rank() == 255 && !pt.is_external() {
                     conv_ok = false;
                     break;
                 }
                 rank = rank.max(c.rank() as u32);
             }
-            if conv_ok && best.as_ref().map_or(true, |(_, r)| rank < *r) {
+            if conv_ok && best.as_ref().is_none_or(|(_, r)| rank < *r) {
                 best = Some((sid, rank));
             }
         }
@@ -2465,7 +2465,7 @@ impl<'a> Checker<'a> {
     fn param_info_inner(&mut self, sid: SymbolId) -> (Vec<String>, Vec<bool>) {
         for file in &self.program.project.files {
             if let Some(parsed) = self.program.asts.get(file) {
-                if let Some(info) = find_param_info(parsed, sid, &self.program) {
+                if let Some(info) = find_param_info(parsed, sid, self.program) {
                     return info;
                 }
             }

@@ -9,7 +9,7 @@ use crate::semantic::types::Type;
 
 pub fn validate(hir: &HirProgram) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
-    let mut err = |code: &str, span: crate::span::Span, msg: String, out: &mut Vec<Diagnostic>| {
+    let err = |code: &str, span: crate::span::Span, msg: String, out: &mut Vec<Diagnostic>| {
         out.push(error(Phase::Hir, code, span, msg));
     };
 
@@ -26,22 +26,20 @@ pub fn validate(hir: &HirProgram) -> Vec<Diagnostic> {
                     );
                 }
             }
-            HirExprKind::New { class, .. } => {
-                if *class as usize >= hir.classes.len() {
-                    err(
-                        "HI010",
-                        e.span,
-                        format!("new targets unknown class {class}"),
-                        &mut diags,
-                    );
-                }
+            HirExprKind::New { class, .. } if *class as usize >= hir.classes.len() => {
+                err(
+                    "HI010",
+                    e.span,
+                    format!("new targets unknown class {class}"),
+                    &mut diags,
+                );
             }
             _ => {}
         }
     }
 
     // HI006: assignment targets are lvalues.
-    for (_, e) in hir.exprs.iter().enumerate() {
+    for e in &hir.exprs {
         if let HirExprKind::Assign { target, .. } = &e.kind {
             match &hir.expr(*target).map(|t| &t.kind) {
                 Some(HirExprKind::VarRef { .. })

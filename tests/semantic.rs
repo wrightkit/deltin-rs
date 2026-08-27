@@ -154,7 +154,7 @@ fn diagnostics_have_provenance() {
     assert!(has_code(&diags, "SM004"));
     for d in &diags {
         assert_eq!(d.phase, deltin_rs::diagnostics::Phase::Semantic);
-        assert!(d.primary.start < d.primary.end || d.primary.start == d.primary.end);
+        assert!(d.primary.start <= d.primary.end);
     }
 }
 

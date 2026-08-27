@@ -785,9 +785,7 @@ impl<'a> Lowerer<'a> {
             );
             return None;
         };
-        let Some(binding) = self.external_binding(expr.span, &name, &namespace) else {
-            return None;
-        };
+        let binding = self.external_binding(expr.span, &name, &namespace)?;
         let ExternalBinding::Event(info) = binding else {
             self.unsupported(
                 expr.span,
@@ -1508,14 +1506,14 @@ impl<'a> Lowerer<'a> {
                 step,
                 body,
             } => {
-                if self.auto_for_uses_condition(*var, *end) {
-                    if matches!(
+                if self.auto_for_uses_condition(*var, *end)
+                    && matches!(
                         self.hir.expr(*step).map(|expr| &expr.kind),
                         Some(HirExprKind::Postfix { .. })
-                    ) {
-                        return self
-                            .lower_condition_auto_for(stmt.span, *var, *start, *end, *step, body);
-                    }
+                    )
+                {
+                    return self
+                        .lower_condition_auto_for(stmt.span, *var, *start, *end, *step, body);
                 }
                 let Ok(start) = self.lower_value(*start) else {
                     return Vec::new();

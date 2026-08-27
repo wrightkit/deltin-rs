@@ -2801,13 +2801,14 @@ impl<'a> Parser<'a> {
         self.silent += 1;
         let t = self.parse_type_inner(false);
         self.silent -= 1;
-        if t.is_err() {
-            self.pos = save;
-            self.open_delims.truncate(save_delims);
-            self.diagnostics.truncate(saved_len);
-            None
-        } else {
-            Some(t.unwrap())
+        match t {
+            Ok(t) => Some(t),
+            Err(_) => {
+                self.pos = save;
+                self.open_delims.truncate(save_delims);
+                self.diagnostics.truncate(saved_len);
+                None
+            }
         }
     }
 
