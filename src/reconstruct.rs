@@ -637,6 +637,8 @@ impl<'a> Classifier<'a> {
             | ModifyOp::Modulo => {}
             ModifyOp::AppendToArray => {} // representable as `receiver.append(value)`
             ModifyOp::RaiseToPower
+            | ModifyOp::Min
+            | ModifyOp::Max
             | ModifyOp::RemoveFromArray
             | ModifyOp::RemoveFromArrayByIndex => {
                 self.error(ReconstructError::at(
@@ -1275,6 +1277,8 @@ fn assign_op_spelling(op: ModifyOp) -> &'static str {
         ModifyOp::Divide => "/=",
         ModifyOp::Modulo => "%=",
         ModifyOp::AppendToArray
+        | ModifyOp::Min
+        | ModifyOp::Max
         | ModifyOp::RaiseToPower
         | ModifyOp::RemoveFromArray
         | ModifyOp::RemoveFromArrayByIndex => {
