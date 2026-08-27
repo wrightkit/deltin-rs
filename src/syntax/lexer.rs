@@ -109,7 +109,7 @@ fn lex_with_base(file: FileId, text: &str, base: usize) -> (Vec<Token>, Vec<Diag
     (tokens, lx.diagnostics)
 }
 
-impl<'a> Lexer<'a> {
+impl Lexer<'_> {
     fn offset_at(&self, i: usize) -> usize {
         let off = if i >= self.chars.len() {
             self.text.len()

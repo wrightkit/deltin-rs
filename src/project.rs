@@ -203,7 +203,7 @@ struct Loader<'a> {
     by_canonical: HashMap<PathBuf, FileId>,
 }
 
-impl<'a> Loader<'a> {
+impl Loader<'_> {
     fn resolve_path(&self, p: &Path) -> PathBuf {
         if p.is_absolute() {
             p.to_path_buf()

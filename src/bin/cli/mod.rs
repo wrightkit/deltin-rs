@@ -69,7 +69,7 @@ impl Renderer {
             ColorPolicy::Always => true,
             ColorPolicy::Never => false,
             ColorPolicy::Auto => {
-                !env::var_os("NO_COLOR").is_some()
+                env::var_os("NO_COLOR").is_none()
                     && mode == PresentationMode::Terminal
                     && io::stderr().is_terminal()
             }
