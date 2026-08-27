@@ -4,8 +4,8 @@
 //! adapter; canonical catalog data remains in `workshop-rs`.
 
 use crate::span::{FileId, Span};
-use workshop_rs::WorkshopError;
 use workshop_rs::catalog::{Catalog, CatalogEntry, Kind, Locale};
+use workshop_rs::WorkshopError;
 
 /// Position a query name is used in.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

@@ -1,10 +1,10 @@
 //! Lowering: SemanticProgram -> HirProgram (provenance-preserving).
 
 use crate::hir::*;
-use crate::semantic::SemanticProgram;
 use crate::semantic::resolve::{BuiltinMember, Resolution};
 use crate::semantic::symbols::{SymbolId, SymbolKind};
 use crate::semantic::types::Type;
+use crate::semantic::SemanticProgram;
 use crate::syntax::ast::*;
 use std::collections::HashMap;
 

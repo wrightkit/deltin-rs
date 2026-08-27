@@ -1,7 +1,7 @@
 //! Core DEL HIR -> canonical Workshop WIR lowering evidence for #30.
 
 use deltin_rs::hir;
-use deltin_rs::project::{ProjectOptions, load_project};
+use deltin_rs::project::{load_project, ProjectOptions};
 use deltin_rs::semantic::check_project;
 use deltin_rs::semantic::provider::CatalogProvider;
 use deltin_rs::workshop::{lower_project_to_wir, lower_to_wir};
@@ -97,11 +97,9 @@ fn hir_is_backend_neutral_and_hir_only_external_lowering_fails_closed() {
 
     let (program, diagnostics) = lower_to_wir(&hir, &semantic.project.sources);
     assert!(program.rules.is_empty());
-    assert!(
-        diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code == "HI018" && diagnostic.primary == external.0)
-    );
+    assert!(diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == "HI018" && diagnostic.primary == external.0));
 }
 
 #[test]
@@ -112,15 +110,43 @@ void First(Number amount, Number label) "First" { amount += 1; }
 rule: "params" Event.OngoingGlobal { First(label: 1, amount: 2); }
 "#,
     );
-    assert!(diagnostics.iter().all(|diagnostic| !diagnostic.is_error()), "{diagnostics:?}");
+    assert!(
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
+        "{diagnostics:?}"
+    );
     program.validate().expect("structurally valid WIR");
     assert_eq!(program.global_variables.len(), 2);
-    assert_eq!(program.global_variables.get(workshop_rs::wir::GlobalVarId::from_index(0)).unwrap().name, "__del_param_f0_p0");
-    assert_eq!(program.global_variables.get(workshop_rs::wir::GlobalVarId::from_index(1)).unwrap().name, "__del_param_f0_p1");
-    let rule = program.rules.iter().find(|rule| rule.name == "params").unwrap();
-    assert!(matches!(program.actions.get(rule.actions[0]), Some(workshop_rs::wir::Action::SetGlobalVariable { variable, .. }) if *variable == workshop_rs::wir::GlobalVarId::from_index(1)));
-    assert!(matches!(program.actions.get(rule.actions[1]), Some(workshop_rs::wir::Action::SetGlobalVariable { variable, .. }) if *variable == workshop_rs::wir::GlobalVarId::from_index(0)));
-    assert!(matches!(program.actions.get(rule.actions[2]), Some(workshop_rs::wir::Action::CallSubroutine { .. })));
+    assert_eq!(
+        program
+            .global_variables
+            .get(workshop_rs::wir::GlobalVarId::from_index(0))
+            .unwrap()
+            .name,
+        "__del_param_f0_p0"
+    );
+    assert_eq!(
+        program
+            .global_variables
+            .get(workshop_rs::wir::GlobalVarId::from_index(1))
+            .unwrap()
+            .name,
+        "__del_param_f0_p1"
+    );
+    let rule = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "params")
+        .unwrap();
+    assert!(
+        matches!(program.actions.get(rule.actions[0]), Some(workshop_rs::wir::Action::SetGlobalVariable { variable, .. }) if *variable == workshop_rs::wir::GlobalVarId::from_index(1))
+    );
+    assert!(
+        matches!(program.actions.get(rule.actions[1]), Some(workshop_rs::wir::Action::SetGlobalVariable { variable, .. }) if *variable == workshop_rs::wir::GlobalVarId::from_index(0))
+    );
+    assert!(matches!(
+        program.actions.get(rule.actions[2]),
+        Some(workshop_rs::wir::Action::CallSubroutine { .. })
+    ));
     let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
     let locale = workshop_rs::catalog::Locale::new("en-US");
     let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
@@ -143,7 +169,12 @@ rule: "any" Event.OngoingGlobal { Target(1); }"#,
     ] {
         let (program, diagnostics) = lower(source);
         assert!(program.rules.is_empty(), "{source}");
-        assert!(diagnostics.iter().any(|diagnostic| diagnostic.code == "HI018"), "{source}\n{diagnostics:?}");
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "HI018"),
+            "{source}\n{diagnostics:?}"
+        );
     }
 }
 
@@ -155,8 +186,18 @@ void Target(Number amount) "Target" { }
 rule: "nested" Event.OngoingGlobal { if (true) { Target(1); } }
 "#,
     );
-    assert!(program.rules.is_empty(), "{}\n{diagnostics:?}", program.dump());
-    assert!(diagnostics.iter().any(|diagnostic| diagnostic.code == "HI018" && diagnostic.message.contains("direct actions")), "{diagnostics:?}");
+    assert!(
+        program.rules.is_empty(),
+        "{}\n{diagnostics:?}",
+        program.dump()
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "HI018"
+                && diagnostic.message.contains("direct actions")),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]
@@ -184,13 +225,11 @@ rule: "damage" Event.OnDamageDealt if (score > 0) {
         0
     );
     assert_eq!(program.rules.len(), 2);
-    assert!(
-        program
-            .rules
-            .get(workshop_rs::wir::RuleId::from_index(0))
-            .and_then(|rule| rule.span)
-            .is_some()
-    );
+    assert!(program
+        .rules
+        .get(workshop_rs::wir::RuleId::from_index(0))
+        .and_then(|rule| rule.span)
+        .is_some());
     let rule = program
         .rules
         .get(workshop_rs::wir::RuleId::from_index(1))
@@ -352,11 +391,20 @@ rule: "colliding-local" Event.OngoingGlobal {
 }
 "#,
     );
-    assert!(program.rules.is_empty(), "{}\n{diagnostics:?}", program.dump());
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == "HI018"
-            && diagnostic.message.contains("synthetic rule-local global name")
-    }), "{diagnostics:?}");
+    assert!(
+        program.rules.is_empty(),
+        "{}\n{diagnostics:?}",
+        program.dump()
+    );
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("synthetic rule-local global name")
+        }),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]
@@ -582,18 +630,16 @@ rule: "foreach-wait" Event.OngoingGlobal {
 }
 "#,
     );
+    assert!(program.rules.iter().all(|rule| rule.name != "foreach-wait"));
     assert!(
-        program
-            .rules
-            .iter()
-            .all(|rule| rule.name != "foreach-wait")
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("non-reentrant global rule context")
+        }),
+        "{diagnostics:?}"
     );
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == "HI018"
-            && diagnostic
-                .message
-                .contains("non-reentrant global rule context")
-    }), "{diagnostics:?}");
 }
 
 #[test]
@@ -615,12 +661,15 @@ rule: "foreach-collision" Event.OngoingGlobal {
         "{}\n{diagnostics:?}",
         program.dump()
     );
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == "HI018"
-            && diagnostic
-                .message
-                .contains("foreach synthetic global name collides")
-    }), "{diagnostics:?}");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("foreach synthetic global name collides")
+        }),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]
@@ -715,9 +764,7 @@ rule: "dynamic-switch" Event.OngoingGlobal {
     assert_eq!(helper.span, helper.name_span);
     assert_eq!(helper.span.unwrap().file.index(), 0);
     let Some(workshop_rs::wir::Action::SetGlobalVariable {
-        span,
-        target_span,
-        ..
+        span, target_span, ..
     }) = program.actions.get(rule.actions[0])
     else {
         panic!("dynamic switch must initialize a synthetic global temp")
@@ -822,9 +869,9 @@ rule: "calls-dynamic" Event.OngoingGlobal {
     assert!(
         diagnostics.iter().any(|diagnostic| {
             diagnostic.code == "HI018"
-                && diagnostic
-                    .message
-                    .contains("subroutine switch materialization requires a bounded invocation context")
+                && diagnostic.message.contains(
+                    "subroutine switch materialization requires a bounded invocation context",
+                )
         }),
         "{diagnostics:?}"
     );
@@ -919,15 +966,39 @@ rule: "player-target" Event.OngoingPlayer {
 }
 "#,
     );
-    assert!(diagnostics.iter().all(|diagnostic| !diagnostic.is_error()), "{diagnostics:?}");
+    assert!(
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
+        "{diagnostics:?}"
+    );
     program.validate().expect("structurally valid WIR");
-    let global = program.rules.iter().find(|rule| rule.name == "global-target").unwrap();
-    let player = program.rules.iter().find(|rule| rule.name == "player-target").unwrap();
-    for (rule, expected) in [(global, ["chaseAtRate", "stopChasingVariable"]), (player, ["chaseAtRate", ""])] {
-        assert_eq!(rule.actions.len(), if expected[1].is_empty() { 1 } else { 2 });
+    let global = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "global-target")
+        .unwrap();
+    let player = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "player-target")
+        .unwrap();
+    for (rule, expected) in [
+        (global, ["chaseAtRate", "stopChasingVariable"]),
+        (player, ["chaseAtRate", ""]),
+    ] {
+        assert_eq!(
+            rule.actions.len(),
+            if expected[1].is_empty() { 1 } else { 2 }
+        );
         for (action, name) in rule.actions.iter().zip(expected) {
-            if name.is_empty() { break; }
-            let workshop_rs::wir::Action::Call { name: actual, args, .. } = program.actions.get(*action).unwrap() else { panic!("expected canonical action") };
+            if name.is_empty() {
+                break;
+            }
+            let workshop_rs::wir::Action::Call {
+                name: actual, args, ..
+            } = program.actions.get(*action).unwrap()
+            else {
+                panic!("expected canonical action")
+            };
             assert_eq!(actual, name);
             assert!(!args.is_empty());
         }
@@ -949,10 +1020,15 @@ rule: "dynamic-target" Event.OngoingGlobal {
 "#,
     );
     assert!(program.rules.is_empty());
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == "HI018"
-            && diagnostic.message.contains("resolved global or player variable")
-    }), "{diagnostics:?}");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("resolved global or player variable")
+        }),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]
@@ -964,8 +1040,13 @@ rule: "player-stop" Event.OngoingPlayer { StopChasingVariable(target); }
 "#,
     );
     assert!(program.rules.is_empty());
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == "HI018"
-            && diagnostic.message.contains("player stop-chase action is unavailable")
-    }), "{diagnostics:?}");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == "HI018"
+                && diagnostic
+                    .message
+                    .contains("player stop-chase action is unavailable")
+        }),
+        "{diagnostics:?}"
+    );
 }

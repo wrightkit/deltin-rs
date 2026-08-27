@@ -82,7 +82,10 @@ fn caller_config_takes_precedence_without_discovering_root_config() {
         }),
     });
     assert!(project.diagnostics.is_empty(), "{:?}", project.diagnostics);
-    assert_eq!(project.sources.get(project.entry).name, PathBuf::from("src/lib.del"));
+    assert_eq!(
+        project.sources.get(project.entry).name,
+        PathBuf::from("src/lib.del")
+    );
     assert!(project.sources.by_name(&PathBuf::from("ds.toml")).is_none());
 }
 
@@ -116,8 +119,8 @@ fn invalid_ds_toml_is_a_project_diagnostic_with_config_provenance() {
 
 #[test]
 fn unreadable_ds_toml_uses_a_registered_config_source() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/project-fixtures/non-file-ds-toml");
+    let root =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/project-fixtures/non-file-ds-toml");
     let project = load_project(ProjectOptions {
         root,
         entry: None,

@@ -328,7 +328,10 @@ fn compatibility_report_classifies_evidence_and_gaps() {
     }));
     for case in &report.cases {
         if case.fixture.expect == deltin_rs::compatibility::ExpectedOutcome::Unknown {
-            assert_ne!(case.status, deltin_rs::compatibility::FixtureStatus::Matched);
+            assert_ne!(
+                case.status,
+                deltin_rs::compatibility::FixtureStatus::Matched
+            );
         }
     }
 }

@@ -292,7 +292,8 @@ fn position_offset(
 }
 
 fn check_path_for_cli(path: &std::path::Path, json: bool) -> deltin_rs::api::CheckReport {
-    let run = || deltin_rs::api::check_path(path, &deltin_rs::semantic::provider::NoopProvider::new());
+    let run =
+        || deltin_rs::api::check_path(path, &deltin_rs::semantic::provider::NoopProvider::new());
     if json {
         without_debug_output(run)
     } else {
