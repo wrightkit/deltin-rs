@@ -3,7 +3,7 @@
 //! before any backend exists. Not a Workshop runtime: external calls are
 //! holes; events never fire.
 
-use crate::diagnostics::{error, Diagnostic, Phase};
+use crate::diagnostics::Diagnostic;
 use crate::hir::*;
 use crate::span::Span;
 use std::collections::HashMap;
@@ -94,8 +94,6 @@ pub struct Oracle<'a> {
     pub options: OracleOptions,
     steps: u64,
     depth: u32,
-    /// Per-loop iteration counters keyed by statement id.
-    loop_counts: HashMap<u32, u64>,
 }
 
 enum Flow {
@@ -121,12 +119,7 @@ impl<'a> Oracle<'a> {
             options: OracleOptions::default(),
             steps: 0,
             depth: 0,
-            loop_counts: HashMap::new(),
         }
-    }
-
-    fn diag(&mut self, code: &str, span: Span, msg: String) {
-        self.diagnostics.push(error(Phase::Oracle, code, span, msg));
     }
 
     fn step(&mut self, span: Span) -> Result<(), OracleError> {
@@ -159,7 +152,7 @@ impl<'a> Oracle<'a> {
                     .globals
                     .get(var)
                     .cloned()
-                    .ok_or_else(|| OracleError::Undefined { span: e.span })?;
+                    .ok_or(OracleError::Undefined { span: e.span })?;
                 Ok(v)
             }
             HirExprKind::Member { base, member } => {

@@ -942,7 +942,7 @@ impl<'a> Builder<'a> {
                 let sym_ty = self.tables.symbol(*mid).ty.clone();
                 let sym_kind = self.tables.symbol(*mid).kind;
                 if sym_kind == SymbolKind::Variable {
-                    self.collect_value_refs(&sym_ty, *tid, &mut targets);
+                    self.collect_value_refs(&sym_ty, &mut targets);
                 } else if sym_kind == SymbolKind::EnumMember {
                     let fts = self
                         .enum_members
@@ -950,7 +950,7 @@ impl<'a> Builder<'a> {
                         .map(|i| i.field_types.clone())
                         .unwrap_or_default();
                     for ft in &fts {
-                        self.collect_value_refs(ft, *tid, &mut targets);
+                        self.collect_value_refs(ft, &mut targets);
                     }
                 }
             }
@@ -991,9 +991,9 @@ impl<'a> Builder<'a> {
         }
     }
 
-    fn collect_value_refs(&mut self, ty: &Type, self_id: SymbolId, out: &mut Vec<SymbolId>) {
+    fn collect_value_refs(&mut self, ty: &Type, out: &mut Vec<SymbolId>) {
         match ty {
-            Type::Array(inner) => self.collect_value_refs(inner, self_id, out),
+            Type::Array(inner) => self.collect_value_refs(inner, out),
             Type::Struct(id) | Type::Enum(id) => out.push(*id),
             Type::GenericInstantiation { def, args } => {
                 let kind = self.tables.symbol(*def).kind;
@@ -1021,7 +1021,7 @@ impl<'a> Builder<'a> {
                         let sym_kind = self.tables.symbol(*mid).kind;
                         if sym_kind == SymbolKind::Variable {
                             let subst_ty = substitute(&sym_ty, &subst);
-                            self.collect_value_refs(&subst_ty, self_id, out);
+                            self.collect_value_refs(&subst_ty, out);
                         } else if sym_kind == SymbolKind::EnumMember {
                             let fts = self
                                 .enum_members
@@ -1030,7 +1030,7 @@ impl<'a> Builder<'a> {
                                 .unwrap_or_default();
                             for ft in &fts {
                                 let subst_ty = substitute(ft, &subst);
-                                self.collect_value_refs(&subst_ty, self_id, out);
+                                self.collect_value_refs(&subst_ty, out);
                             }
                         }
                     }
@@ -1331,11 +1331,8 @@ fn collect_call_names(body: &FuncBody, out: &mut Vec<String>) {
                     }
                 }
             }
-            StmtKind::Return { value } => {
-                if let Some(v) = value {
-                    walk_expr(v, out);
-                }
-            }
+            StmtKind::Return { value: Some(v) } => walk_expr(v, out),
+            StmtKind::Return { value: None } => {}
             StmtKind::Delete { target } => walk_expr(target, out),
             StmtKind::Hook { target, value } => {
                 walk_expr(target, out);

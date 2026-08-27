@@ -89,7 +89,7 @@ pub const REPORT_SCHEMA: u32 = 1;
 
 /// Load and execute every source fixture in `tests/corpus`.
 pub fn run(root: &Path) -> Result<CompatibilityReport, Vec<String>> {
-    let matrix = matrix::load_and_validate().map_err(|problems| problems)?;
+    let matrix = matrix::load_and_validate()?;
     let fixtures = discover(root, &matrix)?;
     let mut cases = Vec::with_capacity(fixtures.len());
     for fixture in fixtures {

@@ -22,8 +22,6 @@ pub struct Lowerer<'a> {
     pub symbol_var: HashMap<SymbolId, HirVarId>,
     /// var name node id -> HirVarId (locals during body lowering).
     local_vars: HashMap<NodeId, HirVarId>,
-    /// Lambda expr node id -> HirFuncId.
-    lambda_funcs: HashMap<NodeId, HirFuncId>,
 }
 
 pub fn lower(program: &SemanticProgram) -> (HirProgram, Vec<crate::diagnostics::Diagnostic>) {
@@ -49,7 +47,6 @@ pub fn lower(program: &SemanticProgram) -> (HirProgram, Vec<crate::diagnostics::
         symbol_enum: HashMap::new(),
         symbol_var: HashMap::new(),
         local_vars: HashMap::new(),
-        lambda_funcs: HashMap::new(),
     };
     l.run();
     l.hir.exprs = std::mem::take(&mut l.exprs);
@@ -511,7 +508,7 @@ impl<'a> Lowerer<'a> {
     }
 
     fn lower_stmt(&mut self, s: &Stmt, out: &mut Vec<HirStmt>) {
-        let kind = self.lower_stmt_kind(s, out);
+        let kind = self.lower_stmt_kind(s);
         out.push(HirStmt {
             id: self.next_stmt,
             span: s.span,
@@ -520,7 +517,7 @@ impl<'a> Lowerer<'a> {
         self.next_stmt += 1;
     }
 
-    fn lower_stmt_kind(&mut self, s: &Stmt, out: &mut Vec<HirStmt>) -> HirStmtKind {
+    fn lower_stmt_kind(&mut self, s: &Stmt) -> HirStmtKind {
         match &s.kind {
             StmtKind::Block(b) => HirStmtKind::Block(self.lower_block(b)),
             StmtKind::Var(v) => {
@@ -728,7 +725,7 @@ impl<'a> Lowerer<'a> {
             ExprKind::Null => HirExprKind::Literal(LiteralValue::Null),
             ExprKind::Ident(_) => {
                 if let Some(Resolution::Symbol(sid)) = self.program.resolution.get(&e.id) {
-                    if let Some(vid) = self.symbol_var.get(&sid) {
+                    if let Some(vid) = self.symbol_var.get(sid) {
                         return HirExprKind::VarRef { var: *vid };
                     }
                     // Locals/params registered during body lowering by their
@@ -737,7 +734,7 @@ impl<'a> Lowerer<'a> {
                     if let Some(vid) = self.local_vars.get(&decl) {
                         return HirExprKind::VarRef { var: *vid };
                     }
-                    if let Some(fid) = self.symbol_func.get(&sid) {
+                    if let Some(fid) = self.symbol_func.get(sid) {
                         return HirExprKind::FunctionValue { func: *fid };
                     }
                 }
@@ -865,7 +862,7 @@ impl<'a> Lowerer<'a> {
                     }
                 }
                 if matches!(sym.kind, SymbolKind::Function | SymbolKind::Macro) {
-                    if let Some(fid) = self.symbol_func.get(&sid) {
+                    if let Some(fid) = self.symbol_func.get(sid) {
                         if let Some(class) = self.hir.funcs[*fid as usize].class {
                             return HirMemberTarget::MethodGroup {
                                 class,
@@ -874,7 +871,7 @@ impl<'a> Lowerer<'a> {
                         }
                     }
                 }
-                if let Some(vid) = self.symbol_var.get(&sid) {
+                if let Some(vid) = self.symbol_var.get(sid) {
                     return HirMemberTarget::PlayervarAccess(*vid);
                 }
                 // Class field.
@@ -907,7 +904,7 @@ impl<'a> Lowerer<'a> {
                 BuiltinMember::Invoke => return HirMemberTarget::Invoke,
             }),
             Some(Resolution::PlayervarAccess(sid)) => {
-                if let Some(vid) = self.symbol_var.get(&sid) {
+                if let Some(vid) = self.symbol_var.get(sid) {
                     HirMemberTarget::PlayervarAccess(*vid)
                 } else {
                     HirMemberTarget::Invoke

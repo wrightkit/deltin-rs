@@ -67,7 +67,7 @@ fn lex_with_base(file: FileId, text: &str, base: usize) -> (Vec<Token>, Vec<Diag
                 lx.string(lx.peek(1).unwrap(), Some(StrForm::Interpolated))
             }
             '0'..='9' => lx.number(),
-            '.' if lx.peek(1).map_or(false, |d| d.is_ascii_digit()) => lx.number(),
+            '.' if lx.peek(1).is_some_and(|d| d.is_ascii_digit()) => lx.number(),
             c if c.is_ascii_alphanumeric() || c == '_' => {
                 let kind = lx.identifier();
                 let bool_value = match kind {
@@ -138,7 +138,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn skip_to_line_end(&mut self) {
-        while self.peek(0).map_or(false, |c| c != '\n') {
+        while self.peek(0).is_some_and(|c| c != '\n') {
             self.advance();
         }
     }
@@ -173,7 +173,7 @@ impl<'a> Lexer<'a> {
         if self.peek(0) == Some('.') {
             self.advance();
         }
-        while self.peek(0).map_or(false, |c| c.is_ascii_digit()) {
+        while self.peek(0).is_some_and(|c| c.is_ascii_digit()) {
             self.advance();
         }
         let mut is_real = false;
@@ -185,7 +185,7 @@ impl<'a> Lexer<'a> {
                 Some(c) if c.is_ascii_digit() => {
                     is_real = true;
                     self.advance();
-                    while self.peek(0).map_or(false, |c| c.is_ascii_digit()) {
+                    while self.peek(0).is_some_and(|c| c.is_ascii_digit()) {
                         self.advance();
                     }
                 }
@@ -196,10 +196,10 @@ impl<'a> Lexer<'a> {
             }
         }
         // Malformed trailing form: "1.2.3" or "5abc" -> Error over the run.
-        if self.peek(0) == Some('.') || self.peek(0).map_or(false, |c| c.is_ascii_alphabetic()) {
+        if self.peek(0) == Some('.') || self.peek(0).is_some_and(|c| c.is_ascii_alphabetic()) {
             while self
                 .peek(0)
-                .map_or(false, |c| c.is_ascii_alphanumeric() || c == '.')
+                .is_some_and(|c| c.is_ascii_alphanumeric() || c == '.')
             {
                 self.advance();
             }
@@ -226,7 +226,7 @@ impl<'a> Lexer<'a> {
     fn identifier(&mut self) -> TokenKind {
         while self
             .peek(0)
-            .map_or(false, |c| c.is_ascii_alphanumeric() || c == '_')
+            .is_some_and(|c| c.is_ascii_alphanumeric() || c == '_')
         {
             self.advance();
         }

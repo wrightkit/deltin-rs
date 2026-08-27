@@ -185,7 +185,6 @@ pub fn conversion(
             Conversion::Identity
         }
         (Type::Null, Type::Class(_))
-        | (Type::Null, Type::Any)
         | (Type::Null, Type::Array(_))
         | (Type::Null, Type::String)
         | (Type::Null, Type::Vector)
@@ -294,17 +293,21 @@ pub fn cast_legal(from: &Type, to: &Type) -> bool {
     if from == to {
         return true;
     }
-    match (from, to) {
-        (Type::Error, _) | (_, Type::Error) => true,
-        (_, Type::Any) | (Type::Any, _) => true,
-        (Type::Number, Type::Number) => true,
-        (Type::Class(_), Type::Class(_)) => true,
-        (Type::Number, Type::Class(_)) => true,
-        (Type::Enum(_), Type::Number) | (Type::Number, Type::Enum(_)) => true,
-        (Type::Enum(_), Type::Enum(_)) => true,
-        (Type::External(_), _) | (_, Type::External(_)) => true,
-        _ => false,
-    }
+    matches!(
+        (from, to),
+        (Type::Error, _)
+            | (_, Type::Error)
+            | (_, Type::Any)
+            | (Type::Any, _)
+            | (Type::Number, Type::Number)
+            | (Type::Class(_), Type::Class(_))
+            | (Type::Number, Type::Class(_))
+            | (Type::Enum(_), Type::Number)
+            | (Type::Number, Type::Enum(_))
+            | (Type::Enum(_), Type::Enum(_))
+            | (Type::External(_), _)
+            | (_, Type::External(_))
+    )
 }
 
 /// Whether a type is a "constant or parallel data type" (enum keys, rule

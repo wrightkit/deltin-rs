@@ -261,7 +261,7 @@ fn parser_auto_for_forms() {
         "rule: \"\" {\n    for (Number i = 0; i < 10; i++) {}\n}\n",
         "rule: \"\" {\n    for (i = 0; i < 10; i = i + 1) {}\n}\n",
     ] {
-        let (ast, diags) = parse(text);
+        let (_ast, diags) = parse(text);
         assert!(
             errors(&diags).is_empty(),
             "case {text:?}: {:?}",
@@ -348,7 +348,7 @@ fn parser_doc_comments_associated() {
 #[test]
 fn parser_single_value_struct() {
     let text = "rule: \"\" {\n    Number value = {0};\n}\n";
-    let (ast, diags) = parse(text);
+    let (_ast, diags) = parse(text);
     assert!(errors(&diags).is_empty(), "{:?}", errors(&diags));
 }
 

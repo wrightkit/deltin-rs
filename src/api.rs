@@ -91,7 +91,7 @@ pub fn symbol_at(program: &SemanticProgram, file: FileId, offset: u32) -> Option
 /// All use sites of a symbol (span of each resolution reference).
 pub fn references(program: &SemanticProgram, symbol: SymbolId) -> Vec<Span> {
     let mut out = Vec::new();
-    for (_, res) in &program.resolution {
+    for res in program.resolution.values() {
         if let Resolution::Symbol(sid) = res {
             if *sid == symbol {
                 out.push(program.tables.symbol(*sid).span);
@@ -125,7 +125,7 @@ fn expr_node_at(
         walk_item_exprs(item, &mut |e: &crate::syntax::ast::Expr| {
             if e.span.contains(offset) {
                 let size = e.span.end - e.span.start;
-                if best.map_or(true, |(_, s)| size <= s) {
+                if best.is_none_or(|(_, s)| size <= s) {
                     best = Some((e.id, size));
                 }
             }
@@ -229,11 +229,8 @@ fn walk_stmt_exprs(s: &crate::syntax::ast::Stmt, f: &mut dyn FnMut(&crate::synta
                 }
             }
         }
-        K::Return { value } => {
-            if let Some(v) = value {
-                walk_expr_exprs(v, f);
-            }
-        }
+        K::Return { value: Some(v) } => walk_expr_exprs(v, f),
+        K::Return { value: None } => {}
         K::Expr(e) => walk_expr_exprs(e, f),
         K::Delete { target } => walk_expr_exprs(target, f),
         K::Hook { target, value } => {
