@@ -55,7 +55,7 @@ pub fn parse(tokens: &[Token], file: FileId, text: &str) -> (AstFile, Vec<Diagno
     (ast, p.diagnostics)
 }
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     fn node(&mut self) -> NodeId {
         let id = NodeId(self.next_node);
         self.next_node += 1;

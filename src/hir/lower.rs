@@ -54,7 +54,7 @@ pub fn lower(program: &SemanticProgram) -> (HirProgram, Vec<crate::diagnostics::
     (l.hir, Vec::new())
 }
 
-impl<'a> Lowerer<'a> {
+impl Lowerer<'_> {
     fn ty(&self, node: NodeId) -> Type {
         self.program.types.get(&node).cloned().unwrap_or(Type::Any)
     }
@@ -750,7 +750,7 @@ impl<'a> Lowerer<'a> {
                 ) {
                     HirExprKind::External {
                         name: name.name.clone(),
-                        namespace: self.member_namespace(base),
+                        namespace: Self::member_namespace(base),
                     }
                 } else {
                     HirExprKind::Member {
@@ -1039,7 +1039,7 @@ impl<'a> Lowerer<'a> {
                     _ => HirExprKind::Call {
                         target: CallTarget::External {
                             name: name.name.clone(),
-                            namespace: self.member_namespace(base),
+                            namespace: Self::member_namespace(base),
                             span: call.callee.span,
                         },
                         args,
@@ -1053,11 +1053,11 @@ impl<'a> Lowerer<'a> {
         }
     }
 
-    fn member_namespace(&mut self, base: &Expr) -> Vec<String> {
+    fn member_namespace(base: &Expr) -> Vec<String> {
         match &base.kind {
             ExprKind::Ident(i) => vec![i.name.clone()],
             ExprKind::Member { base, name } => {
-                let mut p = self.member_namespace(base);
+                let mut p = Self::member_namespace(base);
                 p.push(name.name.clone());
                 p
             }

@@ -38,7 +38,7 @@ fn find_func(hir: &deltin_rs::hir::HirProgram, name: &str) -> deltin_rs::hir::Hi
 fn lowering_produces_program() {
     let text = "globalvar Number x = 5;\nrecursive Number fact(Number n) { if (n > 0) { return n * fact(n - 1); } return 1; }\nrule: \"\" {\n    define y = fact(3);\n}\n";
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().find(|d| d.is_error()).is_none(), "{:?}", diags);
+    assert!(!diags.iter().any(|d| d.is_error()), "{:?}", diags);
     assert!(!hir.funcs.is_empty());
     assert!(!hir.rules.is_empty());
     assert!(!hir.vars.is_empty());
@@ -49,7 +49,7 @@ fn lowering_produces_program() {
 fn lowering_preserves_spans() {
     let text = "rule: \"\" {\n    define a = 1 + 2;\n}\n";
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().find(|d| d.is_error()).is_none());
+    assert!(!diags.iter().any(|d| d.is_error()));
     for e in &hir.exprs {
         // Spans must be within a plausible range for this file.
         assert!(e.span.end <= 1000);
@@ -77,7 +77,7 @@ recursive Number fact(Number n) {
 }
 "#;
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().find(|d| d.is_error()).is_none(), "{:?}", diags);
+    assert!(!diags.iter().any(|d| d.is_error()), "{:?}", diags);
     let fid = find_func(&hir, "fact");
     let result = run_oracle(
         &hir,
@@ -103,7 +103,7 @@ Number sum(Number[] values) {
 }
 "#;
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().find(|d| d.is_error()).is_none(), "{:?}", diags);
+    assert!(!diags.iter().any(|d| d.is_error()), "{:?}", diags);
     let fid = find_func(&hir, "sum");
     let result = run_oracle(
         &hir,
@@ -134,7 +134,7 @@ Number classify(Number v) {
 }
 "#;
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().find(|d| d.is_error()).is_none(), "{:?}", diags);
+    assert!(!diags.iter().any(|d| d.is_error()), "{:?}", diags);
     let fid = find_func(&hir, "classify");
     // Fallthrough: case 1 runs then falls into case 2 (out = 3).
     let result = run_oracle(
@@ -152,7 +152,7 @@ Number classify(Number v) {
 fn oracle_loop_limit() {
     let text = "Number loop() { while (true) { } return 0; }\n";
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().find(|d| d.is_error()).is_none());
+    assert!(!diags.iter().any(|d| d.is_error()));
     let fid = find_func(&hir, "loop");
     let result = run_oracle(
         &hir,
@@ -175,7 +175,7 @@ fn oracle_loop_limit() {
 fn oracle_external_boundary() {
     let text = "Number f(Number a): a + ExternalValue();\n";
     let (hir, diags) = pipeline(text);
-    assert!(diags.iter().find(|d| d.is_error()).is_none());
+    assert!(!diags.iter().any(|d| d.is_error()));
     let fid = find_func(&hir, "f");
     let result = run_oracle(
         &hir,

@@ -543,11 +543,11 @@ impl<'a> Checker<'a> {
                             self.program.tables.symbols[sid as usize].ty = inferred;
                         }
                     }
-                    if !self.is_assignable(&init_ty, &ty)
-                        && !ty.is_external()
-                        && !ty.is_error()
-                        && !init_ty.is_external()
-                        && !(ty == Type::Any && matches!(v.kind, VarDeclKind::Define))
+                    if !(self.is_assignable(&init_ty, &ty)
+                        || ty.is_external()
+                        || ty.is_error()
+                        || init_ty.is_external()
+                        || ty == Type::Any && matches!(v.kind, VarDeclKind::Define))
                     {
                         self.err(
                             "SM051",
@@ -1359,9 +1359,9 @@ impl<'a> Checker<'a> {
                 }
             }
             BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod | BinaryOp::Pow => {
-                if !(self.is_number_like(lt) && self.is_number_like(rt))
-                    && !matches!(lt, Type::Vector)
-                    && !matches!(rt, Type::Vector)
+                if !(matches!(lt, Type::Vector)
+                    || matches!(rt, Type::Vector)
+                    || self.is_number_like(lt) && self.is_number_like(rt))
                 {
                     self.err(
                         "SM041",
@@ -1790,7 +1790,7 @@ impl<'a> Checker<'a> {
         base: &Expr,
         name: &Ident,
     ) -> Type {
-        let namespace = self.member_path(base);
+        let namespace = Self::member_path(base);
         let query = NameQuery {
             namespace: namespace.clone(),
             name: name.name.clone(),
@@ -1855,11 +1855,11 @@ impl<'a> Checker<'a> {
         }
     }
 
-    fn member_path(&mut self, base: &Expr) -> Vec<String> {
+    fn member_path(base: &Expr) -> Vec<String> {
         match &base.kind {
             ExprKind::Ident(i) => vec![i.name.clone()],
             ExprKind::Member { base, name } => {
-                let mut p = self.member_path(base);
+                let mut p = Self::member_path(base);
                 p.push(name.name.clone());
                 p
             }
