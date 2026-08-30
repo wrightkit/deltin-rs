@@ -1510,10 +1510,6 @@ pub fn check_path(path: &Path, provider: &dyn WorkshopProvider) -> CheckReport; 
 pub fn check_path_default(path: &Path) -> CheckReport;                            // permissive NoopProvider
 pub struct InspectReport { pub check: CheckReport, pub file: Option<FileId>, pub symbol: Option<SymbolId>, pub ty: Option<Type>, pub resolution: Option<Resolution> }
 pub fn inspect_path(path: &Path, file: &Path, offset: u32) -> InspectReport;
-pub struct CompileOptions { pub project: ProjectOptions, pub target_locale: String }
-pub struct CompileReport { pub project: Project, pub output: Option<String>, pub diagnostics: Vec<Diagnostic> }
-pub fn compile_project(options: CompileOptions) -> CompileReport;                 // source -> validated/emitted Workshop text
-pub fn compile_path(path: &Path, target_locale: &str) -> CompileReport;
 
 // ---- matrix ----
 pub fn load_matrix() -> Result<SupportMatrix, toml::de::Error>;    // include_str!("../docs/support-matrix.toml")
@@ -1533,9 +1529,9 @@ The standalone `deltin-rs-cli` package is driven by one structured `clap` comman
 model for parsing, help, validation, and static Bash/Zsh/Fish/PowerShell
 completion. The current task-oriented command classification, migration aliases,
 presentation policy, GitHub annotations, JSON boundary, and exit-code contract
-live in [`cli.md`](cli.md). The binary consumes the library facade; semantic
-commands use `NoopProvider`, while `compile` uses the library's catalog-backed
-compile path. It does not depend on Wright or a shared CLI crate.
+live in [`cli.md`](cli.md). The binary consumes the library's parsing, semantic,
+inspection, and matrix APIs; Workshop-dependent compilation is not part of this
+CLI contract. It does not depend on Wright or a shared CLI crate.
 
 `cli/tests/cli.rs` is the black-box evidence for command migration, completion,
 environment isolation, machine-output purity, workflow escaping, diagnostics,

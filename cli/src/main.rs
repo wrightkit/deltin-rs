@@ -29,8 +29,6 @@ enum Command {
     Check(PathArgs),
     /// Query semantic identity, type, and resolution at a source position.
     Inspect(InspectArgs),
-    /// Compile a DEL/OSTW file or project to localized Workshop text.
-    Compile(CompileArgs),
     /// Show or validate the declared DEL/OSTW support surface.
     Support(SupportArgs),
     /// Generate a static shell completion script from this command model.
@@ -89,17 +87,6 @@ struct InspectArgs {
     file: PathBuf,
     #[arg(value_name = "LINE:COL", allow_hyphen_values = true)]
     position: String,
-    #[command(flatten)]
-    output: cli::OutputArgs,
-}
-
-#[derive(Debug, Args)]
-struct CompileArgs {
-    #[arg(value_name = "FILE_OR_DIR")]
-    path: PathBuf,
-    /// Target Workshop locale for emitted text.
-    #[arg(long, default_value = "en-US")]
-    locale: String,
     #[command(flatten)]
     output: cli::OutputArgs,
 }
@@ -187,7 +174,6 @@ fn execute(cli: Cli) -> CliResult {
     match command {
         Command::Check(args) => cmd_check(args),
         Command::Inspect(args) => cmd_inspect(args),
-        Command::Compile(args) => cmd_compile(args),
         Command::Support(args) => cmd_support(args, false),
         Command::Completion(args) => cmd_completion(args),
         Command::Dev { command } => match command {
@@ -391,43 +377,6 @@ fn cmd_check(args: PathArgs) -> CliResult {
         ),
         if errors == 0 { 0 } else { 1 },
     )
-}
-
-fn cmd_compile(args: CompileArgs) -> CliResult {
-    preflight_project_input(&args.path)?;
-    let report = without_debug_output(|| api::compile_path(&args.path, &args.locale));
-    let errors = error_count(&report.diagnostics);
-    let json = serde_json::json!({
-        "command": "compile",
-        "phase": "emit",
-        "locale": args.locale,
-        "diagnostics": report.diagnostics,
-        "output": report.output,
-        "summary": {
-            "files": report.project.files.len(),
-            "errors": errors,
-        },
-    });
-    if args.output.json {
-        return emit_json(json).map(|_| if errors == 0 { 0 } else { 1 });
-    }
-    let renderer = cli::Renderer::new(&args.output);
-    renderer
-        .emit_diagnostics(&report.diagnostics, &report.project.sources)
-        .map_err(internal_error)?;
-    if let Some(output) = report.output {
-        renderer.emit_text(&output).map_err(internal_error)?;
-    }
-    renderer
-        .emit_summary(&format!(
-            "compiled {} files for {}: {} diagnostics ({} errors)",
-            report.project.files.len(),
-            args.locale,
-            report.diagnostics.len(),
-            errors
-        ))
-        .map_err(internal_error)?;
-    Ok(if errors == 0 { 0 } else { 1 })
 }
 
 fn cmd_hir(args: PathArgs) -> CliResult {

@@ -15,7 +15,7 @@ The command model distinguishes user tasks from inspection and evidence work:
 
 | Surface | Commands | Contract |
 | --- | --- | --- |
-| Stable user-facing | `check`, `inspect`, `compile`, `support`, `completion` | Validate source, query semantic information, compile supported source to Workshop text, inspect declared support, or install static shell completion. |
+| Stable user-facing | `check`, `inspect`, `support`, `completion` | Validate source, query semantic information, inspect declared support, or install static shell completion. |
 | Developer/debug | `dev parse`, `dev hir` | Inspect parser and HIR stages for agent/developer workflows; these are not stable language UX promises. |
 | Maintainer/evidence | `maintainer compatibility` | Run the corpus/evidence report used by maintainers and CI. |
 
@@ -27,8 +27,8 @@ keeping internal stages and evidence workflows out of the documented stable
 command list.
 
 The `dev hir --json` and `inspect --json` interfaces preserve the machine-readable
-semantic capabilities used by #38. `compile` uses the library compile facade and
-emits only when canonical Workshop validation and emission succeed.
+semantic capabilities used by #38. No command in this change compiles DEL/OSTW
+to Workshop; that remains outside this CLI contract.
 
 ## Migration notes
 

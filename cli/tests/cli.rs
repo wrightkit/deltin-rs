@@ -42,7 +42,6 @@ fn help_exposes_task_oriented_surface_and_classifications() {
     let help = String::from_utf8_lossy(&out.stdout);
     assert!(help.contains("check"));
     assert!(help.contains("inspect"));
-    assert!(help.contains("compile"));
     assert!(help.contains("support"));
     assert!(help.contains("dev"));
     assert!(help.contains("maintainer"));
@@ -85,29 +84,6 @@ fn check_json_stdout_is_pure_and_schema_is_preserved() {
     assert_eq!(doc["phase"], "all");
     assert!(doc["diagnostics"].is_array());
     assert!(doc["summary"]["errors"].is_number());
-}
-
-#[test]
-fn compile_json_exposes_workshop_output_and_diagnostics() {
-    let out = run(&[
-        "compile",
-        "--json",
-        repo_root()
-            .join("tests/corpus/parser/basic-rule.del")
-            .to_str()
-            .unwrap(),
-    ]);
-    assert_eq!(
-        out.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let document = json(&out.stdout);
-    assert_eq!(document["command"], "compile");
-    assert_eq!(document["phase"], "emit");
-    assert!(document["output"].is_string());
-    assert!(document["diagnostics"].is_array());
 }
 
 #[test]

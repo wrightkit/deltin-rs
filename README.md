@@ -85,7 +85,6 @@ from source with `cargo install --path cli`.
 ```text
 deltin-rs check <file-or-dir> [--json]
 deltin-rs inspect <file> <line>:<col> [--json]
-deltin-rs compile <file-or-dir> [--locale <locale>] [--json]
 deltin-rs support [--check] [--json]
 deltin-rs dev parse <file> [--json]
 deltin-rs dev hir <file-or-dir> [--json]
