@@ -5,6 +5,10 @@ task-oriented command rebaseline and the CLI-local presentation boundary. The
 library diagnostics, semantic APIs, HIR, and evidence schemas remain owned by
 their existing modules and contracts.
 
+The CLI is the separate `deltin-rs-cli` package in `cli/`; its executable name
+remains `deltin-rs`. The public `deltin-rs` library package has no CLI parsing or
+completion dependencies.
+
 ## Command classification
 
 The command model distinguishes user tasks from inspection and evidence work:

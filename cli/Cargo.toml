@@ -1,0 +1,19 @@
+[package]
+name = "deltin-rs-cli"
+version = "0.1.1"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+description = "Standalone command-line interface for the deltin-rs DEL/OSTW library"
+repository = "https://github.com/wrightkit/deltin-rs"
+publish = false
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.5"
+deltin-rs = { path = "..", version = "0.1.1" }
+serde_json = "1.0"
+
+[[bin]]
+name = "deltin-rs"
+path = "src/main.rs"

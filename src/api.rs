@@ -370,6 +370,51 @@ pub fn check_path(path: &Path, provider: &dyn WorkshopProvider) -> CheckReport {
     }
 }
 
+/// Check a file or project with the permissive built-in provider.
+pub fn check_path_default(path: &Path) -> CheckReport {
+    check_path(path, &NoopProvider::new())
+}
+
+/// Result of a source-aware semantic inspection.
+pub struct InspectReport {
+    pub check: CheckReport,
+    pub file: Option<FileId>,
+    pub symbol: Option<SymbolId>,
+    pub ty: Option<Type>,
+    pub resolution: Option<Resolution>,
+}
+
+/// Check a file or project and query the semantic model at a byte offset.
+///
+/// The file is matched against the project's source names, so a caller can
+/// pass either a project-relative path or the original input path.
+pub fn inspect_path(path: &Path, file: &Path, offset: u32) -> InspectReport {
+    let check = check_path_default(path);
+    let file_id = check
+        .project
+        .sources
+        .files()
+        .find(|source| {
+            source.name == file || source.name.ends_with(file) || file.ends_with(&source.name)
+        })
+        .map(|source| source.id);
+    let (symbol, ty, resolution) = match file_id {
+        Some(file_id) => (
+            symbol_at(&check.semantic, file_id, offset),
+            type_at(&check.semantic, file_id, offset),
+            resolution_at(&check.semantic, file_id, offset),
+        ),
+        None => (None, None, None),
+    };
+    InspectReport {
+        check,
+        file: file_id,
+        symbol,
+        ty,
+        resolution,
+    }
+}
+
 // ---- matrix ----
 
 pub fn load_matrix() -> Result<crate::matrix::SupportMatrix, toml::de::Error> {

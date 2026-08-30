@@ -1,9 +1,9 @@
 # deltin-rs
 
-`deltin-rs` is WrightKit's standalone Rust implementation of the DeltinScript /
-OSTW language surface. It is intended to be useful on its own as a library and
-CLI for parsing, loading, type-checking, inspecting, compiling, and eventually
-reconstructing supported `.del` / `.ostw` projects.
+`deltin-rs` is WrightKit's standalone Rust library implementation of the
+DeltinScript / OSTW language surface. The repository also contains the
+separate, thin `deltin-rs-cli` executable package, whose binary remains named
+`deltin-rs`.
 
 Wright is a downstream consumer that integrates `deltin-rs` with broader tooling
 such as linting, analysis, validated source editing, agent workflows, CI, and
@@ -78,6 +78,10 @@ meanings.
 
 ## CLI and library
 
+Rust embedding uses the `deltin-rs` package and does not pull CLI-only
+dependencies such as `clap` or `clap_complete`. Install the executable package
+from source with `cargo install --path cli`.
+
 ```text
 deltin-rs check <file-or-dir> [--json]
 deltin-rs inspect <file> <line>:<col> [--json]
@@ -109,14 +113,8 @@ identity of this repository.
 Requirements: Rust 1.85+.
 
 ```sh
-cargo build --release
-cargo test --all-targets
-```
-
-Install the current CLI from source with:
-
-```sh
-cargo install --path .
+cargo build --workspace --release
+cargo test --workspace --all-targets
 ```
 
 ## Validation

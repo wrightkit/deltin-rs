@@ -25,6 +25,8 @@ jobs:
         run: cargo test --locked --test matrix
       - name: Corpus harness
         run: cargo test --locked --test corpus
+      - name: CLI package contracts
+        run: cargo test --locked -p deltin-rs-cli --test cli
 
   rust-quality:
     name: Rust (1.85.0)

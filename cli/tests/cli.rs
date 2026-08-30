@@ -9,15 +9,22 @@ fn deltin_rs_bin() -> Command {
 }
 
 fn sample() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/corpus/highlevel/enum-basic.del")
+    repo_root().join("tests/corpus/highlevel/enum-basic.del")
 }
 
 fn invalid_sample() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/cli,source-case.del")
+    repo_root().join("tests/fixtures/cli,source-case.del")
 }
 
 fn missing_sample() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/cli-input-does-not-exist.del")
+    repo_root().join("target/cli-input-does-not-exist.del")
+}
+
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("CLI package has a repository parent")
+        .to_path_buf()
 }
 
 fn run(args: &[&str]) -> Output {
@@ -81,8 +88,7 @@ fn check_json_stdout_is_pure_and_schema_is_preserved() {
 
 #[test]
 fn del_debug_does_not_pollute_machine_json_stderr() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/corpus/projects/modules/Debug Camera.del");
+    let path = repo_root().join("tests/corpus/projects/modules/Debug Camera.del");
     let out = deltin_rs_bin()
         .args(["check", "--json", path.to_str().unwrap()])
         .env("DEL_DEBUG", "1")
@@ -251,8 +257,7 @@ fn completions_are_generated_for_supported_static_shells() {
 
 #[test]
 fn github_actions_annotations_escape_source_properties_and_write_summary() {
-    let summary = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join(format!("target/cli-summary-{}.md", std::process::id()));
+    let summary = repo_root().join(format!("target/cli-summary-{}.md", std::process::id()));
     let _ = std::fs::remove_file(&summary);
     let out = deltin_rs_bin()
         .args([
