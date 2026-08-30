@@ -1,6 +1,6 @@
 //! Structured diagnostics: stable codes, severity, source attribution, phases.
 //!
-//! Code policy: `<PHASE><NNN>` with `PHASE` in {LX, PR, PJ, SM, HI, OR}. Every
+//! Code policy: `<PHASE><NNN>` with `PHASE` in {LX, PR, PJ, SM, HI, WK, OR}. Every
 //! code used in the crate must be registered in [`DIAGNOSTIC_CODES`]; codes are
 //! never reused with different meanings. Diagnostic messages never contain
 //! `line:col` text — consumers derive positions via `SourceMap::line_col`.
@@ -16,6 +16,7 @@ pub enum Phase {
     Project,
     Semantic,
     Hir,
+    Workshop,
     Oracle,
 }
 
@@ -200,6 +201,9 @@ pub const DIAGNOSTIC_CODES: &[(&str, &str)] = &[
         "HI099",
         "HIR has validation errors; oracle refuses to execute",
     ),
+    // Canonical Workshop integration
+    ("WK001", "canonical Workshop validation failed"),
+    ("WK002", "canonical Workshop emission failed"),
     // Oracle
     ("OR001", "stale reference: use of a deleted object"),
     ("OR002", "execution steps limit exceeded"),
@@ -269,7 +273,7 @@ mod tests {
             assert!(!doc.is_empty(), "empty doc for {code}");
             let prefix = &code[..2];
             assert!(
-                matches!(prefix, "LX" | "PR" | "PJ" | "SM" | "HI" | "OR"),
+                matches!(prefix, "LX" | "PR" | "PJ" | "SM" | "HI" | "WK" | "OR"),
                 "bad phase prefix in {code}"
             );
             let suffix = &code[2..];

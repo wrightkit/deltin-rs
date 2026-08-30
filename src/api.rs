@@ -14,6 +14,7 @@ use crate::span::{FileId, SourceMap, Span};
 use crate::syntax::parse_source;
 use crate::syntax::token::Token;
 use std::path::Path;
+use workshop_rs::catalog::{Catalog, Locale};
 
 // ---- parsing ----
 
@@ -368,6 +369,257 @@ pub fn check_path(path: &Path, provider: &dyn WorkshopProvider) -> CheckReport {
         hir,
         diagnostics,
     }
+}
+
+/// Check a file or project with the permissive built-in provider.
+pub fn check_path_default(path: &Path) -> CheckReport {
+    check_path(path, &NoopProvider::new())
+}
+
+/// Result of a source-aware semantic inspection.
+pub struct InspectReport {
+    pub check: CheckReport,
+    pub file: Option<FileId>,
+    pub symbol: Option<SymbolId>,
+    pub ty: Option<Type>,
+    pub resolution: Option<Resolution>,
+}
+
+/// Check a file or project and query the semantic model at a byte offset.
+///
+/// The file is matched against the project's source names, so a caller can
+/// pass either a project-relative path or the original input path.
+pub fn inspect_path(path: &Path, file: &Path, offset: u32) -> InspectReport {
+    let check = check_path_default(path);
+    let file_id = check
+        .project
+        .sources
+        .files()
+        .find(|source| {
+            source.name == file || source.name.ends_with(file) || file.ends_with(&source.name)
+        })
+        .map(|source| source.id);
+    let (symbol, ty, resolution) = match file_id {
+        Some(file_id) => (
+            symbol_at(&check.semantic, file_id, offset),
+            type_at(&check.semantic, file_id, offset),
+            resolution_at(&check.semantic, file_id, offset),
+        ),
+        None => (None, None, None),
+    };
+    InspectReport {
+        check,
+        file: file_id,
+        symbol,
+        ty,
+        resolution,
+    }
+}
+
+/// Options for the ordinary source-to-Workshop compilation facade.
+#[derive(Clone, Debug)]
+pub struct CompileOptions {
+    pub project: ProjectOptions,
+    /// Target Workshop locale, for example `en-US` or `zh-CN`.
+    pub target_locale: String,
+}
+
+impl CompileOptions {
+    pub fn new(project: ProjectOptions) -> Self {
+        Self {
+            project,
+            target_locale: "en-US".to_string(),
+        }
+    }
+
+    pub fn with_target_locale(mut self, locale: impl Into<String>) -> Self {
+        self.target_locale = locale.into();
+        self
+    }
+}
+
+/// Result of the ordinary compilation facade.
+///
+/// Canonical WIR is deliberately not part of this result. Callers that need
+/// WIR/provider interoperability can continue to use the explicit lowering
+/// APIs above; ordinary consumers receive Workshop text and source diagnostics.
+pub struct CompileReport {
+    pub project: Project,
+    pub output: Option<String>,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+impl CompileReport {
+    pub fn succeeded(&self) -> bool {
+        self.output.is_some() && self.diagnostics.iter().all(|d| !d.is_error())
+    }
+}
+
+/// Compile a project through the DEL parser, semantic/HIR pipeline, canonical
+/// Workshop WIR validation, and the released Workshop emitter.
+pub fn compile_project(options: CompileOptions) -> CompileReport {
+    let project = load_project(options.project);
+    let mut diagnostics = project.diagnostics.clone();
+    if diagnostics.iter().any(Diagnostic::is_error) {
+        return CompileReport {
+            project,
+            output: None,
+            diagnostics,
+        };
+    }
+
+    let locale = Locale::new(&options.target_locale);
+    let provider = match Catalog::builtin().and_then(|catalog| {
+        crate::semantic::provider::CatalogProvider::from_catalog(catalog, locale)
+    }) {
+        Ok(provider) => provider,
+        Err(error) => {
+            diagnostics.push(crate::diagnostics::error(
+                crate::diagnostics::Phase::Workshop,
+                "WK002",
+                Span::new(project.entry, 0, 0),
+                error.to_string(),
+            ));
+            return CompileReport {
+                project,
+                output: None,
+                diagnostics,
+            };
+        }
+    };
+
+    let semantic = crate::semantic::check_project(&project, &provider);
+    diagnostics.extend(semantic.diagnostics.clone());
+    if diagnostics.iter().any(Diagnostic::is_error) {
+        return CompileReport {
+            project,
+            output: None,
+            diagnostics,
+        };
+    }
+
+    let (program, lowering_diagnostics) = crate::workshop::lower_project_to_wir(&semantic);
+    diagnostics.extend(lowering_diagnostics);
+    if diagnostics.iter().any(Diagnostic::is_error) {
+        return CompileReport {
+            project,
+            output: None,
+            diagnostics,
+        };
+    }
+
+    if let Err(error) = program.validate() {
+        let primary = error
+            .span()
+            .and_then(|span| workshop_span_to_del(&project, span))
+            .unwrap_or_else(|| Span::new(project.entry, 0, 0));
+        diagnostics.push(crate::diagnostics::error(
+            crate::diagnostics::Phase::Workshop,
+            "WK001",
+            primary,
+            error.to_string(),
+        ));
+    }
+    if let Err(error) = workshop_rs::validate::validate_canonical_ids(&program, provider.catalog())
+    {
+        let primary = workshop_error_span(&project, &error);
+        diagnostics.push(crate::diagnostics::error(
+            crate::diagnostics::Phase::Workshop,
+            "WK001",
+            primary,
+            error.to_string(),
+        ));
+    }
+    if diagnostics.iter().any(Diagnostic::is_error) {
+        return CompileReport {
+            project,
+            output: None,
+            diagnostics,
+        };
+    }
+
+    let output = match workshop_rs::emitter::emit(&program, provider.catalog(), provider.locale()) {
+        Ok(output) => Some(output),
+        Err(error) => {
+            let primary = workshop_error_span(&project, &error);
+            diagnostics.push(crate::diagnostics::error(
+                crate::diagnostics::Phase::Workshop,
+                "WK002",
+                primary,
+                error.to_string(),
+            ));
+            None
+        }
+    };
+    CompileReport {
+        project,
+        output,
+        diagnostics,
+    }
+}
+
+/// Compile a file or directory using the default project entry-point rules.
+pub fn compile_path(path: &Path, target_locale: &str) -> CompileReport {
+    let (root, entry) = if path.is_dir() {
+        (path.to_path_buf(), None)
+    } else {
+        (
+            path.parent().unwrap_or(path).to_path_buf(),
+            Some(path.to_path_buf()),
+        )
+    };
+    compile_project(
+        CompileOptions::new(ProjectOptions {
+            root,
+            entry,
+            config: None,
+        })
+        .with_target_locale(target_locale),
+    )
+}
+
+fn workshop_error_span(project: &Project, error: &workshop_rs::WorkshopError) -> Span {
+    let source_span = match error {
+        workshop_rs::WorkshopError::Unknown { span, .. }
+        | workshop_rs::WorkshopError::Malformed { span, .. }
+        | workshop_rs::WorkshopError::Unsupported { span, .. } => *span,
+        workshop_rs::WorkshopError::Catalog(_)
+        | workshop_rs::WorkshopError::MissingMapping { .. } => None,
+    };
+    source_span
+        .and_then(|span| workshop_span_to_del(project, span))
+        .unwrap_or_else(|| Span::new(project.entry, 0, 0))
+}
+
+fn workshop_span_to_del(project: &Project, span: workshop_rs::source::Span) -> Option<Span> {
+    let file = crate::span::FileId(span.file.index() as u32);
+    let start = source_offset_at(project, file, span.start)?;
+    let end = source_offset_at(project, file, span.end)?;
+    Some(Span::new(file, start, end))
+}
+
+fn source_offset_at(
+    project: &Project,
+    file: crate::span::FileId,
+    position: workshop_rs::source::Position,
+) -> Option<u32> {
+    let source = project.sources.files().find(|source| source.id == file)?;
+    let line_index = position.line.checked_sub(1)? as usize;
+    let line = source.text.split('\n').nth(line_index)?;
+    let column = position.col.checked_sub(1)? as usize;
+    let byte_in_line = if column == line.chars().count() {
+        line.len()
+    } else {
+        line.char_indices().nth(column)?.0
+    };
+    let line_start = source
+        .text
+        .split('\n')
+        .take(line_index)
+        .map(str::len)
+        .sum::<usize>()
+        .checked_add(line_index)?;
+    u32::try_from(line_start.checked_add(byte_in_line)?).ok()
 }
 
 // ---- matrix ----

@@ -1,7 +1,9 @@
 # Release automation
 
-`release-plz` maintains the release PR, publishes `deltin-rs` to crates.io, and
-creates the canonical `vX.Y.Z` tag.
+`release-plz` maintains the release PR, publishes the `deltin-rs` library to
+crates.io, and creates the canonical `vX.Y.Z` tag. The `deltin-rs-cli` package is
+an executable distribution surface in this repository and is intentionally
+`publish = false`; install it from source with `cargo install --path cli`.
 
 The release PR updates the package version and generated changelog. Merging
 that PR into `main` runs `release-plz release`; pull-request heads do not
@@ -20,6 +22,8 @@ release-specific checks should include `actionlint` and this package dry-run:
 ```sh
 cargo package --locked
 ```
+
+The CLI package is checked separately with `cargo check --locked -p deltin-rs-cli`.
 
 This check does not prove publication. Completion requires observing the package
 version on crates.io and the matching tag after a real release. If publication

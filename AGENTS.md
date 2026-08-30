@@ -81,8 +81,8 @@ repository's provenance and licensing documentation.
 ```sh
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
-cargo test --all-targets
-cargo run --quiet -- support --check
+cargo test --workspace --all-targets
+cargo run --quiet -p deltin-rs-cli -- support --check
 ```
 
 Run compatibility/corpus gates affected by the change. A passing unit-test count

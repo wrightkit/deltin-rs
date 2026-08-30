@@ -1,11 +1,10 @@
-#[path = "cli/mod.rs"]
 mod cli;
 
 use clap::{error::ErrorKind, Args, CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
+use deltin_rs::api;
 use deltin_rs::diagnostics::Severity;
 use deltin_rs::matrix;
-use deltin_rs::syntax::parse_source;
 use deltin_rs::{Diagnostic, SourceMap};
 use std::env;
 use std::fs;
@@ -30,6 +29,8 @@ enum Command {
     Check(PathArgs),
     /// Query semantic identity, type, and resolution at a source position.
     Inspect(InspectArgs),
+    /// Compile a DEL/OSTW file or project to localized Workshop text.
+    Compile(CompileArgs),
     /// Show or validate the declared DEL/OSTW support surface.
     Support(SupportArgs),
     /// Generate a static shell completion script from this command model.
@@ -88,6 +89,17 @@ struct InspectArgs {
     file: PathBuf,
     #[arg(value_name = "LINE:COL", allow_hyphen_values = true)]
     position: String,
+    #[command(flatten)]
+    output: cli::OutputArgs,
+}
+
+#[derive(Debug, Args)]
+struct CompileArgs {
+    #[arg(value_name = "FILE_OR_DIR")]
+    path: PathBuf,
+    /// Target Workshop locale for emitted text.
+    #[arg(long, default_value = "en-US")]
+    locale: String,
     #[command(flatten)]
     output: cli::OutputArgs,
 }
@@ -175,6 +187,7 @@ fn execute(cli: Cli) -> CliResult {
     match command {
         Command::Check(args) => cmd_check(args),
         Command::Inspect(args) => cmd_inspect(args),
+        Command::Compile(args) => cmd_compile(args),
         Command::Support(args) => cmd_support(args, false),
         Command::Completion(args) => cmd_completion(args),
         Command::Dev { command } => match command {
@@ -292,8 +305,7 @@ fn position_offset(
 }
 
 fn check_path_for_cli(path: &std::path::Path, json: bool) -> deltin_rs::api::CheckReport {
-    let run =
-        || deltin_rs::api::check_path(path, &deltin_rs::semantic::provider::NoopProvider::new());
+    let run = || api::check_path_default(path);
     if json {
         without_debug_output(run)
     } else {
@@ -317,7 +329,7 @@ fn cmd_parse(args: PathArgs) -> CliResult {
     let text = preflight_file(&args.path)?;
     let mut sources = SourceMap::new();
     let id = sources.add_file(args.path.clone(), text);
-    let output = parse_source(id, sources.text(id));
+    let output = api::parse_source_file(id, sources.text(id));
     let errors = error_count(&output.diagnostics);
     let json = serde_json::json!({
         "command": "parse",
@@ -381,6 +393,43 @@ fn cmd_check(args: PathArgs) -> CliResult {
     )
 }
 
+fn cmd_compile(args: CompileArgs) -> CliResult {
+    preflight_project_input(&args.path)?;
+    let report = without_debug_output(|| api::compile_path(&args.path, &args.locale));
+    let errors = error_count(&report.diagnostics);
+    let json = serde_json::json!({
+        "command": "compile",
+        "phase": "emit",
+        "locale": args.locale,
+        "diagnostics": report.diagnostics,
+        "output": report.output,
+        "summary": {
+            "files": report.project.files.len(),
+            "errors": errors,
+        },
+    });
+    if args.output.json {
+        return emit_json(json).map(|_| if errors == 0 { 0 } else { 1 });
+    }
+    let renderer = cli::Renderer::new(&args.output);
+    renderer
+        .emit_diagnostics(&report.diagnostics, &report.project.sources)
+        .map_err(internal_error)?;
+    if let Some(output) = report.output {
+        renderer.emit_text(&output).map_err(internal_error)?;
+    }
+    renderer
+        .emit_summary(&format!(
+            "compiled {} files for {}: {} diagnostics ({} errors)",
+            report.project.files.len(),
+            args.locale,
+            report.diagnostics.len(),
+            errors
+        ))
+        .map_err(internal_error)?;
+    Ok(if errors == 0 { 0 } else { 1 })
+}
+
 fn cmd_hir(args: PathArgs) -> CliResult {
     preflight_project_input(&args.path)?;
     let report = check_path_for_cli(&args.path, args.output.json);
@@ -425,18 +474,20 @@ fn cmd_inspect(args: InspectArgs) -> CliResult {
     let mut input_sources = SourceMap::new();
     let input_file = input_sources.add_file(args.file.clone(), text);
     let offset = position_offset(&input_sources, input_file, line, col)?;
-    let report = check_path_for_cli(&args.file, args.output.json);
-    let Some(file) = report.project.sources.files().find(|file| {
-        file.name
-            .ends_with(args.file.file_name().unwrap_or_default())
-    }) else {
+    let run = || api::inspect_path(&args.file, &args.file, offset);
+    let inspected = if args.output.json {
+        without_debug_output(run)
+    } else {
+        run()
+    };
+    let report = inspected.check;
+    let Some(_file) = inspected.file else {
         eprintln!("inspect: file not part of the project");
         return Ok(4);
     };
-    let fid = file.id;
-    let symbol = deltin_rs::api::symbol_at(&report.semantic, fid, offset);
-    let ty = deltin_rs::api::type_at(&report.semantic, fid, offset);
-    let resolution = deltin_rs::api::resolution_at(&report.semantic, fid, offset);
+    let symbol = inspected.symbol;
+    let ty = inspected.ty;
+    let resolution = inspected.resolution;
     let errors = error_count(&report.diagnostics);
     let json = serde_json::json!({
         "command": "inspect",
@@ -550,7 +601,9 @@ fn cmd_support(args: SupportArgs, legacy: bool) -> CliResult {
 }
 
 fn cmd_compatibility(output: cli::OutputArgs) -> CliResult {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("CLI package has a repository parent");
     match deltin_rs::compatibility::run(root) {
         Ok(report) => {
             if output.json {

@@ -145,12 +145,20 @@ dependencies = [
 name = "deltin-rs"
 version = "0.1.1"
 dependencies = [
- "clap",
- "clap_complete",
  "serde",
  "serde_json",
  "toml",
  "workshop-rs",
+]
+
+[[package]]
+name = "deltin-rs-cli"
+version = "0.1.1"
+dependencies = [
+ "clap",
+ "clap_complete",
+ "deltin-rs",
+ "serde_json",
 ]
 
 [[package]]
