@@ -57,7 +57,7 @@ use crate::signature;
 pub struct ReconstructError {
     /// A stable machine-readable code, e.g. `reconstruct-unsupported-action`.
     pub code: &'static str,
-    /// The WIR construct kind, e.g. `forPlayerVariable`, `settings`, `debug`.
+    /// The WIR construct kind, e.g. `forPlayerVariable` or `settings`.
     pub kind: String,
     /// Human-readable message (not part of the machine contract).
     pub message: String,
@@ -562,24 +562,6 @@ impl<'a> Classifier<'a> {
                     action.span(),
                 ));
             }
-            Action::Debug { .. } => {
-                self.error(ReconstructError::at(
-                    "reconstruct-unsupported-action",
-                    "debug",
-                    "the Wright 'debug' action has no OSTW source binding on the declared \
-                     reconstruction surface",
-                    action.span(),
-                ));
-            }
-            Action::Print { .. } => {
-                self.error(ReconstructError::at(
-                    "reconstruct-unsupported-action",
-                    "print",
-                    "the Wright 'print' action has no OSTW source binding on the declared \
-                     reconstruction surface",
-                    action.span(),
-                ));
-            }
             Action::Call { name, args, .. } => {
                 if name == "abort" && args.is_empty() {
                     return; // representable as `return;`
@@ -1055,10 +1037,7 @@ impl<'a> Emitter<'a> {
                 self.emit_actions(body, level + 1);
                 self.line(level, "}");
             }
-            Action::AssignMember { .. }
-            | Action::ForPlayerVariable { .. }
-            | Action::Debug { .. }
-            | Action::Print { .. } => {
+            Action::AssignMember { .. } | Action::ForPlayerVariable { .. } => {
                 unreachable!("classified as unsupported")
             }
             Action::Call { name, args, .. } => {
