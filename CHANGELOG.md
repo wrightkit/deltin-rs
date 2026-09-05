@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/wrightkit/deltin-rs/compare/v0.1.1...v0.1.2) - 2026-09-05
+
+### Added
+
+- separate deltin library and CLI packaging ([#81](https://github.com/wrightkit/deltin-rs/pull/81))
+
+### Fixed
+
+- finish Clippy cleanup for Rust 1.85 ([#78](https://github.com/wrightkit/deltin-rs/pull/78))
+
+### Other
+
+- align workshop-rs dependency ([#87](https://github.com/wrightkit/deltin-rs/pull/87))
+- *(release)* track shared workflow from main ([#82](https://github.com/wrightkit/deltin-rs/pull/82))
+- pin shared quality workflow to merged SHA ([#79](https://github.com/wrightkit/deltin-rs/pull/79))
+- adopt shared WrightKit workflows ([#75](https://github.com/wrightkit/deltin-rs/pull/75))
+- clean up clippy baseline ([#77](https://github.com/wrightkit/deltin-rs/pull/77))
+- format Rust sources ([#76](https://github.com/wrightkit/deltin-rs/pull/76))
+
 ## [0.1.1](https://github.com/wrightkit/deltin-rs/compare/v0.1.0...v0.1.1) - 2026-08-27
 
 ### Other
