@@ -15,6 +15,7 @@ Use it for substantive implementation preflight. Keep these evidence classes sep
 | --- | --- |
 | DEL/OSTW core scope, project/semantic ownership, typed implementation model | [`language-core.md`](language-core.md) |
 | Runtime/lowering boundary with canonical Workshop | [`workshop-boundary.md`](workshop-boundary.md) |
+| Runtime semantic compatibility for objects, references, calls, function values, and captures | [`runtime-lowering.md`](runtime-lowering.md) |
 | Current support evidence/state | [`../support-matrix.toml`](../support-matrix.toml), [`../compatibility.md`](../compatibility.md), corpus/real-project evidence |
 | Pinned upstream identity/provenance | [`../provenance.md`](../provenance.md) |
 | Syntax observations | [`../syntax-notes.md`](../syntax-notes.md), when consistent with upstream/current evidence |
