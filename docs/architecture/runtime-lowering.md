@@ -1,188 +1,216 @@
-# DEL Runtime Lowering Contract
+# DEL Runtime Semantic Lowering Contract
 
-This document defines the current runtime-lowering contract for DEL/OSTW semantics that require state beyond direct expression lowering. It is a semantic contract for `deltin-rs`, not a required physical layout.
+This document defines the semantic contract for DEL/OSTW runtime behavior that cannot be lowered as isolated expressions. It deliberately does **not** define a shared physical runtime ABI.
 
 The ownership path remains:
 
 ```text
 typed DEL HIR
     ↓
-DEL-owned runtime lowering
+DEL-owned runtime capability check + lowering
     ↓
 canonical public workshop_rs::Program
 ```
 
-Typed HIR carries source-language intent. Runtime handles, frame stacks, dispatch tables, capture payloads, scratch variables, and helper subroutines are backend concerns owned by `deltin-rs`. `workshop-rs` continues to own only canonical Workshop identities, validation, settings/localization, `Program`, and emission.
+Typed HIR carries valid DEL source semantics. `deltin-rs` owns runtime capability checks and source-language-specific lowering. `workshop-rs` owns canonical Workshop identities, validation, settings/localization, `Program`, and emission. Runtime object tables, handles, frame storage, dispatch data, capture payloads, scratch variables, and helper subroutines remain private `deltin-rs` implementation choices unless independent evidence makes part of their behavior observable.
 
-## Object identity and allocation
+## Compatibility target
 
-A DEL class instance has one stable logical identity for its live lifetime. That identity is represented by an object handle. A handle contains enough information to locate the object's runtime slot and, when generation tracking is enabled, to distinguish different lifetimes that reuse the same slot.
+Runtime compatibility means **observable semantic compatibility plus practical resource compatibility** with the pinned OSTW reference recorded in [`../provenance.md`](../provenance.md).
 
-The compatibility allocator follows these invariants:
+For the current pin, `817c1db4bace52123f054ffe10d3d8a06052e687`:
 
-- handle zero is the null / no-object value;
-- live objects occupy non-zero runtime slots;
-- allocation reuses the first free slot before extending object storage;
-- an object's slot does not change while that object is live;
-- construction allocates identity before constructor code runs so `this` and self-references observe the final identity;
-- deletion marks the slot free and clears DEL-owned instance storage for that object;
-- a later allocation may reuse the freed slot.
+- DEL programs within the declared support surface must preserve upstream-observable behavior;
+- physical Workshop layout, helper names, optimizer shape, and emitted text/action identity need not match upstream;
+- different lowering strategies are allowed when they preserve semantics and practical Workshop usability;
+- an upstream update does not silently change this contract; changing the pin requires an explicit compatibility review.
 
-The exact Workshop variables or arrays used to realize the object table are not part of the contract.
+Compatibility does not require compiler-output identity.
 
-### Generation policy and stale references
+## Evidence threshold
 
-Generation tracking is a compatibility policy, not an unconditional safety feature.
+A behavior becomes a durable semantic requirement only when it has observable evidence from at least one of:
 
-When class-generation tracking is disabled, a reference is identified by its slot. After deletion and slot reuse, an old stale reference may therefore alias the new lifetime in that slot. Runtime lowering must not silently add generation checks in this mode because that changes observable upstream behavior.
+- a pinned upstream executable test;
+- an executable differential fixture;
+- a provenance-linked corpus or real-project regression;
+- explicit upstream documentation that defines the behavior.
 
-When class-generation tracking is enabled, the logical handle is `(slot, generation)`. Deletion increments the slot generation before it becomes reusable. Dereference validity requires both a live slot and a matching generation, so a stale handle does not become valid when the slot is reused.
+Pinned upstream source is useful implementation evidence, but source shape alone does not promote an allocator algorithm, helper layout, optimization, or apparent quirk into the semantic contract.
 
-Reference validation and invalid-delete behavior follow the selected DEL/OSTW runtime settings. A failed validity check must not mutate the referenced slot. Logging/abort behavior is policy layered on the validity result; it is not encoded into typed HIR.
+When only implementation evidence exists, the behavior remains an evidence gap or implementation observation. An upstream bug or quirk is preserved only when observable compatibility evidence shows that supported programs depend on it.
 
-## Instance members, static members, and dispatch
+## Runtime readiness and unsupported modes
 
-Every live object has a runtime class identity in addition to its object handle. The class identity drives runtime type discrimination and virtual dispatch.
+Backend readiness does not redefine the DEL language.
 
-Instance storage obeys these invariants:
+A DEL construct that is valid under the pinned compatibility target remains valid through parsing, type checking, and typed HIR even when its runtime lowering is not implemented yet. The runtime capability/lowering boundary must then either:
 
-- a field declaration has one logical storage position within the compatible inheritance layout;
-- field lookup is keyed by object slot plus that declaration's storage position;
-- base-class fields remain addressable for derived objects;
-- derived fields extend rather than reinterpret inherited storage;
-- deleting an object clears the instance-storage positions reachable by that object's class family before the slot is reused.
+1. lower the construct with the required semantics, or
+2. emit an explicit unsupported-capability diagnostic.
 
-A parallel-array layout, packed object row, or another Workshop-valid representation may implement these invariants. No one physical layout is part of the public architecture contract.
+It must not convert a backend gap into a syntax/type error, silently choose a different runtime policy, or emit an approximate lowering with different observable behavior.
 
-Static members are not object-indexed. They have storage associated with the declaring static member and any source-semantic specialization required by the type system. Creating or deleting an instance does not create or destroy static storage.
+This permits staged engine readiness without inventing false support.
 
-Virtual calls and overridable member access dispatch from the receiver's runtime class identity. The lowering may use switches, lookup data, generated subroutines, or another valid form, but it must choose the most-derived applicable implementation while preserving the statically checked DEL signature and source-level access semantics.
+## Runtime settings and defaults
 
-## References and locations
+Runtime settings that change observable behavior remain part of the compatibility target even when individual modes are implemented in separate slices.
 
-A class-typed value is a handle value and assignments copy that handle; they do not clone the object. Multiple variables holding the same valid handle therefore alias the same instance state.
+Defaults follow the pinned OSTW target. In particular, class-generation tracking is not made mandatory merely because it can reject more stale references; the pinned default remains the compatibility default.
 
-A by-reference argument is different from a class reference. It denotes an assignable source location and must continue to target that location for the duration of the call. Runtime lowering must preserve the distinction already present in typed HIR between value arguments and destination/reference arguments.
+For any runtime setting:
 
-Backend location descriptors are private runtime-lowering data. They must not be added to typed HIR merely because a particular Workshop encoding needs an index path, temporary slot, or helper variable.
+- a supported mode must match its evidenced upstream semantics;
+- a mode that belongs to the compatibility target but is not implemented must fail at the runtime capability/lowering boundary;
+- `deltin-rs` must not silently replace the requested mode with a safer, cheaper, or otherwise different mode.
 
-## Calls, recursion, and activation state
+## Objects, references, and lifetime
 
-Every invocation has a logical activation frame. For calls that can be nested recursively, re-entered, or invoked through a portable function value, the frame must preserve all invocation-specific state that can be observed after a nested call returns:
+Class instances require source-visible identity and lifetime semantics. The runtime representation must preserve the observable consequences of aliasing, member access, inheritance/dispatch, deletion, validation, and supported reference policies.
 
-- value parameters and by-reference parameter locations;
-- receiver / current object when applicable;
-- local values whose lifetime crosses a nested invocation;
-- return value state;
-- the continuation needed to resume the caller.
+Pinned high-level tests provide observable evidence for class allocation and field state, inheritance and overrides, invalid-reference handling, class arrays, and class-generation behavior. In generation-enabled tests, deletion followed by allocation can reuse the prior reference's observable pointer component while validation still distinguishes the stale lifetime.
 
-Recursive and mutually recursive calls use LIFO frame semantics per Workshop execution domain. Player-scoped execution must not share frame state across players; global execution may use global state where source semantics permit it.
+The contract therefore requires the evidenced lifetime and validation relationships, not a particular allocator algorithm.
 
-The upstream implementation demonstrates recursion with pushed parameters, receiver state, and explicit continuation positions. Those particular arrays and skip markers are implementation evidence, not required output shape. `deltin-rs` may use a different Workshop-valid encoding if nested calls restore the same logical state.
+The following are **not** fixed by this contract without additional observable evidence:
 
-Non-recursive calls do not need to pay for the recursive frame mechanism when existing fixed-slot lowering is semantically sufficient. Runtime analysis may therefore select the cheaper path for call graphs that do not require re-entry.
+- numeric slot assignment in general;
+- a first-free search algorithm;
+- the physical null/sentinel encoding;
+- the shape of the object table;
+- whether an internal handle is scalar, vector-like, packed, or split across storage.
 
-### Suspension and re-entry
+If a representation component is observable through valid DEL/Workshop interop, only the evidenced observable relation is compatibility-sensitive. The rest remains private lowering state.
 
-A value that must survive a Workshop suspension/yield cannot live only in recyclable scratch state that another invocation may overwrite. Any call form that can suspend must either:
+The pinned implementation suggests additional behavior for generation-disabled stale references and exact slot reuse, but source inspection alone is insufficient to freeze those details. They require an observable test, differential fixture, documented contract, or provenance-linked real-project case before an implementation issue may treat them as required semantics.
 
-1. place its live activation state in storage whose lifetime spans the suspension, or
-2. be rejected by an explicit source/runtime compatibility diagnostic when the DEL/OSTW semantics do not permit that execution mode.
+## Members, inheritance, and dispatch
 
-Lowering must not broaden async/re-entry behavior by accident. Existing semantic restrictions remain authoritative until independent upstream/corpus evidence establishes additional supported behavior.
+Class member behavior, inherited state, and override dispatch are observable source semantics. Pinned high-level tests exercise inheritance and overrides across multiple runtime classes, so lowering must preserve those results.
 
-Runtime stack depth is ultimately bounded by Workshop value/array/resource limits. The compiler should report statically provable validity/capacity failures; it cannot promise unbounded recursion at runtime.
+The contract does not prescribe how those results are encoded. Instance fields may use parallel arrays, packed records, generated indexes, or another Workshop-valid representation. Runtime class discrimination may use tables, switches, generated subroutines, or another private strategy.
 
-## Function values and lambda captures
+Static members likewise follow DEL source semantics; their physical storage is not object layout and is not fixed by this contract.
 
-A portable function value has three logical parts:
+No class-layout or dispatch helper becomes a `workshop-rs` API merely because multiple DEL features use it.
 
-```text
-callable target identity
-optional bound receiver
-captured value payload
-```
+## Calls and synchronous recursion
 
-The exact serialized Workshop shape is private to runtime lowering.
+Synchronous nested and recursive calls must preserve all caller-observable invocation state needed to produce the pinned behavior. This includes whichever parameters, receiver state, local state, return state, and continuation state are semantically live across a nested invocation.
 
-For the pinned compatibility target, ordinary lambda capture is capture-by-value at function-value creation time:
+Pinned recursion tests exercise direct/subroutine recursion, recursive array state, and recursive invocation through a closure/function value. These results are compatibility requirements.
 
-- scalar/value variables contribute their current value;
-- structs and other value aggregates contribute a snapshot of their value components;
-- a captured class value contributes its object handle, so both the closure and outer code still refer to the same object lifetime;
-- a bound instance method/function value retains its receiver handle.
+The contract does not require a universal activation-frame type or a particular LIFO array/continuation encoding. A non-recursive call may use a cheaper lowering when it preserves behavior. Recursive lowering may use any private representation that restores the same observable state.
 
-Rebinding an outer variable after a value capture does not require a mutable closure cell. No general capture-by-reference closure environment is introduced without independent source-language evidence that requires one. If future evidence identifies an explicit reference-capture construct, that construct must carry location semantics deliberately rather than changing ordinary captures.
+## Suspension, async, and re-entry
 
-Invocation decodes the callable target, restores the bound receiver and capture payload, binds call arguments, and then enters the same activation-frame contract used by direct calls. Recursive invocation through a function value must therefore preserve frame isolation just like direct recursion.
+Upstream-supported async, suspension, and re-entry semantics remain compatibility targets, but engine readiness may be staged independently from synchronous recursion.
 
-## Value-like types
+Until a mode has sufficient observable evidence and an implementation that preserves it, `deltin-rs` must reject that mode with an explicit runtime capability diagnostic rather than approximate it or broaden its behavior by accident.
 
-The runtime object heap is only for semantics that require class identity/lifetime.
+No unbounded recursion or suspension capacity is promised: every lowering remains subject to Workshop resource and validity constraints.
 
-- structs are value-like aggregates and are copied/flattened according to their typed value semantics; they do not acquire object identity merely to reuse class machinery;
-- enums lower as typed scalar/domain values and do not require runtime allocation;
-- ordinary arrays/collections remain value-like Workshop data when DEL semantics do not assign them independent object identity;
-- class references stored inside structs, arrays, or captures remain handle values and preserve the referenced object identity;
-- a future collection/runtime feature uses the object allocator only if source semantics independently require reference identity, lifetime, or aliasing.
+## Function values and captures
 
-This separation prevents a universal heap abstraction from becoming an accidental source-language model.
+Function values must preserve the callable behavior, bound receiver behavior, and captured state that are observable under the pinned DEL semantics. Recursive function-value invocation is already covered by pinned executable tests.
 
-## Workshop boundary and validity
+The physical representation of a function value is private. A callable identifier, receiver, and captured payload may appear in the pinned implementation, but that serialized array shape is not an ABI requirement.
 
-Runtime lowering may allocate DEL-private Workshop variables and subroutines, but emitted operations and identities must be represented through the canonical public `workshop_rs::Program` contract and validated by `workshop-rs`.
+### Capture-semantics evidence gap
 
-No DEL runtime helper, object-layout concept, call-frame type, or closure descriptor becomes a `workshop-rs` semantic API unless it is independently a source-language-neutral Workshop concept.
+The pinned implementation currently snapshots captured values when encoding a portable lambda and flattens struct components into its payload. That is implementation evidence from `Parse/Lambda/Workshop/CaptureEncoder.cs`; it is not yet sufficient under this contract's evidence threshold to freeze ordinary capture timing or copy/reference semantics as a durable requirement.
 
-Physical lowering must account for Workshop variable, subroutine, value, array, and action constraints. Exact limits belong to canonical Workshop validation/catalog data where available rather than duplicated constants in `deltin-rs`. A runtime strategy that cannot produce valid Workshop for a source program fails explicitly; it does not silently approximate DEL behavior.
+Before an implementation issue relies on ordinary capture-by-value, capture-by-reference, mutable closure cells, or a specific class-capture rule, it must add or identify observable evidence for that behavior.
+
+This evidence gap is not permission to invent a closure model. Until it is closed, no universal closure-cell ABI is introduced.
+
+## Value-like types and runtime identity
+
+Runtime identity machinery is introduced only where source semantics require independent identity, lifetime, or aliasing.
+
+- classes require runtime identity/lifetime semantics;
+- structs and enums remain value-like typed data unless independent evidence requires identity;
+- ordinary arrays/collections do not acquire class-object identity merely to reuse class machinery;
+- future collection/runtime features may use identity machinery only when their source semantics require it.
+
+This classification prevents a universal object heap from becoming an accidental language model.
+
+## Practical resource compatibility
+
+Resource compatibility is judged by representative usability, not a fixed element/variable multiplier.
+
+A runtime strategy is a compatibility regression when a provenance-linked, representative program that is valid and practically usable under the pinned upstream target becomes invalid under Workshop limits solely because `deltin-rs` introduces materially worse runtime resource cost.
+
+Element, variable, subroutine, action, and related counts may be recorded as comparative metrics, but individual counts and ratios are not durable public contracts. Regression evidence should preserve the project/revision/path or minimized fixture that demonstrates the lost workflow.
+
+Exact Workshop limits belong to canonical Workshop validation/catalog data where available; `deltin-rs` must not duplicate changing limits as runtime architecture constants.
+
+## Workshop boundary
+
+Runtime lowering may allocate DEL-private Workshop state and helpers, but the emitted result must use the canonical public `workshop_rs::Program` boundary and pass applicable `workshop-rs` validation.
+
+A runtime strategy that cannot represent a supported source program as valid Workshop fails explicitly. It must not silently approximate DEL semantics.
+
+DEL object layouts, reference policies, call frames, and function-value encodings remain source-language-specific and do not become `workshop-rs` semantics unless they are independently source-language-neutral Workshop concepts.
 
 ## Non-contractual implementation choices
 
-The following may change without an architecture change when observable semantics remain stable:
+Unless separate observable evidence says otherwise, the following may change without an architecture decision:
 
+- allocator search strategy, including first-free versus another reuse strategy;
+- object-table and member-storage layout;
 - helper variable and subroutine names;
-- parallel arrays versus packed storage;
-- exact physical encoding of `(slot, generation)`;
-- continuation token or return-stack representation;
-- switch/table/helper shape used for virtual or function-value dispatch;
+- physical handle encoding beyond evidenced observable behavior;
+- frame, return-state, and continuation representation;
+- function-value and capture-payload serialization;
+- dispatch table/switch/helper shape;
 - scratch-slot reuse and optimizer decisions;
-- formatting or emitted action order when behavior and validity are equivalent.
+- exact resource counts when practical usability remains intact;
+- formatting and emitted action order when semantics and validity are equivalent.
 
 ## Implementation seams
 
-Implementation work may be split along these seams without inventing a new shared runtime ABI:
+Implementation may be decomposed without inventing a shared physical ABI:
 
-1. object allocator, deletion, validity policy, and member storage;
-2. inheritance class identities and virtual dispatch;
-3. recursive/re-entrant activation frames and return state;
-4. function-value encoding, capture materialization, and invocation dispatch;
-5. runtime-sensitive value aggregates/collections only where existing value lowering is insufficient.
+1. object/reference lifetime and the pinned default runtime-policy baseline;
+2. inheritance/member behavior and virtual dispatch;
+3. synchronous nested/recursive call state;
+4. function values and ordinary capture semantics after the capture evidence gap is closed;
+5. additional runtime settings and async/suspension/re-entry modes as evidence and engine readiness permit.
 
-Each seam consumes typed HIR and produces canonical Workshop `Program` data. Shared private helpers may be introduced only when at least two seams require the same invariant; a public generic runtime/VM layer is not required by this design.
+Each seam consumes typed HIR and produces canonical Workshop `Program` data. Private helpers should be shared only when multiple implemented seams demonstrably need the same invariant; no generic runtime IR, VM, or public runtime framework is required.
 
-## Design ablation
+## Architecture exclusions
 
-The design was reduced against the required semantics before fixing this contract:
+This contract intentionally does not introduce:
 
-- **No generic VM/runtime IR.** Typed HIR plus private lowering state is sufficient; a new public intermediate layer adds architecture without satisfying an independent requirement.
-- **No mandatory generation handles.** Pinned OSTW makes generation tracking configurable, and forcing it changes stale-reference behavior.
-- **No universal closure cells.** Pinned lambda lowering snapshots captured values; ordinary capture-by-reference is not evidenced.
-- **No universal object heap for structs/enums/arrays.** Their value semantics do not require class identity.
-- **No new `workshop-rs` runtime API.** Existing canonical `Program` ownership is the correct boundary; DEL runtime layout remains source-language-specific.
-- **No upstream layout cloning.** Upstream object arrays, recursion skip markers, lambda arrays, and helper names are useful executable evidence but are not semantic contracts by themselves.
+- a unified physical DEL runtime ABI;
+- a generic runtime IR or mini-VM between typed HIR and Workshop;
+- mandatory generation-bearing references;
+- a fixed allocator algorithm;
+- universal mutable closure cells;
+- a universal object heap for value-like types;
+- a fixed resource-count ratio against upstream;
+- a DEL-specific runtime API in `workshop-rs`;
+- upstream helper/layout cloning as an architecture requirement.
 
-What remains is the minimum shared contract needed to keep object lifetime, dispatch, nested calls, and function values mutually compatible.
+These exclusions keep the contract at the minimum level required for semantic compatibility and real-project usability.
 
-## Compatibility evidence
+## Evidence map
 
-The pinned upstream identity is recorded in [`../provenance.md`](../provenance.md). At commit `817c1db4bace52123f054ffe10d3d8a06052e687`, the relevant executable evidence includes:
+The pinned identity is recorded in [`../provenance.md`](../provenance.md). Evidence for this contract currently includes:
 
-- `Deltinteger/Deltinteger/Parse/Types/Classes/ClassData.cs`: null slot, first-free allocation, optional generation-bearing references, validity checks;
-- `Deltinteger/Deltinteger/Parse/Statement.cs`: deletion invalidates the slot and increments generation when enabled;
-- `Deltinteger/Deltinteger/Parse/Types/Classes/ClassType.cs` and `Parse/Workshop/ClassWorkshopInitializer.cs`: object identity, instance storage, inheritance layout, deletion clearing, and runtime class relations;
-- `Deltinteger/Deltinteger/Parse/Functions/Builder/RecursiveStack.cs` plus `Deltinteger.Tests/HighLevelTests/RecursionTest.cs`: recursive parameter/receiver/continuation preservation and observable recursive results;
-- `Deltinteger/Deltinteger/Parse/Lambda/Workshop/CaptureEncoder.cs` and `PortableBuilder.cs`: callable identity, bound receiver, captured-value payload, and portable invocation;
-- `Deltinteger/Deltinteger/Parse/Lambda/Action.cs`: captured outer-variable discovery and lambda invocation categories;
-- `Deltinteger/Deltinteger/Parse/Settings.cs`: generation tracking and reference-validation behavior are explicit compiler/runtime policies.
+| Behavior | Observable evidence | Implementation evidence | Contract treatment |
+| --- | --- | --- | --- |
+| Class allocation, member state, initial values | `Deltinteger.Tests/HighLevelTests/HighLevelTest.cs` | `Parse/Types/Classes/ClassType.cs`, `Parse/Workshop/ClassWorkshopInitializer.cs` | Observable behavior required; physical storage private. |
+| Inheritance and overrides | `Deltinteger.Tests/HighLevelTests/HighLevelTest.cs` (`Inheritance & overrides`) | class relation/dispatch implementation | Observable dispatch results required; dispatch representation private. |
+| Delete, invalid-reference validation, pointer reuse with generations | `Deltinteger.Tests/HighLevelTests/HighLevelTest.cs` class-generation/reference-validation tests | `Parse/Types/Classes/ClassData.cs`, `Parse/Statement.cs`, `Parse/Settings.cs` | Evidenced validation/reuse relationships required; general allocator algorithm is not. |
+| Runtime-policy defaults/modes | pinned OSTW settings plus the compatibility decision in ADR-0005 | `Parse/Settings.cs` | Preserve pinned defaults and target modes; staged support may diagnose unsupported modes. |
+| Synchronous recursion | `Deltinteger.Tests/HighLevelTests/RecursionTest.cs` | `Parse/Functions/Builder/RecursiveStack.cs` | Observable recursive results required; stack representation private. |
+| Recursive function-value invocation | `Deltinteger.Tests/HighLevelTests/RecursionTest.cs` | lambda portable-builder implementation | Observable invocation result required; payload ABI private. |
+| Ordinary lambda capture timing/copy semantics | **No independent observable evidence identified yet** | `Parse/Lambda/Workshop/CaptureEncoder.cs`, `Parse/Lambda/Action.cs` | Evidence gap; do not freeze or invent semantics from source shape alone. |
+| Async/suspension/re-entry details | evidence required per mode before implementation claims support | async/call implementation | Compatibility target with staged readiness; unsupported modes diagnose explicitly. |
+| First-free allocation, exact object/frame/capture layouts, helper names | none required for compatibility | pinned source implementation | Non-contractual unless future observable evidence proves otherwise. |
 
-These files are evidence for observable behavior and constraints. Their C# class structure, helper objects, names, and emitted Workshop shape are not architecture requirements for `deltin-rs`.
+ADR-0005 records the architecture choices and rationale behind this contract. The architecture document remains the authority for the current invariant once that decision is accepted.
