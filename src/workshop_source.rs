@@ -4,7 +4,6 @@
 //! canonical Workshop source model. It deliberately contains no HIR,
 //! lowering, backend encoding, or catalog state.
 
-use workshop_rs::arena::Arena;
 use workshop_rs::source::{FileId as WorkshopFileId, Position, SourceFile, Span as WorkshopSpan};
 
 use crate::span::{FileId, SourceMap, Span};
@@ -35,21 +34,22 @@ pub enum SourceBridgeError {
 #[derive(Clone)]
 pub struct WorkshopSourceBridge {
     source_map: SourceMap,
-    files: Arena<SourceFile>,
+    files: Vec<SourceFile>,
     del_to_workshop: Vec<WorkshopFileId>,
 }
 
 impl WorkshopSourceBridge {
     /// Build Workshop source-file entries and a stable DEL-file-ID mapping.
     pub fn from_source_map(sources: &SourceMap) -> Result<Self, SourceBridgeError> {
-        let mut files = Arena::new();
+        let mut files = Vec::new();
         let mut del_to_workshop = Vec::new();
 
         for source in sources.files() {
             let Some(path) = source.name.to_str() else {
                 return Err(SourceBridgeError::NonUtf8Path(source.id));
             };
-            let workshop_file = files.push(SourceFile::new(path));
+            let workshop_file = WorkshopFileId::from_index(files.len());
+            files.push(SourceFile::new(path));
             let index = source.id.0 as usize;
             if del_to_workshop.len() <= index {
                 del_to_workshop.resize(index + 1, workshop_file);
@@ -64,8 +64,8 @@ impl WorkshopSourceBridge {
         })
     }
 
-    /// The workshop-rs source-file arena, in DEL source-map order.
-    pub fn files(&self) -> &Arena<SourceFile> {
+    /// Workshop source-file entries in DEL source-map order.
+    pub fn files(&self) -> &[SourceFile] {
         &self.files
     }
 

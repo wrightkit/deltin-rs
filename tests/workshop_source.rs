@@ -18,11 +18,11 @@ fn bridge_preserves_cross_file_identity_and_unicode_positions() {
     assert_ne!(first_workshop, second_workshop);
     assert_eq!(bridge.files().len(), 2);
     assert_eq!(
-        bridge.files().get(first_workshop),
+        bridge.files().get(first_workshop.index()),
         Some(&SourceFile::new("src/main.del"))
     );
     assert_eq!(
-        bridge.files().get(second_workshop),
+        bridge.files().get(second_workshop.index()),
         Some(&SourceFile::new("lib/β.del"))
     );
 
