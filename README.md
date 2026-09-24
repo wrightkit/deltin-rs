@@ -47,9 +47,12 @@ The reverse direction starts with Workshop parsed by `workshop-rs` and uses
 
 ## Compatibility
 
-Compatibility targets observable DeltinScript / OSTW semantics for the declared
-support surface, not upstream compiler architecture, formatting, helper names,
-temporary variables, or output-text identity.
+For the declared support surface, compiled Workshop output converges
+structurally on the pinned upstream OSTW compiler output (rule order, element
+identities, control flow, conditions, values, variable names and indices, and
+element cost) when both outputs are parsed as canonical Workshop programs;
+formatting is not compared. Source analysis and tooling surfaces target
+observable DeltinScript / OSTW semantics, not upstream compiler architecture.
 
 | Capability | Status | Notes |
 | --- | --- | --- |

@@ -45,9 +45,13 @@ emission. `check`, `inspect`, symbol/type queries, and project diagnostics must
 not be forced through complete compiler lowering without an evidence-backed
 reason.
 
-Compatibility targets observable DEL/OSTW semantics, not upstream internal
-architecture, generated helper identity, optimizer shape, formatting, or text
-identity.
+Source→Workshop compilation converges structurally on the pinned upstream OSTW
+compiler output, compared as `workshop-rs`-parsed canonical programs; formatting
+is not a criterion. Structural differences, including behaviorally equivalent or
+cheaper rewrites, are defects unless recorded as an approved exception (see
+[`language-core.md`](docs/architecture/language-core.md#compatibility-target)).
+Other surfaces (diagnostics, queries, reconstruction) target observable DEL/OSTW
+semantics, not upstream internal architecture.
 
 ## Architecture routing
 
