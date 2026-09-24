@@ -55,9 +55,10 @@ When `workshop-rs#10` publishes canonical feature identities, an integration
 adapter may add those IDs to the source fixture metadata and carry them with
 the lowering result. Until then, `deltin-rs` records only source constructs and
 the `workshop-lowering` matrix state. It must not invent or vendor a second
-Workshop catalog. End-to-end assertions will compare normalized Workshop
-semantics and report failures by the canonical IDs supplied by `workshop-rs`,
-not by generated text, temporary variables, optimizer choices, or formatting.
+Workshop catalog. End-to-end assertions will compare the canonical Workshop
+structure of `deltin-rs` and pinned upstream OSTW output, both parsed by
+`workshop-rs`, and report failures by the canonical IDs it supplies, never by
+generated text or formatting.
 
 The complete project fixtures remain alongside focused and minimized source
 cases. The report is additive: a project-level pass does not replace focused

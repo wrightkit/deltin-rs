@@ -43,8 +43,10 @@ The semantic checker keeps one explicit `Checker` state object while locating it
 
 ## Compatibility target
 
-Target observable semantic compatibility: accepted/rejected programs, project behavior, meaningful diagnostics/provenance, source tooling behavior, high-level runtime semantics, lowering results, and declared reconstruction contracts.
+For source→Workshop compilation, the pinned upstream OSTW compiler output is the correctness target, as defined by WrightKit goal principle 7. `deltin-rs` output must match its canonical Workshop structure: rule order, element identities, control flow, condition shape, value construction, variable names and indices (including generated helpers), and element cost. Compatibility is measured by parsing both outputs with `workshop-rs` and comparing the canonical programs structurally; text diffs, line counts, and text-pattern counts are not evidence, and formatting, whitespace, and comments are not criteria.
 
-Matching upstream helper identity, optimizer shape, formatting, generated names, internal IR, or compiler architecture is not required unless it changes an observable contract.
+Structural rewrites are not accepted, even when they appear behaviorally equivalent or reduce element cost. Any structural difference is a defect unless it is a recorded exception approved by the owner, including a difference for an apparent upstream bug. Each exception records the upstream behavior, the `deltin-rs` behavior, the approving decision, and the test that pins it.
+
+For the other surfaces (accepted/rejected programs, project behavior, diagnostics/provenance, source tooling behavior, and declared reconstruction contracts), target observable semantic compatibility. Upstream internal IR and compiler architecture remain non-contractual.
 
 `deltin-rs` does not invent a WrightKit-only DEL/OSTW dialect.

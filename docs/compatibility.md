@@ -8,16 +8,20 @@ The current language contract is [`docs/architecture/language-core.md`](architec
 
 ## Compatibility target
 
-Compatibility means observable semantic compatibility. Relevant evidence includes:
+Source→Workshop compilation converges structurally on the pinned upstream OSTW
+output as defined in [`language-core.md`](architecture/language-core.md#compatibility-target):
+both outputs are parsed by `workshop-rs` and compared as canonical programs, and
+any unrecorded structural difference is a defect. The other surfaces target
+observable semantic compatibility. Relevant evidence includes:
 
 - accepted/rejected source and project behavior;
 - structured diagnostics and provenance;
 - source/project semantic queries;
 - high-level runtime meaning such as dispatch, storage, references, closures, recursion, and lifetime behavior;
-- source→Workshop lowering where supported;
+- structural comparison of source→Workshop lowering against the pinned upstream output where supported;
 - declared Workshop→DEL/OSTW reconstruction behavior.
 
-It does not require upstream compiler architecture, internal IR identity, helper names, optimizer shape, formatting, generated temporary names, or text/byte-identical Workshop output unless one of those affects an observable contract.
+It does not require upstream compiler architecture, internal IR identity, formatting, or byte-identical Workshop text. Generated helper names, variable indices, and optimizer effects on emitted structure are part of the compared compilation structure.
 
 ## Pinned OSTW evidence package
 
