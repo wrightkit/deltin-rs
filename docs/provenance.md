@@ -22,11 +22,10 @@ release `v3.4.0`, tag commit
 The JSON record is the source of truth for the asset fields; this document
 describes their provenance and does not define a second pin.
 
-The complete evidence package was migrated from
-`wrightkit/wright/compatibility/ostw/` with corpus file hashes, probe results,
-reference identities, and explicit roots preserved. The old Wright copy remains
-only until the owner-cutover follow-up `wrightkit/wright#182` removes any
-consumer-required residue.
+The compatibility reference package was migrated from Wright during the
+DEL/OSTW ownership cutover. Wright no longer carries an authoritative
+`compatibility/ostw/` copy; source-language reference identity and provenance
+belong to `deltin-rs`.
 
 ### License detail
 
