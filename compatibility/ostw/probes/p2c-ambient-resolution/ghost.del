@@ -1,6 +1,0 @@
-globalvar Number ambientGhost = 7;
-
-rule: "P2 ghost at project root"
-{
-    BigMessage(AllPlayers(), ambientGhost);
-}

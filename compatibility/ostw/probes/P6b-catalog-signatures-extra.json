@@ -1,6 +1,0 @@
-{
-  "files": {
-    "ds.toml": "entry_point=\"main.ostw\"\n",
-    "main.ostw": "globalvar Number e = 0;\nrule: \"r\" Event.OngoingPlayer {\n  CreateEffect(VisibleTo: AllPlayers(), Type: Effect.Orb, Color: Color.Black, Position: Vector(0,0,0), Reevaluation: EffectRev.VisibleToPositionAndRadius);\n  e = LastCreatedEntity();\n  CreateProgressBarInWorldText(VisibleTo: AllPlayers(), Value: 50, Text: \"t\", Position: Vector(0,0,0), Scale: 1, Clipping: Clipping.DoNotClip, Reevaluation: ProgressBarWorldEvaluation.VisibleToAndValues, NonteamSpectators: Spectators.DefaultVisibility);\n  e = LastTextID();\n  PlayEffect(VisibleTo: EventPlayer(), Type: PlayEffect.BuffImpactSound, Position: Vector(0,0,0));\n  DisableMovementCollisionWithEnvironment(IncludeFloors: false);\n  EnableMovementCollisionWithEnvironment();\n}\n"
-  }
-}

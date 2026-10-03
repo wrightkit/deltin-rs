@@ -1,3 +1,0 @@
-import "ghost.del";
-
-globalvar Number aMarker = 2;

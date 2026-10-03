@@ -1,1 +1,0 @@
-a.ostw: Error at 0, 7: The file '/workspace/compatibility/ostw/probes/p2c-ambient-resolution/sub/ghost.del' does not exist.

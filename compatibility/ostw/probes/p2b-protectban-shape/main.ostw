@@ -1,8 +1,0 @@
-import "interface/Leaf.del";
-
-globalvar Number marker = 1;
-
-rule: "P2 protect-ban missing-import shape"
-{
-    BigMessage(AllPlayers(), "p2b");
-}

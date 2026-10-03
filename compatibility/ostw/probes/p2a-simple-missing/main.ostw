@@ -1,8 +1,0 @@
-import "ghost.del";
-
-globalvar Number marker = 1;
-
-rule: "P2 simple missing import"
-{
-    BigMessage(AllPlayers(), "p2a");
-}

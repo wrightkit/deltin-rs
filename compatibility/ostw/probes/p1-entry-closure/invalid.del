@@ -1,4 +1,0 @@
-rule: "P1 broken rule never opened by entry graph
-{
-    globalvar Number x = ;
-}

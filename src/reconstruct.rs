@@ -18,7 +18,7 @@ use crate::signature;
 /// The `code` is a stable machine-readable identifier; `kind` names the WIR
 /// construct that is not representable on the declared reconstruction
 /// surface (the machine-readable boundary manifest under
-/// `compatibility/ostw/reconstruction/support-boundary.json` uses the same
+/// `tests/reconstruction-fixtures/support-boundary.json` uses the same
 /// spellings); `span` is the offending source region when the WIR carries
 /// one.
 #[derive(Debug, Clone, PartialEq, Eq)]

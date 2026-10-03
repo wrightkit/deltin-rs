@@ -9,8 +9,8 @@
 //! semantic phase
 //! resolves builtins and enum domains through that catalog at the consume
 //! sites. No OSTW `Elements.json` or upstream compiler table is copied;
-//! every binding is exercised by the protect-ban reachable closure or a
-//! committed pinned-reference probe under `compatibility/ostw/probes/`.
+//! every binding is exercised by the protect-ban reachable closure under
+//! `tests/real-projects/protect-ban/`.
 
 use workshop_rs::catalog::Kind;
 
