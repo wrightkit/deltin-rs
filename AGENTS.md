@@ -21,7 +21,7 @@ identity as an independent DEL/OSTW implementation.
 - DEL/OSTW syntax, parsing, project loading/imports, source model, and trivia;
 - semantic/type resolution, diagnostics, provenance, and typed HIR;
 - DEL/OSTW-specific runtime and compiler lowering semantics;
-- standalone CLI/library tooling and compatibility evidence;
+- standalone CLI/library tooling and compatibility verification;
 - Workshop → DEL/OSTW reconstruction when implemented.
 
 `workshop-rs` owns:
@@ -42,7 +42,7 @@ this repository. Missing canonical capabilities must be fixed in
 
 The standalone semantic path must remain useful independently of Workshop
 emission. `check`, `inspect`, symbol/type queries, and project diagnostics must
-not be forced through complete compiler lowering without an evidence-backed
+not be forced through complete compiler lowering without a documented
 reason.
 
 Source→Workshop compilation converges structurally on the pinned upstream OSTW
@@ -67,8 +67,8 @@ Use:
 - [`workshop-boundary.md`](docs/architecture/workshop-boundary.md) for runtime and
   compiler-lowering ownership at the canonical Workshop boundary.
 
-If the Issue, current architecture contract, support evidence, and source/tests
-disagree materially, stop and surface the mismatch rather than deciding the
+If the Issue, current architecture contract, declared support state, and
+source/tests disagree materially, stop and surface the mismatch rather than deciding the
 architecture by implementation convenience.
 
 ## Upstream and provenance
@@ -80,10 +80,10 @@ functionality or demonstrated to be a non-contractual implementation artifact.
 
 Inspect upstream source/docs/tests to understand behavior, then implement the
 behavior directly in clear Rust. Do not mechanically translate or copy
-unlicensed upstream compiler internals. Fixtures and evidence must follow
+unlicensed upstream compiler internals. Fixture attribution must follow
 [`docs/provenance.md`](docs/provenance.md).
 
-The support matrix, inventory, corpus, probes, and real projects verify current
+The support matrix, inventory, corpus, and real projects verify current
 completeness and compatibility. They do not decide whether an established core
 feature belongs in scope.
 
@@ -94,7 +94,7 @@ semantics, type/member/overload rules, dispatch, capture/reference behavior,
 storage/lifetime semantics, runtime intent, and lowering decisions.
 
 Machine-readable matrices/inventories may record capability identity,
-provenance, evidence links, and support state. Do not turn them into an
+provenance, reference links, and support state. Do not turn them into an
 interpreted semantic specification.
 
 ## Development priority
@@ -105,7 +105,8 @@ DEL/OSTW project exposes a blocker:
 1. reproduce it with standalone `deltin-rs` tooling;
 2. fix DEL/OSTW-owned behavior here;
 3. route genuine canonical Workshop gaps to `workshop-rs`;
-4. retain full-project evidence and add a minimized regression where practical;
+4. retain the real-project coverage and add a minimized regression where
+   practical;
 5. prefer coherent implementation waves over unnecessary per-construct issue/PR
    fragmentation.
 
@@ -123,16 +124,16 @@ cargo test --workspace --all-targets
 cargo run --quiet -p deltin-rs-cli -- support --check
 ```
 
-Run compatibility/corpus gates affected by the change. A passing unit-test count
-is not sufficient evidence for a real-project support claim; rerun the affected
-project workflow.
+Run compatibility/corpus gates affected by the change. A passing unit-test
+count does not establish a real-project support claim; rerun the affected
+project workflow (`tests/real-projects/`).
 
 ## Delivery
 
 - Never push directly to `main`; use an independent branch and PR.
 - Keep commits focused and avoid unrelated changes.
 - Keep support-matrix and documentation claims synchronized with executable
-  evidence.
+  tests.
 - Never commit credentials, private runtime data, or unreviewed third-party
   material.
 

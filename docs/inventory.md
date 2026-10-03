@@ -7,7 +7,7 @@ upstream references (see [provenance.md](provenance.md)):
   (https://github.com/ItsDeltin/Overwatch-Script-To-Workshop)
 - **wiki** = `.upstream-refs/ostw-wiki` @ `e8894b972fae3fa9fd81dab0bb3672cc740a771e`
 
-Every entry names its upstream evidence location (`path@commit`, `wiki/<page>`). Entries are
+Every entry names its upstream source location (`path@commit`, `wiki/<page>`). Entries are
 the contract: anything not listed here is not a deltin-rs compatibility requirement. Upstream
 internals are only relevant where observable behavior requires them (per issue #2 non-goals).
 
@@ -21,7 +21,7 @@ File extensions accepted as OSTW source upstream: `.del`, `.ostw`, `.workshop`
 Lexical evidence: `ostw/Deltinteger/Deltinteger/Compiler/Parse/Lexer/LexController.cs`,
 `LexScanner.cs`, `CharData.cs`; token set in `Compiler/Utility.cs` (enum `TokenType`).
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `syntax.comments.line` | `//` line comments | `ostw/.../Parse/Lexer/LexController.cs` (`MatchLineComment`); `wiki/Comments-and-documentation` |
 | `syntax.comments.block` | `/* ... */` block comments | same (`MatchBlockComment`) |
@@ -76,7 +76,7 @@ Lexical evidence: `ostw/Deltinteger/Deltinteger/Compiler/Parse/Lexer/LexControll
 Evidence: `Deltinteger.Tests/Semantics/*`, `Deltinteger.Tests/HighLevelTests/EnumTest.cs`
 (error cases), `Deltinteger.Tests/LanguageTests/*`, and the corresponding `Parse/*` sources.
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `semantic.scoping` | block-scoped variables; rule-level `globalvar`/`playervar` visible project-wide; `root` access from classes | `wiki/Variables`; `Parse/Scope.cs` |
 | `semantic.access-control` | `public` / `private` / `protected` members (classes, structs, functions, macros, constructors) | `wiki/Classes`; `Parse/Functions/User/*` |
@@ -103,7 +103,7 @@ Evidence: `Deltinteger.Tests/Semantics/*`, `Deltinteger.Tests/HighLevelTests/Enu
 Evidence: `Deltinteger.Tests/HighLevelTests/*`, `Deltinteger.Tests/HighLevelTests/EnumTest.cs`
 (ok cases), `Parse/Variables/Workshop/ValidateReference.cs`, `Parse/Workshop/ClassWorkshopInitializer.cs`.
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `runtime-semantics.class-allocation` | `new` allocates an instance (max 999); per-instance fields share `_objectVariable_x` registers | `wiki/Classes`; corpus `highlevel/class-allocation.del`; `wiki/Home-and-FAQ` |
 | `runtime-semantics.delete` | `delete var;` frees the instance index; later access is an invalid reference | `wiki/Classes`; corpus `highlevel/reference-validation.del` |
@@ -132,7 +132,7 @@ Evidence: `ostw/Deltinteger/Deltinteger/Elements/*` (workshop element catalog `E
 > Per issue #2, these are **inventory-only until the integration stage**; they are the
 > `lowering-dependent` rows of the support matrix and do not block source implementation work.
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `workshop-lowering.workshop-catalog` | the canonical workshop elements/actions/values catalog (vendor data, e.g. `Elements.json`); deltin-rs does **not** copy it into the repository (issue #3 non-goal) | `ostw/Deltinteger/Deltinteger/Elements/Elements.json`; `LoadData.cs` |
 | `workshop-lowering.events` | 11 event types (`OngoingGlobal`, `OngoingPlayer`, `OnElimination`, `OnFinalBlow`, `OnDamageDealt`, `OnDamageTaken`, `OnDeath`, `OnHealingDealt`, `OnHealingTaken`, `OnPlayerJoin`, `OnPlayerLeave`) plus subroutines; player/assault/heal contexts | `wiki/Rules` |
@@ -158,7 +158,7 @@ Evidence: `ostw/Deltinteger/Deltinteger/Elements/*` (workshop element catalog `E
 These are upstream compiler-side capabilities deltin-rs may provide as utilities, but they are
 **not** OSTW language features and do not define compatibility:
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `compiler-utility.optimizer` | constant folding, vector shortcutting, `Value In Array` → `First Of`; controlled by `optimize_output` | `wiki/Optimizing`; `ostw/Deltinteger/Deltinteger/Elements/Optimize.cs` |
 | `compiler-utility.element-count` | element-count estimation model | `wiki/Optimizing` |
@@ -169,11 +169,10 @@ These are upstream compiler-side capabilities deltin-rs may provide as utilities
 | `compiler-utility.asset-exporter` | alphabet/model export tooling | `ostw/Deltinteger/Deltinteger/Asset Exporter/` |
 | `compiler-utility.ds-toml` | `ds.toml` project configuration (`entry_point`, `out_file`, `optimize_output`, `global_reference_validation`, `track_class_generations`, `reference_validation_type`, `abort_on_error`, `log_delete_reference_zero`, `new_class_register_optimization`, `reset_nonpersistent`, `paste_check_is_extended`, `subroutine_stacks_are_extended`, `c_style_workshop_output`, `compile_miscellaneous_comments`, `use_tabs_in_workshop_output`) | `wiki/ds.toml` |
 | `compiler-utility.json-type` | `import("file.json") as name` runtime JSON values | `wiki/Importing-data-from-.json-files`; `Deltinteger.Tests/ImportJsonTest.cs` |
-| `compiler-utility.ostw-reference-evidence` | Maintainer-only pinned OSTW identity, corpus/probe observations, and reconstruction boundary; reference replay is explicit and not a native CI gate | `compatibility/ostw/reference.json`; `compatibility/ostw/corpus.json`; `compatibility/ostw/results.json`; `compatibility/ostw/probes/results.json`; `compatibility/ostw/reconstruction/support-boundary.json` |
 
 ## 6. Decompiler
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `decompiler.workshop-to-ostw` | decompile workshop text to OSTW: text → elements → code | `ostw/Deltinteger/Deltinteger/Decompiler/` (`TextToElement/`, `ElementToCode/`, `Decompiler.cs`); `wiki/Decompiling` |
 | `decompiler.settings` | lobby settings extracted during decompile | `Decompiler/Json/DecompilerMeta.cs`; `wiki/Decompiling` |
@@ -184,7 +183,7 @@ These are upstream compiler-side capabilities deltin-rs may provide as utilities
 Everything in this category is explicitly **not** a deltin-rs compatibility requirement. It is
 listed so the matrix can mark it `out-of-scope` rather than silently dropping it.
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `editor.language-server` | LSP server (`Server.cs`, `StdServer.cs`, handlers) | `ostw/Deltinteger/Deltinteger/Language Server/*` |
 | `editor.incremental-parse` | incremental lexer/parser for live editing (token ranges, relexing) | `ostw/.../Compiler/Parse/Lexer/Increment.cs`, `LexState.cs`; `Deltinteger.Tests/Parser/ParserTest.cs` |
@@ -201,7 +200,7 @@ listed so the matrix can mark it `out-of-scope` rather than silently dropping it
 
 Evidence: `tests/corpus/projects/`, `Parse/Import/Importer.cs`, `wiki/ds.toml`.
 
-| Feature | Description | Evidence |
+| Feature | Description | Upstream source |
 |---|---|---|
 | `project.import-resolution` | relative-path `import "file.del";` resolution from the importing file; extension dispatch (`.del`/`.ostw`/`.workshop` source vs `.json`/`.lobby` settings); cycle/self-import/double-import handling | `Parse/Import/Importer.cs`; corpus `tests/corpus/projects/pathfinding/Pathfinding.del` |
 | `project.modules-resolution` | `!`-prefixed imports resolve to a configured modules directory (upstream: the compiler's bundled `Modules/`) | `Extras.cs` (`CombinePathWithDotNotation`); corpus `tests/corpus/projects/modules/PathfindEditor.del` |

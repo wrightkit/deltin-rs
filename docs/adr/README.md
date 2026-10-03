@@ -5,7 +5,7 @@ are history, not a database of current implementation reality.
 
 Current durable contracts are routed from
 [`../architecture/README.md`](../architecture/README.md). Source, tests, Cargo
-metadata, support evidence, and integrations establish current reality.
+metadata, declared support state, and integrations establish current reality.
 
 ## Conventions
 
@@ -29,6 +29,7 @@ metadata, support evidence, and integrations establish current reality.
 - [ADR-0002: DEL/OSTW core semantics and feature locality](0002-language-core-semantics.md)
 - [ADR-0003: DEL HIR and canonical Workshop ownership](0003-hir-workshop-boundary.md)
 - [ADR-0004: Domain-local semantic checker responsibilities](0004-semantic-checker-locality.md)
+- [ADR-0005: Tests-first verification for DEL/OSTW compatibility](0005-tests-first-verification.md)
 
 ## Backfill classification
 
@@ -42,7 +43,8 @@ metadata, support evidence, and integrations establish current reality.
 | Externally owned boundary | Canonical Workshop `Program` API and public operations | Authority: [workshop-rs ADR-0008](https://github.com/wrightkit/workshop-rs/blob/main/docs/adr/0008-canonical-public-program-boundary.md); [workshop-rs #179](https://github.com/wrightkit/workshop-rs/issues/179) and [PR #185](https://github.com/wrightkit/workshop-rs/pull/185) are historical evidence for the decision's emergence. |
 | Externally owned | Canonical Workshop catalog, WIR, settings, localization, validation, and emission | These decisions belong to `workshop-rs`. |
 | Separate decision boundary | DEL runtime ABI and complete provenance/source-attachment contract | ADR-0003 does not decide either contract; if adopted, record a separate material decision. Historical evidence: [deltin-rs #104](https://github.com/wrightkit/deltin-rs/issues/104) and [#107](https://github.com/wrightkit/deltin-rs/issues/107). |
+| Verification model | #112 tests-first conversion | ADR-0005 supersedes the evidence-model framing; ordinary tests and test data are the verification contract. |
 
 The current architecture documents remain the authority for present invariants.
-The ADR registry does not replace those contracts or the repository's evidence
+The ADR registry does not replace those contracts or the repository's test
 surfaces.

@@ -8,7 +8,7 @@ implemented, and why. The authoritative declared surface is
 **lowering-dependent** (concrete Workshop encoding is deltin-rs #30 work; the
 canonical WIR/catalog contract remains owned by `workshop-rs`) or
 **intentionally unsupported** (editor-only or outside the language contract),
-plus a short list of evidence-backed approximation areas.
+plus a short list of approximation areas.
 
 ## Lowering-dependent (deltin-rs #30 / workshop-rs canonical contract boundary)
 
@@ -81,15 +81,16 @@ plus a short list of evidence-backed approximation areas.
   (SM017/SM048) per corpus; binding *alias* semantics are represented in HIR
   but not executed by the oracle beyond value semantics.
 
-## Known approximation areas (evidence-backed)
+## Known approximation areas
 
 - Unknown-type rejection: upstream rejects undeclared type names; deltin-rs
-  treats them as external by the provider contract. Two corpus fixtures were
-  reclassified `unknown` with rationale (`struct-ref-inline-*`).
+  treats them as external by the provider contract. The `struct-ref-inline-*`
+  corpus fixtures record this decided divergence in `// note:` headers and
+  declare `// expect: ok`.
 - Struct literal `{0}` single-value form: modeled as a single-value struct
-  literal per corpus evidence; upstream mechanics differ internally.
+  literal per corpus fixtures; upstream mechanics differ internally.
 - `define` inference, array-member builtin set, and operator tables are
-  corpus-driven; the matrix tracks each entry with evidence paths.
+  corpus-driven.
 - Auto-for classification follows upstream `Loops.cs` (step is an expression
   statement).
 - Lambda captures: by-value snapshot semantics implemented; by-reference is
@@ -98,12 +99,12 @@ plus a short list of evidence-backed approximation areas.
 ## Verification methodology
 
 - The corpus harness (`tests/corpus.rs`, part of CI) walks the fixtures under
-  `tests/corpus/`, asserts each fixture's `// expect:` outcome, and fails on
-  missing `// source:`/`// license:` provenance headers. This is the standing
-  accept/reject record.
+  `tests/corpus/`, asserts each fixture's declared `// expect:` outcome, and
+  fails on any mismatch. This is the standing accept/reject record.
+- `tests/real_projects.rs` runs the vendored third-party projects under
+  `tests/real-projects/` end-to-end.
 - `tests/matrix.rs` and `deltin-rs support --check` mechanically validate
-  `support-matrix.toml` (schema, ids, states, evidence paths, rationale
-  notes) on every CI run.
+  `support-matrix.toml` (schema, ids, states, rationale notes) on every CI run.
 - Differential comparison against a pinned upstream build is the defined
   gap-discovery methodology (see `compatibility.md`); it requires a pinned
   upstream build (`provenance.md`) and is not a CI merge gate.

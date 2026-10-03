@@ -11,4 +11,4 @@ mutable support state or new architecture decisions here. Use:
 - [`workshop-boundary.md`](architecture/workshop-boundary.md) for runtime/lowering
   ownership and the canonical Workshop boundary;
 - [`support-matrix.toml`](support-matrix.toml), [`compatibility.md`](compatibility.md),
-  and executable evidence for current support reality.
+  and executable verification for current support reality.

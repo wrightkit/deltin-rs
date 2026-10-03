@@ -2,8 +2,8 @@
 
 Status: **living reference** · Owner: `deltin-rs` CLI. This document records the
 task-oriented command rebaseline and the CLI-local presentation boundary. The
-library diagnostics, semantic APIs, HIR, and evidence schemas remain owned by
-their existing modules and contracts.
+library diagnostics, semantic APIs, and HIR remain owned by their existing
+modules and contracts.
 
 The CLI is the separate `deltin-rs-cli` package in `cli/`; its executable name
 remains `deltin-rs`. The public `deltin-rs` library package has no CLI parsing or
@@ -11,20 +11,17 @@ completion dependencies.
 
 ## Command classification
 
-The command model distinguishes user tasks from inspection and evidence work:
+The command model distinguishes user tasks from inspection work:
 
 | Surface | Commands | Contract |
 | --- | --- | --- |
 | Stable user-facing | `check`, `inspect`, `support`, `completion` | Validate source, query semantic information, inspect declared support, or install static shell completion. |
 | Developer/debug | `dev parse`, `dev hir` | Inspect parser and HIR stages for agent/developer workflows; these are not stable language UX promises. |
-| Maintainer/evidence | `maintainer compatibility` | Run the corpus/evidence report used by maintainers and CI. |
 
-The top-level `parse` and `hir` commands remain accepted as hidden compatibility
-aliases for the `dev` commands. The top-level `matrix` command remains a hidden
-compatibility alias for `support`, and `compatibility` remains a hidden alias
-for `maintainer compatibility`. Hidden aliases preserve existing scripts while
-keeping internal stages and evidence workflows out of the documented stable
-command list.
+The top-level `parse` and `hir` commands remain accepted as hidden aliases for
+the `dev` commands. The top-level `matrix` command remains a hidden alias for
+`support`. Hidden aliases preserve existing scripts while keeping internal
+stages out of the documented stable command list.
 
 The `dev hir --json` and `inspect --json` interfaces preserve the machine-readable
 semantic capabilities used by #38. No command in this change compiles DEL/OSTW
@@ -37,7 +34,6 @@ to Workshop; that remains outside this CLI contract.
 | `deltin-rs parse FILE` | `deltin-rs dev parse FILE` | Existing top-level form remains accepted. |
 | `deltin-rs hir PATH` | `deltin-rs dev hir PATH` | Existing top-level form remains accepted. |
 | `deltin-rs matrix` | `deltin-rs support` | Existing top-level form remains accepted; JSON keeps `command: "matrix"`. |
-| `deltin-rs compatibility` | `deltin-rs maintainer compatibility` | Existing top-level form remains accepted and keeps report schema 1. |
 
 `check` and `inspect` keep their existing names. `inspect` is deliberately a
 best-effort query: it propagates parser and semantic diagnostics in human output and in a
@@ -82,7 +78,7 @@ DEL library does not know about CI environments.
 | Code | Meaning |
 | --- | --- |
 | `0` | Successful task; `inspect` also uses this for a completed best-effort query with source diagnostics. |
-| `1` | Source/evidence errors, an invalid support matrix, or unexpected compatibility regressions. |
+| `1` | Source errors or an invalid support matrix. |
 | `2` | Usage error: unknown command/flag or malformed `LINE:COL`. |
 | `3` | Internal CLI failure: unexpected panic or an output/summary serialization or write failure. |
 | `4` | Input I/O failure, such as an unreadable source path. |

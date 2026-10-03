@@ -1,6 +1,8 @@
 # ADR-0002: DEL/OSTW core semantics and feature locality
 
-- Status: Accepted
+- Status: Accepted — the verification/evidence-model framing is superseded
+  by [ADR-0005](0005-tests-first-verification.md); the scope and locality
+  decisions stand
 - Date: 2026-09-12
 - Related: [Issues #2](https://github.com/wrightkit/deltin-rs/issues/2), [#4](https://github.com/wrightkit/deltin-rs/issues/4), [#5](https://github.com/wrightkit/deltin-rs/issues/5), [#6](https://github.com/wrightkit/deltin-rs/issues/6), [#7](https://github.com/wrightkit/deltin-rs/issues/7), [#89](https://github.com/wrightkit/deltin-rs/issues/89), [`language-core.md`](../architecture/language-core.md)
 
