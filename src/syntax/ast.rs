@@ -1,12 +1,16 @@
 //! Typed AST for DEL/OSTW source. Every node carries `id` + `span`.
 //!
 //! Authored identifiers and literals are retained verbatim. `NodeId` is a
-//! monotonic counter shared per file.
+//! monotonic counter scoped to its file; the file identity is part of the id
+//! so project-wide tables keyed by `NodeId` cannot collide across files.
 
-use crate::span::Span;
+use crate::span::{FileId, Span};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct NodeId(pub u32);
+pub struct NodeId {
+    pub file: FileId,
+    pub seq: u32,
+}
 
 #[derive(Clone, Debug)]
 pub struct AstFile {
