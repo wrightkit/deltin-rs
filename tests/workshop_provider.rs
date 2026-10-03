@@ -157,3 +157,26 @@ fn catalog_provider_rejects_excess_arguments_and_exposes_catalog_identity() {
     assert!(!identity.provenance.license.is_empty());
     assert!(identity.provenance.reviewed);
 }
+
+#[test]
+fn every_declared_binding_resolves_against_the_canonical_catalog() {
+    let catalog = workshop_rs::catalog::Catalog::builtin().expect("built-in catalog");
+    let mut failures = Vec::new();
+    for (source, (kind, id)) in deltin_rs::signature::BUILTIN_BINDINGS {
+        if catalog.entry(*kind, id).is_none() {
+            failures.push(format!("{source} -> {id}"));
+        }
+    }
+    for (source, binding) in deltin_rs::signature::ENUM_DOMAIN_BINDINGS {
+        let Some(domain) = catalog.enum_domain(binding.domain) else {
+            failures.push(format!("{source} -> domain {}", binding.domain));
+            continue;
+        };
+        for (member_source, member_id) in binding.members {
+            if !domain.members.iter().any(|m| m.member == *member_id) {
+                failures.push(format!("{source}.{member_source} -> {member_id}"));
+            }
+        }
+    }
+    assert!(failures.is_empty(), "stale bindings: {failures:?}");
+}
