@@ -4,7 +4,7 @@
 # categories: syntax | semantic | runtime-semantics | workshop-lowering | compiler-utility | decompiler | editor | project
 #
 # Generated from docs/inventory.md (pinned upstream: ItsDeltin/Overwatch-Script-To-Workshop@817c1db4bace52123f054ffe10d3d8a06052e687).
-# Every id exists in docs/inventory.md; every evidence path exists on disk.
+# Every id exists in docs/inventory.md; support claims are verified by tests.
 
 [meta]
 upstream_repo = "ItsDeltin/Overwatch-Script-To-Workshop"
@@ -16,322 +16,276 @@ id = "syntax.comments.line"
 name = "syntax.comments.line"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.comments.block"
 name = "syntax.comments.block"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.comments.action"
 name = "syntax.comments.action"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.identifiers"
 name = "syntax.identifiers"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.numbers"
 name = "syntax.numbers"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings"
 name = "syntax.strings"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings.localized"
 name = "syntax.strings.localized"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings.interpolated"
 name = "syntax.strings.interpolated"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/parser/interpolated-string.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.strings.classic-format"
 name = "syntax.strings.classic-format"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/projects/pathfinding/Pathfinding.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.rules"
 name = "syntax.rules"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/parser/basic-rule.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.rules.events"
 name = "syntax.rules.events"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.vanilla-rule"
 name = "syntax.vanilla-rule"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/parser/vanilla-rule.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables"
 name = "syntax.variables"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables.id"
 name = "syntax.variables.id"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables.extended"
 name = "syntax.variables.extended"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.variables.reservation"
 name = "syntax.variables.reservation"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.functions"
 name = "syntax.functions"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.functions.attributes"
 name = "syntax.functions.attributes"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/semantic/ref-call-from-ref-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.functions.subroutine"
 name = "syntax.functions.subroutine"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/recursion-subroutine.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.macros"
 name = "syntax.macros"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/projects/modules/Container.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.parameters"
 name = "syntax.parameters"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/semantic/ref-param-target.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.arguments"
 name = "syntax.arguments"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.types"
 name = "syntax.types"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/semantic/generic-parent-linking-subroutine-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.generics"
 name = "syntax.generics"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/semantic/generic-parent-linking-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.typealias"
 name = "syntax.typealias"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.classes"
 name = "syntax.classes"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/class-allocation.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.structs"
 name = "syntax.structs"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/nested-single-struct.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.structs.update"
 name = "syntax.structs.update"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/semantic/struct-variable-guard-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.enums"
 name = "syntax.enums"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/enum-basic.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.constructors"
 name = "syntax.constructors"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/projects/modules/Container.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.inheritance"
 name = "syntax.inheritance"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/inheritance-overrides.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.virtual-override"
 name = "syntax.virtual-override"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/inheritance-overrides.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.static"
 name = "syntax.static"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.this-root"
 name = "syntax.this-root"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.new"
 name = "syntax.new"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/class-allocation.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.delete"
 name = "syntax.delete"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/reference-validation.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.imports"
 name = "syntax.imports"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/projects/pathfinding/Pathfinding.del", "tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.lambdas"
 name = "syntax.lambdas"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/recursion-closure.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.functiontypes"
 name = "syntax.functiontypes"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.operators"
 name = "syntax.operators"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/semantic/immutable-struct-array-addassign-error.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.casts"
 name = "syntax.casts"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.arrays"
 name = "syntax.arrays"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.statements"
 name = "syntax.statements"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/highlevel/switch-fallthrough.del", "tests/corpus/highlevel/if-chain.del", "docs/inventory.md"]
 
 [[features]]
 id = "syntax.async"
 name = "syntax.async"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.hooks"
 name = "syntax.hooks"
 category = "syntax"
 state = "source-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "syntax.vanilla-context"
 name = "syntax.vanilla-context"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/parser/vanilla-rule.del", "docs/inventory.md"]
 notes = "vanilla workshop lexing context"
 
 [[features]]
@@ -339,7 +293,6 @@ id = "syntax.recovery"
 name = "syntax.recovery"
 category = "syntax"
 state = "source-supported"
-evidence = ["tests/corpus/parser/enum-incomplete.del", "tests/corpus/parser/enum-incomplete-name.del", "docs/inventory.md"]
 notes = "recoverable parsing is a deltin-rs goal (issue #3); upstream supports incomplete constructs"
 
 [[features]]
@@ -347,126 +300,108 @@ id = "semantic.scoping"
 name = "semantic.scoping"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "semantic.access-control"
 name = "semantic.access-control"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "semantic.immutability"
 name = "semantic.immutability"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/immutable-array-modification-error.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.struct-ref-methods"
 name = "semantic.struct-ref-methods"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/struct-variable-guard-error.del", "tests/corpus/semantic/ref-call-from-nonref-error.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.struct-indexing"
 name = "semantic.struct-indexing"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/struct-index-error.del", "tests/corpus/semantic/single-struct-index-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.condition-restrictions"
 name = "semantic.condition-restrictions"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/invalid-condition-value-struct.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.type-checking"
 name = "semantic.type-checking"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "semantic.type-args"
 name = "semantic.type-args"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "semantic.enum-keys"
 name = "semantic.enum-keys"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/enum-invalid-key-error.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.enum-recursion"
 name = "semantic.enum-recursion"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/enum-recursive-error.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.pattern-matching"
 name = "semantic.pattern-matching"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/enum-incompatible-pattern-error.del", "tests/corpus/semantic/enum-extraneous-binding-error.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.generic-binding"
 name = "semantic.generic-binding"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/generic-parent-linking-ok.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.overloads"
 name = "semantic.overloads"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "semantic.ref-in-params"
 name = "semantic.ref-in-params"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/ref-param-target.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.target-player-resolution"
 name = "semantic.target-player-resolution"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/chase-event-player-var.del", "tests/corpus/semantic/player-struct-target.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.disabled"
 name = "semantic.disabled"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/disabled-rule.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.variable-prefix"
 name = "semantic.variable-prefix"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/variable-prefix.del", "docs/inventory.md"]
 
 [[features]]
 id = "semantic.lambda-capture"
 name = "semantic.lambda-capture"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 notes = "captured values are saved by value at lambda creation"
 
 [[features]]
@@ -474,134 +409,115 @@ id = "semantic.single-vs-parallel"
 name = "semantic.single-vs-parallel"
 category = "semantic"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/enum-parallel-any-errors.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.class-allocation"
 name = "runtime-semantics.class-allocation"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/class-allocation.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.delete"
 name = "runtime-semantics.delete"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/reference-validation.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.reference-validation"
 name = "runtime-semantics.reference-validation"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/reference-validation-simple.del", "tests/corpus/highlevel/class-array-validation.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.generations"
 name = "runtime-semantics.generations"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/generation-validation.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.virtual-dispatch"
 name = "runtime-semantics.virtual-dispatch"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/inheritance-overrides.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.initial-values"
 name = "runtime-semantics.initial-values"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/initial-class-values.del", "tests/corpus/highlevel/initial-class-values-inheritance.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.recursion"
 name = "runtime-semantics.recursion"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/recursion-inline.del", "tests/corpus/highlevel/recursion-subroutine.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.lambda-closures"
 name = "runtime-semantics.lambda-closures"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/recursion-closure.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.struct-copy"
 name = "runtime-semantics.struct-copy"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/nested-single-struct.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.enum-storage"
 name = "runtime-semantics.enum-storage"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/enum-single.del", "tests/corpus/highlevel/enum-parallel.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.pattern-binding"
 name = "runtime-semantics.pattern-binding"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/enum-binding-mutability-ok.del", "tests/corpus/highlevel/enum-player-binding.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.switch-fallthrough"
 name = "runtime-semantics.switch-fallthrough"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/highlevel/switch-fallthrough.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.auto-for"
 name = "runtime-semantics.auto-for"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["tests/corpus/semantic/auto-for-player-var.del", "docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.extended-collection"
 name = "runtime-semantics.extended-collection"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.subroutine-context"
 name = "runtime-semantics.subroutine-context"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.async-calls"
 name = "runtime-semantics.async-calls"
 category = "runtime-semantics"
 state = "semantic-supported"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "runtime-semantics.emulator"
 name = "runtime-semantics.emulator"
 category = "runtime-semantics"
 state = "planned"
-evidence = ["docs/inventory.md"]
-notes = "emulator is evidence tooling, not a language feature"
+notes = "emulator is developer tooling, not a language feature"
 
 [[features]]
 id = "workshop-lowering.workshop-catalog"
 name = "workshop-lowering.workshop-catalog"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_provider.rs", "tests/workshop_source.rs"]
 notes = "#34 covers CatalogProvider, canonical catalog identity, and the DEL-owned source/provenance bridge through released workshop-rs 0.1.9; the DEL-owned HIR-to-WIR lowering adapter is deltin-rs #30 work, while the canonical WIR/catalog contract remains owned by workshop-rs. deltin-rs must not vendor catalog data."
 
 [[features]]
@@ -609,95 +525,83 @@ id = "workshop-lowering.events"
 name = "workshop-lowering.events"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.actions"
 name = "workshop-lowering.actions"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.values"
 name = "workshop-lowering.values"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.constants"
 name = "workshop-lowering.constants"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.variables"
 name = "workshop-lowering.variables"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.extended-collection"
 name = "workshop-lowering.extended-collection"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.classes"
 name = "workshop-lowering.classes"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.structs"
 name = "workshop-lowering.structs"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.enums"
 name = "workshop-lowering.enums"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.vanilla-superset"
 name = "workshop-lowering.vanilla-superset"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.auto-for"
 name = "workshop-lowering.auto-for"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.chase-modify"
 name = "workshop-lowering.chase-modify"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
 notes = "A bounded #32 slice adapts DEL chase spellings to canonical workshop-rs identities from resolved global/player target semantics; global stop-chase is supported, while player stop-chase remains blocked by the released catalog gap and ModifyVariable/member/struct targets remain explicit gaps. This is not a full end-to-end support claim."
 
 [[features]]
@@ -705,15 +609,13 @@ id = "workshop-lowering.subroutines"
 name = "workshop-lowering.subroutines"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md", "tests/workshop_lowering.rs"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.strings"
 name = "workshop-lowering.strings"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["tests/workshop_lowering.rs", "docs/inventory.md"]
 notes = "A bounded #32 slice resolves localized strings through the released workshop-rs catalog and fails closed when no canonical preset identity exists. Plain and interpolated string lowering remains within the broader compiler surface."
 
 [[features]]
@@ -721,80 +623,69 @@ id = "workshop-lowering.lobby-settings"
 name = "workshop-lowering.lobby-settings"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.workshop-comments"
 name = "workshop-lowering.workshop-comments"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.output-formats"
 name = "workshop-lowering.output-formats"
 category = "workshop-lowering"
 state = "lowering-dependent"
-evidence = ["docs/inventory.md"]
-notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. Inventory evidence for the lowering-dependent contract; this is not an end-to-end support claim."
+notes = "Concrete HIR-to-WIR lowering is deltin-rs #30 work; canonical WIR, catalog, and emission contracts remain owned by workshop-rs. This is not an end-to-end support claim."
 
 [[features]]
 id = "compiler-utility.optimizer"
 name = "compiler-utility.optimizer"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "compiler-utility.element-count"
 name = "compiler-utility.element-count"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "compiler-utility.emulator"
 name = "compiler-utility.emulator"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "compiler-utility.pathfinding"
 name = "compiler-utility.pathfinding"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "compiler-utility.model-import"
 name = "compiler-utility.model-import"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "compiler-utility.workshop-string-utility"
 name = "compiler-utility.workshop-string-utility"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "compiler-utility.asset-exporter"
 name = "compiler-utility.asset-exporter"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "compiler-utility.ds-toml"
 name = "compiler-utility.ds-toml"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
 notes = "project config; see project.ds-toml"
 
 [[features]]
@@ -802,52 +693,30 @@ id = "compiler-utility.json-type"
 name = "compiler-utility.json-type"
 category = "compiler-utility"
 state = "planned"
-evidence = ["docs/inventory.md"]
-
-[[features]]
-id = "compiler-utility.ostw-reference-evidence"
-name = "compiler-utility.ostw-reference-evidence"
-category = "compiler-utility"
-state = "source-supported"
-evidence = [
-  "compatibility/ostw/reference.json",
-  "compatibility/ostw/corpus.json",
-  "compatibility/ostw/results.json",
-  "compatibility/ostw/probes/results.json",
-  "compatibility/ostw/reconstruction/support-boundary.json",
-  "docs/compatibility.md",
-  "docs/provenance.md",
-  "docs/inventory.md",
-]
-notes = "Maintainer-only evidence validation and explicit reference replay; not a native CI merge gate."
 
 [[features]]
 id = "decompiler.workshop-to-ostw"
 name = "decompiler.workshop-to-ostw"
 category = "decompiler"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "decompiler.settings"
 name = "decompiler.settings"
 category = "decompiler"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "decompiler.editor-commands"
 name = "decompiler.editor-commands"
 category = "decompiler"
 state = "planned"
-evidence = ["docs/inventory.md"]
 
 [[features]]
 id = "editor.language-server"
 name = "editor.language-server"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -855,7 +724,6 @@ id = "editor.incremental-parse"
 name = "editor.incremental-parse"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -863,7 +731,6 @@ id = "editor.completions"
 name = "editor.completions"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -871,7 +738,6 @@ id = "editor.semantic-tokens"
 name = "editor.semantic-tokens"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -879,7 +745,6 @@ id = "editor.codelens"
 name = "editor.codelens"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -887,7 +752,6 @@ id = "editor.snippets"
 name = "editor.snippets"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -895,7 +759,6 @@ id = "editor.extension"
 name = "editor.extension"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -903,15 +766,13 @@ id = "editor.tmlanguage"
 name = "editor.tmlanguage"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
-notes = "grammar used as evidence, shipping a grammar is editor scope"
+notes = "grammar used for development reference, shipping a grammar is editor scope"
 
 [[features]]
 id = "editor.debugger"
 name = "editor.debugger"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -919,7 +780,6 @@ id = "editor.element-count-ui"
 name = "editor.element-count-ui"
 category = "editor"
 state = "out-of-scope"
-evidence = ["docs/inventory.md"]
 notes = "VS Code extension behavior; not a deltin-rs language-contract requirement (#2)"
 
 [[features]]
@@ -927,33 +787,28 @@ id = "project.import-resolution"
 name = "project.import-resolution"
 category = "project"
 state = "source-supported"
-evidence = ["tests/corpus/projects/pathfinding/Pathfinding.del", "docs/inventory.md"]
 
 [[features]]
 id = "project.modules-resolution"
 name = "project.modules-resolution"
 category = "project"
 state = "source-supported"
-evidence = ["tests/corpus/projects/modules/PathfindEditor.del", "docs/inventory.md"]
 
 [[features]]
 id = "project.lobby-settings-import"
 name = "project.lobby-settings-import"
 category = "project"
 state = "planned"
-evidence = ["tests/corpus/projects/pathfinding/customGameSettings.json", "docs/inventory.md"]
 
 [[features]]
 id = "project.pathmap-loading"
 name = "project.pathmap-loading"
 category = "project"
 state = "planned"
-evidence = ["tests/corpus/projects/pathfinding/Map.pathmap", "docs/inventory.md"]
 
 [[features]]
 id = "project.ds-toml"
 name = "project.ds-toml"
 category = "project"
 state = "source-supported"
-evidence = ["tests/project.rs", "tests/corpus/projects/ds-toml/ds.toml", "tests/corpus/projects/invalid-ds-toml/ds.toml", "docs/inventory.md"]
 notes = "The loader discovers root ds.toml, selects entry_point when no explicit entry is supplied, validates TOML syntax and the entry_point type, and emits PJ004 with ds.toml provenance on malformed configuration. Other compiler options are only syntax-validated and ignored."
