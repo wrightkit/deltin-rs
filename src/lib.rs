@@ -1,5 +1,4 @@
 pub mod api;
-pub mod compatibility;
 pub mod diagnostics;
 pub mod hir;
 pub mod matrix;

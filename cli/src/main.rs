@@ -38,22 +38,12 @@ enum Command {
         #[command(subcommand)]
         command: DeveloperCommand,
     },
-    /// Maintainer and CI evidence commands.
-    Maintainer {
-        #[command(subcommand)]
-        command: MaintainerCommand,
-    },
     #[command(hide = true)]
     Parse(PathArgs),
     #[command(hide = true)]
     Hir(PathArgs),
     #[command(name = "matrix", hide = true)]
     LegacyMatrix(SupportArgs),
-    #[command(name = "compatibility", hide = true)]
-    LegacyCompatibility {
-        #[command(flatten)]
-        output: cli::OutputArgs,
-    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -62,15 +52,6 @@ enum DeveloperCommand {
     Parse(PathArgs),
     /// Lower a source file or project to typed HIR and validate it.
     Hir(PathArgs),
-}
-
-#[derive(Debug, Subcommand)]
-enum MaintainerCommand {
-    /// Run the evidence-driven DEL/OSTW corpus report.
-    Compatibility {
-        #[command(flatten)]
-        output: cli::OutputArgs,
-    },
 }
 
 #[derive(Debug, Args)]
@@ -180,13 +161,9 @@ fn execute(cli: Cli) -> CliResult {
             DeveloperCommand::Parse(args) => cmd_parse(args),
             DeveloperCommand::Hir(args) => cmd_hir(args),
         },
-        Command::Maintainer { command } => match command {
-            MaintainerCommand::Compatibility { output } => cmd_compatibility(output),
-        },
         Command::Parse(args) => cmd_parse(args),
         Command::Hir(args) => cmd_hir(args),
         Command::LegacyMatrix(args) => cmd_support(args, true),
-        Command::LegacyCompatibility { output } => cmd_compatibility(output),
     }
 }
 
@@ -549,62 +526,6 @@ fn cmd_support(args: SupportArgs, legacy: bool) -> CliResult {
     }
 }
 
-fn cmd_compatibility(output: cli::OutputArgs) -> CliResult {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("CLI package has a repository parent");
-    match deltin_rs::compatibility::run(root) {
-        Ok(report) => {
-            if output.json {
-                return emit_json(serde_json::to_value(&report).map_err(internal_error)?)
-                    .map(|_| compatibility_exit_code(report.summary.unexpected_regressions));
-            }
-            let renderer = cli::Renderer::new(&output);
-            let summary = &report.summary;
-            renderer
-                .emit_summary(&format!(
-                    "compatibility: {} fixtures | matched {} | known gaps {} | unsupported {} | unexpected regressions {} | inconclusive {}",
-                    summary.total,
-                    summary.matched,
-                    summary.known_gaps,
-                    summary.unsupported,
-                    summary.unexpected_regressions,
-                    summary.inconclusive
-                ))
-                .map_err(internal_error)?;
-            for case in &report.cases {
-                if case.status != deltin_rs::compatibility::FixtureStatus::Matched {
-                    renderer
-                        .emit_text(&format!("  {:?}: {}", case.status, case.fixture.path))
-                        .map_err(internal_error)?;
-                }
-            }
-            Ok(compatibility_exit_code(summary.unexpected_regressions))
-        }
-        Err(problems) => {
-            let json = serde_json::json!({
-                "command": "compatibility",
-                "valid": false,
-                "problems": problems,
-            });
-            if output.json {
-                emit_json(json).map(|_| 1)
-            } else {
-                let renderer = cli::Renderer::new(&output);
-                for problem in problems {
-                    renderer
-                        .emit_message(
-                            &format!("compatibility problem: {problem}"),
-                            Severity::Error,
-                        )
-                        .map_err(internal_error)?;
-                }
-                Ok(1)
-            }
-        }
-    }
-}
-
 fn cmd_completion(args: CompletionArgs) -> CliResult {
     let mut command = Cli::command();
     let mut stdout = io::stdout().lock();
@@ -655,27 +576,17 @@ fn support_exit_code(valid: bool) -> u8 {
     }
 }
 
-fn compatibility_exit_code(unexpected_regressions: usize) -> u8 {
-    if unexpected_regressions == 0 {
-        0
-    } else {
-        1
-    }
-}
-
 fn internal_error(error: impl std::fmt::Display) -> CliError {
     CliError::Internal(error.to_string())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{compatibility_exit_code, support_exit_code};
+    use super::support_exit_code;
 
     #[test]
-    fn json_exit_codes_follow_support_and_compatibility_results() {
+    fn json_exit_codes_follow_support_results() {
         assert_eq!(support_exit_code(true), 0);
         assert_eq!(support_exit_code(false), 1);
-        assert_eq!(compatibility_exit_code(0), 0);
-        assert_eq!(compatibility_exit_code(1), 1);
     }
 }

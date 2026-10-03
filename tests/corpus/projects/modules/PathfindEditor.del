@@ -1,7 +1,6 @@
 // source: https://github.com/ItsDeltin/Overwatch-Script-To-Workshop/blob/817c1db4bace52123f054ffe10d3d8a06052e687/Deltinteger/Deltinteger/Modules/PathfindEditor.del
 // license: MIT
 // expect: ok
-// evidence: pinned-oracle
 // note: pathmap editor; imports '!Container.del' (resolved to the modules dir upstream, to this dir in the corpus)
 /*
 
