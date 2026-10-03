@@ -71,7 +71,7 @@ fn positive_fixtures_reconstruct_to_parseable_ostw() {
     for name in b["fixtures"]["positive"].as_array().unwrap() {
         let name = name.as_str().unwrap();
         let text = std::fs::read_to_string(fixture_dir(name, false).join("workshop.txt")).unwrap();
-        let program = workshop_rs::parser::parse_wir(&text, &catalog, &locale)
+        let program = workshop_rs::parser::parse(&text, &catalog, &locale)
             .unwrap_or_else(|e| panic!("{name}: reference Workshop must parse: {e:?}"));
         let ostw = reconstruct(&program, &catalog)
             .unwrap_or_else(|e| panic!("{name}: reconstruct failed on declared surface: {e:?}"));
@@ -95,7 +95,7 @@ fn reject_fixtures_fail_with_declared_codes() {
     for name in b["fixtures"]["reject"].as_array().unwrap() {
         let name = name.as_str().unwrap();
         let text = std::fs::read_to_string(fixture_dir(name, true).join("workshop.txt")).unwrap();
-        let program = workshop_rs::parser::parse_wir(&text, &catalog, &locale)
+        let program = workshop_rs::parser::parse(&text, &catalog, &locale)
             .unwrap_or_else(|e| panic!("{name}: reference Workshop must parse: {e:?}"));
         let errors = reconstruct(&program, &catalog)
             .expect_err(&format!("{name}: fixture is declared reject"));

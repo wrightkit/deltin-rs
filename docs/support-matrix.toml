@@ -602,7 +602,7 @@ id = "workshop-lowering.chase-modify"
 name = "workshop-lowering.chase-modify"
 category = "workshop-lowering"
 state = "lowering-dependent"
-notes = "A bounded #32 slice adapts DEL chase spellings to canonical workshop-rs identities from resolved global/player target semantics; global stop-chase is supported, while player stop-chase remains blocked by the released catalog gap and ModifyVariable/member/struct targets remain explicit gaps. This is not a full end-to-end support claim."
+notes = "A bounded #32 slice adapts DEL chase spellings to canonical workshop-rs identities from resolved global/player target semantics; global and player stop-chase lower to `stopChasingGlobalVariable`/`stopChasingPlayerVariable`, while ModifyVariable/member/struct targets remain explicit gaps. This is not a full end-to-end support claim."
 
 [[features]]
 id = "workshop-lowering.subroutines"

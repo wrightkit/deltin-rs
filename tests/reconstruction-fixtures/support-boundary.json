@@ -38,10 +38,10 @@
       "disallowButton", "enableGameModeHud", "enableGameModeInworldUI",
       "enableHeroHud", "enableMovementCollisionWithEnvironment",
       "enableMovementCollisionWithPlayers", "enableScoreboard",
-      "forcePlayerHero", "forceThrottle", "loopIfConditionIsTrue", "playEffect",
+      "startForcingHero", "startForcingThrottle", "loopIfConditionIsTrue", "playEffect",
       "setAllowedHeroes", "setGravity", "setInvisibility", "smallMessage",
-      "startCamera", "startGameMode", "stopCamera", "stopChasingVariable",
-      "stopForcingHero", "stopForcingThrottle", "teleport", "wait", "waitUntil"
+      "startCamera", "startGameMode", "stopCamera", "stopChasingGlobalVariable",
+      "stopForcingCurrentHero", "stopForcingThrottle", "teleport", "wait", "waitUntil"
     ],
     "syntaxValueIds": [
       "==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "add", "subtract",
@@ -71,7 +71,8 @@
     { "kind": "unboundValue", "code": "reconstruct-unbound-call", "reason": "A value call whose catalog id has no OSTW source binding (e.g. getHealth) cannot be emitted." },
     { "kind": "unboundEnum", "code": "reconstruct-unbound-enum", "reason": "An enum domain/member with no OSTW source binding cannot be emitted." },
     { "kind": "modifyOp:RaiseToPower", "code": "reconstruct-unsupported-modify-op", "reason": "Raise To Power has no OSTW augmented-assignment form on the declared surface." },
-    { "kind": "modifyOp:RemoveFromArray", "code": "reconstruct-unsupported-modify-op", "reason": "Remove From Array has no OSTW augmented-assignment form on the declared surface." },
+    { "kind": "modifyOp:RemoveFromArrayByValue", "code": "reconstruct-unsupported-modify-op", "reason": "Remove From Array By Value has no OSTW augmented-assignment form on the declared surface." },
+    { "kind": "modifyOp:RemoveFromArrayByIndex", "code": "reconstruct-unsupported-modify-op", "reason": "Remove From Array By Index has no OSTW augmented-assignment form on the declared surface." },
     { "kind": "condition", "code": "reconstruct-unsupported-condition", "reason": "A rule condition that is not a two-operand comparison call would render as `value == True` in the shared Workshop emitter and cannot round-trip." },
     { "kind": "arity", "code": "reconstruct-arity", "reason": "A bound call supplying fewer or more arguments than the canonical catalog arity would be re-resolved by the frontend with default filling or rejected; full canonical arity is required for a byte-stable round trip." },
     { "kind": "nameCollision", "code": "reconstruct-name-collision", "reason": "Variable/subroutine names colliding with builtin source names, enum domain source names, or each other (global vs player) would be shadowed by the frontend's resolution." },
@@ -82,7 +83,11 @@
     { "kind": "formatArg", "code": "reconstruct-unsupported-format-arg", "reason": "A strict-greater comparison inside a reconstructed format string would terminate the OSTW `<\"...\"` string." },
     { "kind": "number", "code": "reconstruct-unsupported-number", "reason": "A number spelling outside the OSTW lexer's `[0-9]+(\\.[0-9]+)?` form cannot round-trip." },
     { "kind": "danglingSubroutine", "code": "reconstruct-dangling-subroutine", "reason": "A subroutine value that does not reference a declared subroutine cannot be emitted." },
-    { "kind": "localizedString", "code": "reconstruct-unsupported-localized-string", "reason": "Localized Workshop preset strings have no OSTW source representation." }
+    { "kind": "localizedString", "code": "reconstruct-unsupported-localized-string", "reason": "Localized Workshop preset strings have no OSTW source representation." },
+    { "kind": "event", "code": "reconstruct-unsupported-event", "reason": "Player or filtered team/target rule events have no OSTW source form on the declared surface." },
+    { "kind": "disabledAction", "code": "reconstruct-unsupported-action", "reason": "A disabled action has no OSTW source form on the declared surface." },
+    { "kind": "disabledCondition", "code": "reconstruct-unsupported-condition", "reason": "A disabled condition has no OSTW source form on the declared surface." },
+    { "kind": "controlFlow", "code": "reconstruct-unsupported-action", "reason": "A stray Else/Else If/End or an unclosed if/while/for block in the linear action stream cannot reconstruct into balanced OSTW blocks." }
   ],
   "fixtures": {
     "positive": ["surface-basic", "surface-actions", "surface-values"],

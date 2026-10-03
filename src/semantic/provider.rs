@@ -336,12 +336,12 @@ impl WorkshopProvider for CatalogProvider {
             self.resolve_entry(*kind, &query.name)
                 .map(|entry| (*kind, entry))
         }) {
-            if query.arity > entry.params.len() {
+            if query.arity > entry.param_count() {
                 return ExternalResolution::DefiniteError(format!(
                     "Workshop {} '{}' accepts at most {} arguments, got {}",
                     kind.as_str(),
                     entry.id,
-                    entry.params.len(),
+                    entry.param_count(),
                     query.arity
                 ));
             }
@@ -449,17 +449,13 @@ fn del_enum_identifier(value: &str) -> Option<String> {
 
 fn parameters(entry: &CatalogEntry) -> Vec<ExternalParam> {
     entry
-        .params
+        .params()
         .iter()
         .enumerate()
         .map(|(index, name)| ExternalParam {
             name: name.clone(),
-            optional: entry
-                .param_defaults
-                .get(index)
-                .and_then(Option::as_ref)
-                .is_some(),
-            default: entry.param_defaults.get(index).cloned().flatten(),
+            optional: entry.param_default(index).is_some(),
+            default: entry.param_default(index).map(str::to_string),
         })
         .collect()
 }

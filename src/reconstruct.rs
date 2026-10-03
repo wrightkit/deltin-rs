@@ -1,31 +1,32 @@
-//! Reconstruct canonical OSTW source from validated Workshop IR.
+//! Reconstruct canonical OSTW source from a validated Workshop program.
 //!
 //! Classification is total and fail-closed: unsupported constructs produce
 //! structured errors before emission, without partial output. Emitted names
 //! come from the existing OSTW-to-catalog bindings, and output is deterministic.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 use workshop_rs::catalog::{Catalog, Kind};
+use workshop_rs::format::format_number;
 use workshop_rs::source::Span;
-use workshop_rs::wir::{self, Action, Event, ModifyOp, Value, ValueId};
+use workshop_rs::{Action, Event, EventTarget, EventTeam, ModifyOp, Program, Value};
 
 use crate::signature;
 
 /// A structured reconstruction failure.
 ///
-/// The `code` is a stable machine-readable identifier; `kind` names the WIR
-/// construct that is not representable on the declared reconstruction
+/// The `code` is a stable machine-readable identifier; `kind` names the
+/// Workshop construct that is not representable on the declared reconstruction
 /// surface (the machine-readable boundary manifest under
 /// `tests/reconstruction-fixtures/support-boundary.json` uses the same
-/// spellings); `span` is the offending source region when the WIR carries
+/// spellings); `span` is the offending source region when the program carries
 /// one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReconstructError {
     /// A stable machine-readable code, e.g. `reconstruct-unsupported-action`.
     pub code: &'static str,
-    /// The WIR construct kind, e.g. `forPlayerVariable` or `settings`.
+    /// The Workshop construct kind, e.g. `forPlayerVariable` or `settings`.
     pub kind: String,
     /// Human-readable message (not part of the machine contract).
     pub message: String,
@@ -66,15 +67,12 @@ impl std::fmt::Display for ReconstructError {
 
 impl std::error::Error for ReconstructError {}
 
-/// Reconstruct canonical OSTW source from a validated Workshop IR program.
+/// Reconstruct canonical OSTW source from a validated Workshop program.
 ///
-/// Returns `Err` with **every** structured rejection when any WIR construct
-/// lies outside the declared reconstruction surface (never partial output).
-/// The input must be structurally valid ([`wir::Program::validate`]).
-pub fn reconstruct(
-    program: &wir::Program,
-    catalog: &Catalog,
-) -> Result<String, Vec<ReconstructError>> {
+/// Returns `Err` with **every** structured rejection when any program
+/// construct lies outside the declared reconstruction surface (never partial
+/// output). The input must be a validated [`Program`].
+pub fn reconstruct(program: &Program, catalog: &Catalog) -> Result<String, Vec<ReconstructError>> {
     let diagnostics = Classifier::new(program, catalog).classify();
     if !diagnostics.is_empty() {
         return Err(diagnostics);
@@ -183,45 +181,50 @@ fn is_comparison_op(name: &str) -> bool {
     COMPARISON_OPS.contains(&name)
 }
 
-/// Whether a value node contains a strict-greater comparison anywhere in its
+/// Whether a value contains a strict-greater comparison anywhere in its
 /// subtree. A bare `>` terminates an enclosing `<"..."` formatted string in
 /// the OSTW parser, so such a value cannot be an argument of a reconstructed
 /// format string.
-fn contains_strict_greater(program: &wir::Program, id: ValueId) -> bool {
-    fn walk(program: &wir::Program, id: ValueId) -> bool {
-        let Some(node) = program.values.get(id) else {
-            return false;
-        };
-        let children: Vec<ValueId> = match &node.value {
-            Value::Array(elements) => elements.clone(),
-            Value::Vector { x, y, z } => vec![*x, *y, *z],
-            Value::PlayerVariable { player, .. } => vec![*player],
-            Value::Call { name, args } => {
-                if name == ">" && args.len() == 2 {
-                    return true;
-                }
-                args.clone()
+fn contains_strict_greater(value: &Value) -> bool {
+    let children: &[Value] = match value {
+        Value::Array(elements) => elements,
+        Value::Vector { x, y, z } => {
+            return [x, y, z].into_iter().any(|v| contains_strict_greater(v))
+        }
+        Value::PlayerVariable { player, .. } => return contains_strict_greater(player),
+        Value::Call { name, args } => {
+            if name == ">" && args.len() == 2 {
+                return true;
             }
-            _ => Vec::new(),
-        };
-        children.into_iter().any(|child| walk(program, child))
-    }
-    walk(program, id)
+            args
+        }
+        _ => return false,
+    };
+    children.iter().any(contains_strict_greater)
+}
+
+/// The open control-flow constructs in a rule's linear action stream.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Flow {
+    If { seen_else: bool },
+    While,
+    For,
 }
 
 struct Classifier<'a> {
-    program: &'a wir::Program,
+    program: &'a Program,
     catalog: &'a Catalog,
     errors: Vec<ReconstructError>,
-    subroutine_rules: Vec<Option<wir::RuleId>>,
+    /// Declared subroutine name → body rule index (last rule wins).
+    subroutine_rules: HashMap<&'a str, usize>,
 }
 
 impl<'a> Classifier<'a> {
-    fn new(program: &'a wir::Program, catalog: &'a Catalog) -> Self {
-        let mut subroutine_rules: Vec<Option<wir::RuleId>> = vec![None; program.subroutines.len()];
+    fn new(program: &'a Program, catalog: &'a Catalog) -> Self {
+        let mut subroutine_rules = HashMap::new();
         for (index, rule) in program.rules.iter().enumerate() {
-            if let Event::Subroutine(subroutine) = &rule.event {
-                subroutine_rules[subroutine.index()] = Some(wir::RuleId::from_index(index));
+            if let Event::Subroutine(name) = &rule.event {
+                subroutine_rules.insert(name.as_str(), index);
             }
         }
         Classifier {
@@ -236,8 +239,8 @@ impl<'a> Classifier<'a> {
         self.check_settings();
         self.check_names();
         self.check_subroutines();
-        for rule in self.program.rules.iter() {
-            self.check_rule(rule);
+        for index in 0..self.program.rules.len() {
+            self.check_rule(index);
         }
         self.errors
     }
@@ -264,14 +267,23 @@ impl<'a> Classifier<'a> {
     /// producing misleading source instead of a rejection.
     fn check_names(&mut self) {
         let mut names: Vec<(String, Option<Span>)> = Vec::new();
-        for variable in self.program.global_variables.iter() {
-            names.push((variable.name.clone(), variable.span));
+        for (index, variable) in self.program.global_variables.iter().enumerate() {
+            names.push((
+                variable.name.clone(),
+                self.program.global_variable_name_span(index),
+            ));
         }
-        for variable in self.program.player_variables.iter() {
-            names.push((variable.name.clone(), variable.span));
+        for (index, variable) in self.program.player_variables.iter().enumerate() {
+            names.push((
+                variable.name.clone(),
+                self.program.player_variable_name_span(index),
+            ));
         }
-        for subroutine in self.program.subroutines.iter() {
-            names.push((subroutine.name.clone(), subroutine.span));
+        for (index, subroutine) in self.program.subroutines.iter().enumerate() {
+            names.push((
+                subroutine.name.clone(),
+                self.program.subroutine_name_span(index),
+            ));
         }
         for (name, span) in &names {
             if name.is_empty() {
@@ -316,7 +328,7 @@ impl<'a> Classifier<'a> {
             .iter()
             .map(|variable| variable.name.as_str())
             .collect();
-        for variable in self.program.player_variables.iter() {
+        for (index, variable) in self.program.player_variables.iter().enumerate() {
             if globals.contains(variable.name.as_str()) {
                 self.error(ReconstructError::at(
                     "reconstruct-name-collision",
@@ -327,7 +339,7 @@ impl<'a> Classifier<'a> {
                          source would be misleading",
                         variable.name
                     ),
-                    variable.span,
+                    self.program.player_variable_name_span(index),
                 ));
             }
         }
@@ -340,7 +352,9 @@ impl<'a> Classifier<'a> {
     /// (empty-action rules emit nothing), so they cannot round-trip.
     fn check_subroutines(&mut self) {
         for (index, subroutine) in self.program.subroutines.iter().enumerate() {
-            let Some(rule_id) = self.subroutine_rules[index] else {
+            let span = self.program.subroutine_name_span(index);
+            let Some(rule_index) = self.subroutine_rules.get(subroutine.name.as_str()).copied()
+            else {
                 self.error(ReconstructError::at(
                     "reconstruct-unsupported-subroutine",
                     "subroutine",
@@ -349,11 +363,11 @@ impl<'a> Classifier<'a> {
                          through its single Subroutine-event rule body",
                         subroutine.name
                     ),
-                    subroutine.span,
+                    span,
                 ));
                 continue;
             };
-            let rule = &self.program.rules.get(rule_id).expect("rule id in range");
+            let rule = &self.program.rules[rule_index];
             if rule.actions.is_empty() {
                 self.error(ReconstructError::at(
                     "reconstruct-unsupported-subroutine",
@@ -363,7 +377,7 @@ impl<'a> Classifier<'a> {
                          empty-action rules, so the reconstructed Workshop would lose it",
                         subroutine.name
                     ),
-                    subroutine.span,
+                    span,
                 ));
             }
             if !rule.conditions.is_empty() {
@@ -375,21 +389,72 @@ impl<'a> Classifier<'a> {
                          models subroutines as condition-free functions",
                         subroutine.name
                     ),
-                    rule.span,
+                    self.program.rule_span(rule_index),
                 ));
             }
         }
     }
 
-    fn check_rule(&mut self, rule: &wir::Rule) {
+    /// The declared surface covers the events the OSTW emitter can spell:
+    /// `Global`, `EachPlayer` (including its all-team/all-target filtered
+    /// form), and `Subroutine` bodies. Player/filtered events have no OSTW
+    /// source form.
+    fn check_event(&mut self, rule: usize) {
+        let rule_ref = &self.program.rules[rule];
+        let supported = match &rule_ref.event {
+            Event::Global | Event::EachPlayer => true,
+            Event::EachPlayerWithFilters { team, target } => {
+                *team == EventTeam::All && *target == EventTarget::All
+            }
+            Event::Player { .. } => false,
+            Event::Subroutine(name) => {
+                if !self.program.subroutines.iter().any(|s| s.name == *name) {
+                    self.error(ReconstructError::at(
+                        "reconstruct-dangling-subroutine",
+                        "danglingSubroutine",
+                        format!(
+                            "rule event binds subroutine '{name}', which is not declared; the \
+                             reconstructed function would have no declaration",
+                        ),
+                        self.program.rule_span(rule),
+                    ));
+                }
+                true
+            }
+        };
+        if !supported {
+            self.error(ReconstructError::at(
+                "reconstruct-unsupported-event",
+                "event",
+                "player or filtered team/target rule events have no OSTW source form on the \
+                 declared reconstruction surface",
+                self.program.rule_span(rule),
+            ));
+        }
+    }
+
+    fn check_rule(&mut self, rule: usize) {
+        self.check_event(rule);
+        let rule_ref = &self.program.rules[rule];
         // Rule conditions must be two-operand comparison calls: the shared
         // Workshop emitter renders comparison conditions infix and renders
         // every other condition as `value == True`, so only comparison
         // conditions round-trip through the declared normalization.
-        for condition in &rule.conditions {
+        for (index, condition) in rule_ref.conditions.iter().enumerate() {
+            let span = self.program.condition_span(rule, index);
+            if condition.disabled {
+                self.error(ReconstructError::at(
+                    "reconstruct-unsupported-condition",
+                    "disabledCondition",
+                    "a disabled condition has no OSTW source form on the declared \
+                     reconstruction surface",
+                    span,
+                ));
+                continue;
+            }
             let comparison = matches!(
-                self.program.values.get(*condition).map(|node| &node.value),
-                Some(Value::Call { name, args }) if is_comparison_op(name) && args.len() == 2
+                &condition.value,
+                Value::Call { name, args } if is_comparison_op(name) && args.len() == 2
             );
             if !comparison {
                 self.error(ReconstructError::at(
@@ -398,51 +463,89 @@ impl<'a> Classifier<'a> {
                     "a rule condition must be a two-operand comparison call on the declared \
                      reconstruction surface (the shared Workshop emitter renders only those \
                      infix; other conditions become `value == True`)",
-                    rule.span,
+                    span,
                 ));
                 continue;
             }
-            let Some(Value::Call { args, .. }) =
-                self.program.values.get(*condition).map(|node| &node.value)
-            else {
+            let Value::Call { args, .. } = &condition.value else {
                 continue;
             };
-            self.check_value(args[0]);
-            self.check_value(args[1]);
+            self.check_value(&args[0], span);
+            self.check_value(&args[1], span);
         }
-        for action in &rule.actions {
-            self.check_action(*action);
+        // The linear action stream must nest cleanly: `Else`/`ElseIf` only
+        // inside `If`, every opener closed by `End`. Malformed streams would
+        // mis-nest reconstructed blocks.
+        let mut stack: Vec<Flow> = Vec::new();
+        for (index, action) in rule_ref.actions.iter().enumerate() {
+            let span = self.program.action_span(rule, index);
+            self.check_flow(action, span, &mut stack);
+            self.check_action(action, span);
+        }
+        if !stack.is_empty() {
+            self.error(ReconstructError::at(
+                "reconstruct-unsupported-action",
+                "controlFlow",
+                "an unclosed if/while/for block has no balanced OSTW source form",
+                self.program.rule_span(rule),
+            ));
         }
     }
 
-    fn check_action(&mut self, id: wir::ActionId) {
-        let Some(action) = self.program.actions.get(id) else {
-            return;
+    /// Track the linear `If`/`ElseIf`/`Else`/`While`/`For`/`End` stream and
+    /// reject control flow that cannot be reconstructed into balanced blocks.
+    fn check_flow(&mut self, action: &Action, span: Option<Span>, stack: &mut Vec<Flow>) {
+        let malformed = |kind: &str, classifier: &mut Classifier<'_>| {
+            classifier.error(ReconstructError::at(
+                "reconstruct-unsupported-action",
+                "controlFlow",
+                format!("a stray '{kind}' has no enclosing block in the linear action stream"),
+                span,
+            ));
         };
         match action {
-            Action::SetGlobalVariable { value, .. } => self.check_value(*value),
+            Action::If { .. } => stack.push(Flow::If { seen_else: false }),
+            Action::While { .. } => stack.push(Flow::While),
+            Action::ForGlobalVariable { .. } | Action::ForPlayerVariable { .. } => {
+                stack.push(Flow::For)
+            }
+            Action::ElseIf { .. } => match stack.last_mut() {
+                Some(Flow::If { seen_else }) if !*seen_else => {}
+                _ => malformed("Else If", self),
+            },
+            Action::Else => match stack.last_mut() {
+                Some(Flow::If { seen_else }) if !*seen_else => *seen_else = true,
+                _ => malformed("Else", self),
+            },
+            Action::End => match stack.pop() {
+                Some(_) => {}
+                None => malformed("End", self),
+            },
+            _ => {}
+        }
+    }
+
+    fn check_action(&mut self, action: &Action, span: Option<Span>) {
+        match action {
+            Action::SetGlobalVariable { value, .. } => self.check_value(value, span),
             Action::ModifyGlobalVariable { op, value, .. } => {
-                self.check_modify_op(*op, action.span());
-                self.check_value(*value);
+                self.check_modify_op(*op, span);
+                self.check_value(value, span);
             }
             Action::SetPlayerVariable { player, value, .. } => {
-                self.check_value(*player);
-                self.check_value(*value);
+                self.check_value(player, span);
+                self.check_value(value, span);
             }
             Action::ModifyPlayerVariable {
                 player, op, value, ..
             } => {
-                self.check_modify_op(*op, action.span());
+                self.check_modify_op(*op, span);
                 // A non-Event-Player receiver cannot round-trip: the
                 // source implementation's augmented assignment only recognizes the
                 // Event Player receiver as a modify target (`p += v`), so a
                 // `(receiver).p += v` would lower to a Set with a binary
                 // value.
-                let event_player = matches!(
-                    self.program.values.get(*player).map(|node| &node.value),
-                    Some(Value::EventPlayer)
-                );
-                if !event_player {
+                if !matches!(player, Value::EventPlayer) {
                     self.error(ReconstructError::at(
                         "reconstruct-unsupported-player-receiver",
                         "playerModifyReceiver",
@@ -450,11 +553,11 @@ impl<'a> Classifier<'a> {
                          representable on the declared surface (the source implementation's augmented \
                          assignment only recognizes the Event Player receiver as a modify \
                          target)",
-                        action.span(),
+                        span,
                     ));
                 }
-                self.check_value(*player);
-                self.check_value(*value);
+                self.check_value(player, span);
+                self.check_value(value, span);
             }
             Action::AssignMember {
                 target, op, value, ..
@@ -463,53 +566,41 @@ impl<'a> Classifier<'a> {
                     "reconstruct-unsupported-action",
                     "assignMember",
                     "dynamic member assignment is outside the declared OSTW reconstruction surface",
-                    action.span(),
+                    span,
                 ));
                 if let Some(op) = op {
-                    self.check_modify_op(*op, action.span());
+                    self.check_modify_op(*op, span);
                 }
-                self.check_value(*target);
-                self.check_value(*value);
+                self.check_value(target, span);
+                self.check_value(value, span);
             }
-            Action::CallSubroutine { .. } => {}
-            Action::If {
-                branches,
-                else_body,
-                ..
-            } => {
-                for branch in branches {
-                    self.check_value(branch.condition);
-                    for action in &branch.body {
-                        self.check_action(*action);
-                    }
-                }
-                if let Some(else_body) = else_body {
-                    for action in else_body {
-                        self.check_action(*action);
-                    }
-                }
-            }
-            Action::While {
-                condition, body, ..
-            } => {
-                self.check_value(*condition);
-                for action in body {
-                    self.check_action(*action);
+            Action::CallSubroutine { subroutine } => {
+                if !self
+                    .program
+                    .subroutines
+                    .iter()
+                    .any(|s| s.name == *subroutine)
+                {
+                    self.error(ReconstructError::at(
+                        "reconstruct-dangling-subroutine",
+                        "subroutine",
+                        format!(
+                            "subroutine call '{subroutine}' does not reference a declared subroutine"
+                        ),
+                        span,
+                    ));
                 }
             }
+            Action::If { condition }
+            | Action::ElseIf { condition }
+            | Action::While { condition } => self.check_value(condition, span),
+            Action::Else | Action::End => {}
             Action::ForGlobalVariable {
-                start,
-                stop,
-                step,
-                body,
-                ..
+                start, stop, step, ..
             } => {
-                self.check_value(*start);
-                self.check_value(*stop);
-                self.check_value(*step);
-                for action in body {
-                    self.check_action(*action);
-                }
+                self.check_value(start, span);
+                self.check_value(stop, span);
+                self.check_value(step, span);
             }
             Action::ForPlayerVariable { .. } => {
                 self.error(ReconstructError::at(
@@ -518,10 +609,19 @@ impl<'a> Classifier<'a> {
                     "'For Player Variable' is outside the declared reconstruction surface \
                      (the source implementation lowers loop counters as globals; the per-player loop form \
                      has no OSTW source form on this surface)",
-                    action.span(),
+                    span,
                 ));
             }
-            Action::Call { name, args, .. } => {
+            Action::Disabled { .. } => {
+                self.error(ReconstructError::at(
+                    "reconstruct-unsupported-action",
+                    "disabledAction",
+                    "a disabled action has no OSTW source form on the declared reconstruction \
+                     surface",
+                    span,
+                ));
+            }
+            Action::Call { name, args } => {
                 if name == "abort" && args.is_empty() {
                     return;
                 }
@@ -530,7 +630,7 @@ impl<'a> Classifier<'a> {
                         let arity = self
                             .catalog
                             .entry(Kind::Action, name)
-                            .map(|entry| entry.params.len())
+                            .map(|entry| entry.param_count())
                             .unwrap_or(0);
                         if args.len() != arity {
                             self.error(ReconstructError::at(
@@ -543,11 +643,11 @@ impl<'a> Classifier<'a> {
                                      byte-stable",
                                     args.len()
                                 ),
-                                action.span(),
+                                span,
                             ));
                         }
                         for arg in args {
-                            self.check_value(*arg);
+                            self.check_value(arg, span);
                         }
                     }
                     None => {
@@ -558,10 +658,10 @@ impl<'a> Classifier<'a> {
                                 "action call '{name}' has no OSTW source binding on the \
                                  declared reconstruction surface"
                             ),
-                            action.span(),
+                            span,
                         ));
                         for arg in args {
-                            self.check_value(*arg);
+                            self.check_value(arg, span);
                         }
                     }
                 }
@@ -580,15 +680,15 @@ impl<'a> Classifier<'a> {
             ModifyOp::RaiseToPower
             | ModifyOp::Min
             | ModifyOp::Max
-            | ModifyOp::RemoveFromArray
-            | ModifyOp::RemoveFromArrayByIndex => {
+            | ModifyOp::RemoveFromArrayByValue
+            | ModifyOp::RemoveFromArrayByIndex
+            | _ => {
                 self.error(ReconstructError::at(
                     "reconstruct-unsupported-modify-op",
-                    format!("modifyOp:{}", op.as_str()),
+                    format!("modifyOp:{op:?}"),
                     format!(
-                        "modify operator '{}' has no OSTW assignment form on the declared \
-                         reconstruction surface",
-                        op.as_str()
+                        "modify operator '{op:?}' has no OSTW assignment form on the declared \
+                         reconstruction surface"
                     ),
                     span,
                 ));
@@ -596,15 +696,13 @@ impl<'a> Classifier<'a> {
         }
     }
 
-    fn check_value(&mut self, id: ValueId) {
-        let Some(node) = self.program.values.get(id) else {
-            return;
-        };
-        match &node.value {
-            Value::Number { text, .. } => {
+    fn check_value(&mut self, value: &Value, span: Option<Span>) {
+        match value {
+            Value::Number(number) => {
                 // The OSTW lexer accepts `[0-9]+(\.[0-9]+)?` only; a
-                // different spelling (signs, exponents, computed forms)
+                // different spelling (signs, exponents, non-finite forms)
                 // would not round-trip through the source implementation.
+                let text = format_number(*number);
                 let valid = !text.is_empty()
                     && text.chars().all(|ch| ch.is_ascii_digit() || ch == '.')
                     && text.chars().any(|ch| ch.is_ascii_digit());
@@ -613,7 +711,7 @@ impl<'a> Classifier<'a> {
                         "reconstruct-unsupported-number",
                         "number",
                         format!("number literal '{text}' is not a valid OSTW number spelling"),
-                        node.span,
+                        span,
                     ));
                 }
             }
@@ -623,18 +721,18 @@ impl<'a> Classifier<'a> {
                     "reconstruct-unsupported-localized-string",
                     format!("localized-string:{value}"),
                     "localized Workshop preset strings have no OSTW source representation",
-                    node.span,
+                    span,
                 ));
             }
             Value::Array(elements) => {
                 for element in elements {
-                    self.check_value(*element);
+                    self.check_value(element, span);
                 }
             }
             Value::Vector { x, y, z } => {
-                self.check_value(*x);
-                self.check_value(*y);
-                self.check_value(*z);
+                self.check_value(x, span);
+                self.check_value(y, span);
+                self.check_value(z, span);
             }
             Value::Enum { value_type, value } => {
                 let bound = enum_ostw(value_type, value);
@@ -650,27 +748,34 @@ impl<'a> Classifier<'a> {
                             "enum value '{value_type}.{value}' has no OSTW source binding on \
                              the declared reconstruction surface"
                         ),
-                        node.span,
+                        span,
                     ));
                 }
             }
             Value::GlobalVariable(_) => {}
-            Value::PlayerVariable { player, .. } => self.check_value(*player),
+            Value::PlayerVariable { player, .. } => self.check_value(player, span),
             Value::Subroutine(subroutine) => {
-                if self.program.subroutines.get(*subroutine).is_none() {
+                if !self
+                    .program
+                    .subroutines
+                    .iter()
+                    .any(|s| s.name == *subroutine)
+                {
                     self.error(ReconstructError::at(
                         "reconstruct-dangling-subroutine",
                         "subroutine",
-                        format!("subroutine value '{subroutine}' does not reference a declared subroutine"),
-                        node.span,
+                        format!(
+                            "subroutine value '{subroutine}' does not reference a declared subroutine"
+                        ),
+                        span,
                     ));
                 }
             }
-            Value::Call { name, args } => self.check_value_call(name, args, node.span),
+            Value::Call { name, args } => self.check_value_call(name, args, span),
         }
     }
 
-    fn check_value_call(&mut self, name: &str, args: &[ValueId], span: Option<Span>) {
+    fn check_value_call(&mut self, name: &str, args: &[Value], span: Option<Span>) {
         let check_operands = |classifier: &mut Classifier<'_>, count: usize, what: &str| {
             if args.len() != count {
                 classifier.error(ReconstructError::at(
@@ -685,7 +790,7 @@ impl<'a> Classifier<'a> {
                 ));
             }
             for arg in args {
-                classifier.check_value(*arg);
+                classifier.check_value(arg, span);
             }
         };
         if is_comparison_op(name) {
@@ -698,7 +803,7 @@ impl<'a> Classifier<'a> {
             "not" => return check_operands(self, 1, "one operand"),
             "array" => {
                 for arg in args {
-                    self.check_value(*arg);
+                    self.check_value(arg, span);
                 }
                 return;
             }
@@ -708,12 +813,7 @@ impl<'a> Classifier<'a> {
                 return check_operands(self, 3, "a condition, a then-value, and an else-value");
             }
             "customString" | "format" => {
-                let literal = matches!(
-                    args.first()
-                        .and_then(|arg| self.program.values.get(*arg))
-                        .map(|node| &node.value),
-                    Some(Value::String(_))
-                );
+                let literal = matches!(args.first(), Some(Value::String(_)));
                 if !literal {
                     self.error(ReconstructError::at(
                         "reconstruct-unsupported-format-text",
@@ -724,11 +824,11 @@ impl<'a> Classifier<'a> {
                     ));
                 }
                 for arg in args.iter().skip(1) {
-                    self.check_value(*arg);
+                    self.check_value(arg, span);
                     // A strict-greater comparison would terminate the
                     // enclosing `<"..."` formatted string in the OSTW
                     // parser.
-                    if contains_strict_greater(self.program, *arg) {
+                    if contains_strict_greater(arg) {
                         self.error(ReconstructError::at(
                             "reconstruct-unsupported-format-arg",
                             "formatArg",
@@ -747,7 +847,7 @@ impl<'a> Classifier<'a> {
                 let arity = self
                     .catalog
                     .entry(Kind::Value, name)
-                    .map(|entry| entry.params.len())
+                    .map(|entry| entry.param_count())
                     .unwrap_or(0);
                 if args.len() != arity {
                     self.error(ReconstructError::at(
@@ -763,7 +863,7 @@ impl<'a> Classifier<'a> {
                     ));
                 }
                 for arg in args {
-                    self.check_value(*arg);
+                    self.check_value(arg, span);
                 }
             }
             None => {
@@ -777,7 +877,7 @@ impl<'a> Classifier<'a> {
                     span,
                 ));
                 for arg in args {
-                    self.check_value(*arg);
+                    self.check_value(arg, span);
                 }
             }
         }
@@ -785,18 +885,19 @@ impl<'a> Classifier<'a> {
 }
 
 struct Emitter<'a> {
-    program: &'a wir::Program,
+    program: &'a Program,
     catalog: &'a Catalog,
     out: String,
-    subroutine_rules: Vec<Option<wir::RuleId>>,
+    /// Declared subroutine name → body rule index (last rule wins).
+    subroutine_rules: HashMap<&'a str, usize>,
 }
 
 impl<'a> Emitter<'a> {
-    fn new(program: &'a wir::Program, catalog: &'a Catalog) -> Self {
-        let mut subroutine_rules: Vec<Option<wir::RuleId>> = vec![None; program.subroutines.len()];
+    fn new(program: &'a Program, catalog: &'a Catalog) -> Self {
+        let mut subroutine_rules = HashMap::new();
         for (index, rule) in program.rules.iter().enumerate() {
-            if let Event::Subroutine(subroutine) = &rule.event {
-                subroutine_rules[subroutine.index()] = Some(wir::RuleId::from_index(index));
+            if let Event::Subroutine(name) = &rule.event {
+                subroutine_rules.insert(name.as_str(), index);
             }
         }
         Emitter {
@@ -809,10 +910,10 @@ impl<'a> Emitter<'a> {
 
     fn run(mut self) -> String {
         // The pinned OSTW v3.4.0 reference requires a declared type on
-        // `globalvar`/`playervar` declarations; the WIR carries no type
-        // information, so the permissive universal `Any` type is emitted
-        // (honest: the variable genuinely may hold any type). The native
-        // source implementation also accepts `Any`.
+        // `globalvar`/`playervar` declarations; the public Workshop model
+        // carries no type information, so the permissive universal `Any`
+        // type is emitted (honest: the variable genuinely may hold any
+        // type). The native source implementation also accepts `Any`.
         for variable in self.program.global_variables.iter() {
             self.line(0, &format!("globalvar Any {};", variable.name));
         }
@@ -823,8 +924,8 @@ impl<'a> Emitter<'a> {
             self.out.push('\n');
         }
         for subroutine in self.program.subroutines.iter() {
-            let rule_id = self.subroutine_rules[subroutine.index as usize].expect("classified");
-            let rule = self.program.rules.get(rule_id).expect("rule id in range");
+            let rule_index = self.subroutine_rules[subroutine.name.as_str()];
+            let rule = &self.program.rules[rule_index];
             self.line(
                 0,
                 &format!(
@@ -846,7 +947,7 @@ impl<'a> Emitter<'a> {
         self.out
     }
 
-    fn emit_rule(&mut self, rule: &wir::Rule) {
+    fn emit_rule(&mut self, rule: &workshop_rs::Rule) {
         let mut header = if rule.disabled {
             format!("disabled rule: \"{}\"", escape_string(&rule.name))
         } else {
@@ -854,22 +955,20 @@ impl<'a> Emitter<'a> {
         };
         match &rule.event {
             Event::Global => {}
-            Event::EachPlayer => {
-                write!(header, " Event.OngoingPlayer").unwrap();
-            }
-            Event::EachPlayerWithFilters {
-                team: workshop_rs::wir::EventTeam::All,
-                target: workshop_rs::wir::EventTarget::All,
+            Event::EachPlayer
+            | Event::EachPlayerWithFilters {
+                team: EventTeam::All,
+                target: EventTarget::All,
             } => {
                 write!(header, " Event.OngoingPlayer").unwrap();
             }
             Event::EachPlayerWithFilters { .. } | Event::Player { .. } => {
-                unreachable!("filtered/player events are outside the OSTW reconstruction surface")
+                unreachable!("filtered/player events are classified as unsupported")
             }
             Event::Subroutine(_) => unreachable!("subroutine rules emit as functions"),
         }
         for condition in &rule.conditions {
-            write!(header, " if ({})", self.value(*condition)).unwrap();
+            write!(header, " if ({})", self.value(&condition.value)).unwrap();
         }
         self.line(0, &format!("{header} {{"));
         self.emit_actions(&rule.actions, 1);
@@ -877,36 +976,77 @@ impl<'a> Emitter<'a> {
         self.out.push('\n');
     }
 
-    fn emit_actions(&mut self, actions: &[wir::ActionId], level: usize) {
+    /// Emit the linear action stream, tracking block depth so `End`, `Else`,
+    /// and `ElseIf` close and reopen braces at the right level.
+    fn emit_actions(&mut self, actions: &[Action], level: usize) {
+        let mut level = level;
         for action in actions {
-            self.emit_action(*action, level);
+            match action {
+                Action::If { condition } => {
+                    self.line(level, &format!("if ({}) {{", self.value(condition)));
+                    level += 1;
+                }
+                Action::ElseIf { condition } => {
+                    level -= 1;
+                    self.line(level, &format!("}} else if ({}) {{", self.value(condition)));
+                    level += 1;
+                }
+                Action::Else => {
+                    level -= 1;
+                    self.line(level, "} else {");
+                    level += 1;
+                }
+                Action::End => {
+                    level -= 1;
+                    self.line(level, "}");
+                }
+                Action::While { condition } => {
+                    self.line(level, &format!("while ({}) {{", self.value(condition)));
+                    level += 1;
+                }
+                Action::ForGlobalVariable {
+                    variable,
+                    start,
+                    stop,
+                    step,
+                } => {
+                    self.line(
+                        level,
+                        &format!(
+                            "for ({} = {}; {}; {}) {{",
+                            variable,
+                            self.value(start),
+                            self.value(stop),
+                            self.value(step)
+                        ),
+                    );
+                    level += 1;
+                }
+                _ => self.emit_action(action, level),
+            }
         }
     }
 
-    fn emit_action(&mut self, id: wir::ActionId, level: usize) {
-        let action = self.program.actions.get(id).expect("classified");
+    fn emit_action(&mut self, action: &Action, level: usize) {
         match action {
-            Action::SetGlobalVariable {
-                variable, value, ..
-            } => {
-                self.line(
-                    level,
-                    &format!("{} = {};", self.global_name(*variable), self.value(*value)),
-                );
+            Action::SetGlobalVariable { variable, value } => {
+                self.line(level, &format!("{variable} = {};", self.value(value)));
             }
             Action::ModifyGlobalVariable {
                 variable,
                 op,
                 value,
-                ..
             } => {
-                let name = self.global_name(*variable);
                 if *op == ModifyOp::AppendToArray {
-                    self.line(level, &format!("{name}.append({});", self.value(*value)));
+                    self.line(level, &format!("{variable}.append({});", self.value(value)));
                 } else {
                     self.line(
                         level,
-                        &format!("{name} {} {};", assign_op_spelling(*op), self.value(*value)),
+                        &format!(
+                            "{variable} {} {};",
+                            assign_op_spelling(*op),
+                            self.value(value)
+                        ),
                     );
                 }
             }
@@ -914,18 +1054,13 @@ impl<'a> Emitter<'a> {
                 player,
                 variable,
                 value,
-                ..
             } => {
-                let name = self.player_name(*variable);
-                let target = if matches!(
-                    self.program.values.get(*player).map(|node| &node.value),
-                    Some(Value::EventPlayer)
-                ) {
-                    name
+                let target = if matches!(player, Value::EventPlayer) {
+                    variable.clone()
                 } else {
-                    format!("({}).{name}", self.value(*player))
+                    format!("({}).{variable}", self.value(player))
                 };
-                self.line(level, &format!("{target} = {};", self.value(*value)));
+                self.line(level, &format!("{target} = {};", self.value(value)));
             }
             Action::ModifyPlayerVariable {
                 variable,
@@ -933,68 +1068,32 @@ impl<'a> Emitter<'a> {
                 value,
                 ..
             } => {
-                let name = self.player_name(*variable);
-                self.line(
-                    level,
-                    &format!("{name} {} {};", assign_op_spelling(*op), self.value(*value)),
-                );
-            }
-            Action::CallSubroutine { subroutine, .. } => {
-                let name = self.subroutine_name(*subroutine);
-                self.line(level, &format!("{name}();"));
-            }
-            Action::If {
-                branches,
-                else_body,
-                ..
-            } => {
-                for (index, branch) in branches.iter().enumerate() {
-                    let keyword = if index == 0 { "if" } else { "else if" };
-                    self.line(
-                        level,
-                        &format!("{keyword} ({}) {{", self.value(branch.condition)),
-                    );
-                    self.emit_actions(&branch.body, level + 1);
-                    self.line(level, "}");
-                }
-                if let Some(else_body) = else_body {
-                    self.line(level, "else {");
-                    self.emit_actions(else_body, level + 1);
-                    self.line(level, "}");
-                }
-            }
-            Action::While {
-                condition, body, ..
-            } => {
-                self.line(level, &format!("while ({}) {{", self.value(*condition)));
-                self.emit_actions(body, level + 1);
-                self.line(level, "}");
-            }
-            Action::ForGlobalVariable {
-                variable,
-                start,
-                stop,
-                step,
-                body,
-                ..
-            } => {
                 self.line(
                     level,
                     &format!(
-                        "for ({} = {}; {}; {}) {{",
-                        self.global_name(*variable),
-                        self.value(*start),
-                        self.value(*stop),
-                        self.value(*step)
+                        "{variable} {} {};",
+                        assign_op_spelling(*op),
+                        self.value(value)
                     ),
                 );
-                self.emit_actions(body, level + 1);
-                self.line(level, "}");
             }
-            Action::AssignMember { .. } | Action::ForPlayerVariable { .. } => {
+            Action::CallSubroutine { subroutine } => {
+                self.line(level, &format!("{subroutine}();"));
+            }
+            Action::If { .. }
+            | Action::ElseIf { .. }
+            | Action::Else
+            | Action::While { .. }
+            | Action::ForGlobalVariable { .. }
+            | Action::End => {
+                unreachable!("control-flow actions are handled by emit_actions")
+            }
+            Action::AssignMember { .. }
+            | Action::ForPlayerVariable { .. }
+            | Action::Disabled { .. } => {
                 unreachable!("classified as unsupported")
             }
-            Action::Call { name, args, .. } => {
+            Action::Call { name, args } => {
                 if name == "abort" && args.is_empty() {
                     self.line(level, "return;");
                     return;
@@ -1006,7 +1105,7 @@ impl<'a> Emitter<'a> {
                     let args = args
                         .iter()
                         .enumerate()
-                        .map(|(index, arg)| self.action_arg(name, index, *arg))
+                        .map(|(index, arg)| self.action_arg(name, index, arg))
                         .collect::<Vec<_>>()
                         .join(", ");
                     self.line(level, &format!("{ostw}({args});"));
@@ -1015,21 +1114,18 @@ impl<'a> Emitter<'a> {
         }
     }
 
-    fn action_arg(&self, action: &str, index: usize, value: ValueId) -> String {
+    fn action_arg(&self, action: &str, index: usize, value: &Value) -> String {
         let boolean = self
             .catalog
             .entry(Kind::Action, action)
-            .and_then(|entry| entry.param_types.get(index))
-            .and_then(Option::as_deref)
+            .and_then(|entry| entry.param_type(index))
             == Some("Boolean");
         if boolean {
-            if let Some(Value::Number { value, .. }) =
-                self.program.values.get(value).map(|node| &node.value)
-            {
-                if *value == 0.0 {
+            if let Value::Number(number) = value {
+                if *number == 0.0 {
                     return "false".to_string();
                 }
-                if *value == 1.0 {
+                if *number == 1.0 {
                     return "true".to_string();
                 }
             }
@@ -1038,10 +1134,9 @@ impl<'a> Emitter<'a> {
     }
 
     /// Render one value as an OSTW expression.
-    fn value(&self, id: ValueId) -> String {
-        let node = self.program.values.get(id).expect("classified");
-        match &node.value {
-            Value::Number { text, .. } => text.clone(),
+    fn value(&self, value: &Value) -> String {
+        match value {
+            Value::Number(number) => format_number(*number),
             Value::String(value) => format!("\"{}\"", escape_string(value)),
             Value::LocalizedString(_) => unreachable!("classified"),
             Value::Bool(true) => "true".to_string(),
@@ -1050,34 +1145,30 @@ impl<'a> Emitter<'a> {
             Value::Array(elements) => {
                 let elements = elements
                     .iter()
-                    .map(|element| self.value(*element))
+                    .map(|element| self.value(element))
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("[{elements}]")
             }
             Value::Vector { x, y, z } => format!(
                 "Vector({}, {}, {})",
-                self.value(*x),
-                self.value(*y),
-                self.value(*z)
+                self.value(x),
+                self.value(y),
+                self.value(z)
             ),
             Value::Enum { value_type, value } => {
                 let (source, member) = enum_ostw(value_type, value).expect("classified");
                 format!("{source}.{member}")
             }
-            Value::GlobalVariable(variable) => self.global_name(*variable),
+            Value::GlobalVariable(variable) => variable.clone(),
             Value::PlayerVariable { player, variable } => {
-                let name = self.player_name(*variable);
-                if matches!(
-                    self.program.values.get(*player).map(|node| &node.value),
-                    Some(Value::EventPlayer)
-                ) {
-                    name
+                if matches!(player.as_ref(), Value::EventPlayer) {
+                    variable.clone()
                 } else {
-                    format!("({}).{name}", self.value(*player))
+                    format!("({}).{variable}", self.value(player))
                 }
             }
-            Value::Subroutine(subroutine) => self.subroutine_name(*subroutine),
+            Value::Subroutine(subroutine) => subroutine.clone(),
             Value::EventPlayer => "EventPlayer()".to_string(),
             Value::Call { name, args } => self.value_call(name, args),
         }
@@ -1085,41 +1176,45 @@ impl<'a> Emitter<'a> {
 
     /// Render a value call using the OSTW source form that re-lowers to the
     /// same canonical catalog identity.
-    fn value_call(&self, name: &str, args: &[ValueId]) -> String {
+    fn value_call(&self, name: &str, args: &[Value]) -> String {
         if is_comparison_op(name) {
-            return format!("{} {name} {}", self.operand(args[0]), self.operand(args[1]));
+            return format!(
+                "{} {name} {}",
+                self.operand(&args[0]),
+                self.operand(&args[1])
+            );
         }
         match name {
-            "and" => format!("{} && {}", self.operand(args[0]), self.operand(args[1])),
-            "or" => format!("{} || {}", self.operand(args[0]), self.operand(args[1])),
-            "add" => format!("{} + {}", self.operand(args[0]), self.operand(args[1])),
-            "subtract" => format!("{} - {}", self.operand(args[0]), self.operand(args[1])),
-            "multiply" => format!("{} * {}", self.operand(args[0]), self.operand(args[1])),
-            "divide" => format!("{} / {}", self.operand(args[0]), self.operand(args[1])),
-            "not" => format!("!{}", self.operand(args[0])),
+            "and" => format!("{} && {}", self.operand(&args[0]), self.operand(&args[1])),
+            "or" => format!("{} || {}", self.operand(&args[0]), self.operand(&args[1])),
+            "add" => format!("{} + {}", self.operand(&args[0]), self.operand(&args[1])),
+            "subtract" => format!("{} - {}", self.operand(&args[0]), self.operand(&args[1])),
+            "multiply" => format!("{} * {}", self.operand(&args[0]), self.operand(&args[1])),
+            "divide" => format!("{} / {}", self.operand(&args[0]), self.operand(&args[1])),
+            "not" => format!("!{}", self.operand(&args[0])),
             "array" => {
                 let elements = args
                     .iter()
-                    .map(|arg| self.value(*arg))
+                    .map(|arg| self.value(arg))
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("[{elements}]")
             }
             "vector" => format!(
                 "Vector({}, {}, {})",
-                self.value(args[0]),
-                self.value(args[1]),
-                self.value(args[2])
+                self.value(&args[0]),
+                self.value(&args[1]),
+                self.value(&args[2])
             ),
-            "valueInArray" => format!("({})[{}]", self.value(args[0]), self.value(args[1])),
+            "valueInArray" => format!("({})[{}]", self.value(&args[0]), self.value(&args[1])),
             "ifThenElse" => format!(
                 "{} ? {} : {}",
-                self.operand(args[0]),
-                self.operand(args[1]),
-                self.operand(args[2])
+                self.operand(&args[0]),
+                self.operand(&args[1]),
+                self.operand(&args[2])
             ),
             "customString" | "format" => {
-                let text = match &self.program.values.get(args[0]).expect("classified").value {
+                let text = match &args[0] {
                     Value::String(text) => text.clone(),
                     _ => String::new(),
                 };
@@ -1128,7 +1223,7 @@ impl<'a> Emitter<'a> {
                 } else {
                     let rest = args[1..]
                         .iter()
-                        .map(|arg| self.value(*arg))
+                        .map(|arg| self.value(arg))
                         .collect::<Vec<_>>()
                         .join(", ");
                     format!("<\"{}\", {rest}>", escape_string(&text))
@@ -1138,7 +1233,7 @@ impl<'a> Emitter<'a> {
                 let ostw = value_ostw_name(name).expect("classified");
                 let args = args
                     .iter()
-                    .map(|arg| self.value(*arg))
+                    .map(|arg| self.value(arg))
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("{ostw}({args})")
@@ -1148,11 +1243,11 @@ impl<'a> Emitter<'a> {
 
     /// Render an operand of an infix/ternary operator: parenthesized when it
     /// is itself an operator expression, so the parsed tree is unambiguous.
-    fn operand(&self, id: ValueId) -> String {
-        let text = self.value(id);
+    fn operand(&self, value: &Value) -> String {
+        let text = self.value(value);
         let needs_parens = matches!(
-            self.program.values.get(id).map(|node| &node.value),
-            Some(Value::Call { name, .. })
+            value,
+            Value::Call { name, .. }
                 if is_comparison_op(name)
                     || matches!(
                         name.as_str(),
@@ -1165,30 +1260,6 @@ impl<'a> Emitter<'a> {
         } else {
             text
         }
-    }
-
-    fn global_name(&self, id: wir::GlobalVarId) -> String {
-        self.program
-            .global_variables
-            .get(id)
-            .map(|variable| variable.name.clone())
-            .unwrap_or_default()
-    }
-
-    fn player_name(&self, id: wir::PlayerVarId) -> String {
-        self.program
-            .player_variables
-            .get(id)
-            .map(|variable| variable.name.clone())
-            .unwrap_or_default()
-    }
-
-    fn subroutine_name(&self, id: wir::SubroutineId) -> String {
-        self.program
-            .subroutines
-            .get(id)
-            .map(|subroutine| subroutine.name.clone())
-            .unwrap_or_default()
     }
 
     fn line(&mut self, level: usize, text: &str) {
@@ -1209,14 +1280,7 @@ fn assign_op_spelling(op: ModifyOp) -> &'static str {
         ModifyOp::Multiply => "*=",
         ModifyOp::Divide => "/=",
         ModifyOp::Modulo => "%=",
-        ModifyOp::AppendToArray
-        | ModifyOp::Min
-        | ModifyOp::Max
-        | ModifyOp::RaiseToPower
-        | ModifyOp::RemoveFromArray
-        | ModifyOp::RemoveFromArrayByIndex => {
-            unreachable!("classified")
-        }
+        _ => unreachable!("classified"),
     }
 }
 
@@ -1240,44 +1304,65 @@ fn escape_string(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use workshop_rs::catalog::Catalog;
-    use workshop_rs::source::SourceFile;
+    use workshop_rs::{Rule, Variable};
 
     #[test]
     fn reconstructs_a_basic_global_assignment() {
-        let mut program = wir::Program::default();
-        program.files.push(SourceFile::new("reconstructed.del"));
-        let variable = program.global_variables.push(wir::WorkshopVariable {
-            name: "score".to_string(),
-            index: 0,
-            span: None,
-            name_span: None,
+        let mut program = Program::new();
+        program.global_variable(Variable::new("score"));
+        let mut rule = Rule::new("main", Event::Global);
+        rule.actions.push(Action::SetGlobalVariable {
+            variable: "score".to_string(),
+            value: Value::Number(1.0),
         });
-        let value = program.values.push(wir::ValueNode::new(
-            wir::Value::Number {
-                value: 1.0,
-                text: "1".to_string(),
-            },
-            None,
-        ));
-        let action = program.actions.push(wir::Action::SetGlobalVariable {
-            variable,
-            value,
-            span: None,
-            target_span: None,
-        });
-        program.rules.push(wir::Rule {
-            name: "main".to_string(),
-            span: None,
-            name_span: None,
-            disabled: false,
-            event: wir::Event::Global,
-            conditions: Vec::new(),
-            actions: vec![action],
-        });
+        program.rule(rule);
 
         let source = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap();
         assert!(source.contains("score = 1;"), "{source}");
         assert!(source.contains("rule: \"main\""), "{source}");
+    }
+
+    #[test]
+    fn rejects_filtered_player_events_instead_of_panicking() {
+        let mut program = Program::new();
+        program.rule(Rule::new(
+            "main",
+            Event::EachPlayerWithFilters {
+                team: EventTeam::All,
+                target: EventTarget::All,
+            },
+        ));
+        // An all-team/all-target filtered event is on the surface.
+        assert!(reconstruct(&program, &Catalog::builtin().unwrap()).is_ok());
+
+        let mut program = Program::new();
+        let mut rule = Rule::new(
+            "main",
+            Event::Player {
+                kind: workshop_rs::PlayerEventKind::EarnedElimination,
+                team: EventTeam::All,
+                target: EventTarget::All,
+            },
+        );
+        rule.actions.push(Action::CallSubroutine {
+            subroutine: "s".to_string(),
+        });
+        program.rule(rule);
+        let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
+        assert!(errors
+            .iter()
+            .any(|e| e.code == "reconstruct-unsupported-event"));
+    }
+
+    #[test]
+    fn rejects_unbalanced_control_flow() {
+        let mut program = Program::new();
+        let mut rule = Rule::new("main", Event::Global);
+        rule.actions.push(Action::Else);
+        program.rule(rule);
+        let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
+        assert!(errors
+            .iter()
+            .any(|e| e.code == "reconstruct-unsupported-action" && e.kind == "controlFlow"));
     }
 }
