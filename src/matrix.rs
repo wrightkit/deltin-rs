@@ -68,6 +68,7 @@ impl State {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MatrixMeta {
     pub upstream_repo: String,
     pub upstream_pin: String,
@@ -75,6 +76,7 @@ pub struct MatrixMeta {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MatrixEntry {
     pub id: String,
     pub name: String,
@@ -85,6 +87,7 @@ pub struct MatrixEntry {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SupportMatrix {
     pub meta: MatrixMeta,
     #[serde(rename = "features")]

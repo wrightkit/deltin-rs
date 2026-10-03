@@ -37,10 +37,10 @@ Compatibility verification is ordinary tests and test data (ADR-0005):
 
 ## Fixture conventions
 
-- `// expect: ok | parse-error | semantic-error | hir-error` is required in the
-  walked corpus directories (`parser/`, `semantic/`, `highlevel/`,
-  `regressions/`). A fixture that cannot be assigned a concrete expectation is
-  a gap to resolve, not a status to record.
+- `// expect: ok | parse-error | semantic-error | hir-error` is required on
+  every fixture under `tests/corpus/` (recursively, except `projects/`). A
+  fixture that cannot be assigned a concrete expectation is a gap to resolve,
+  not a status to record.
 - `// source:` and `// license:` remain only on fixtures derived from
   third-party material under the pinned upstream revision (see
   [`provenance.md`](provenance.md)). WrightKit-authored fixtures need no

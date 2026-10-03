@@ -42,8 +42,8 @@ The reverse direction starts with Workshop parsed by `workshop-rs` and uses
 - Workshop code generation: lowers DEL HIR into the canonical `workshop-rs`
   `Program` model with
   explicit error reporting for unsupported runtime behavior.
-- Verified compatibility: validated against corpus fixtures, oracle snapshots,
-  and differential tests.
+- Verified compatibility: validated by the corpus harness, vendored
+  real-project runs, and the reconstruction boundary tests.
 
 ## Compatibility
 
@@ -65,7 +65,7 @@ observable DeltinScript / OSTW semantics, not upstream compiler architecture.
 | Embedded Workshop / lobby data | 🟡 Partial | Canonical Workshop contracts are still being integrated |
 | Workshop builtins | 🟡 Partial | Canonical catalog binding exists; breadth and lowering continue to expand |
 | DEL/OSTW → Workshop compilation | 🟡 Partial | Core HIR→Program lowering exists; advanced runtime/project surfaces are incomplete |
-| Workshop → DEL/OSTW reconstruction | ⏳ Not yet | Will consume canonical `workshop-rs` semantics and remain owned by `deltin-rs` |
+| Workshop → DEL/OSTW reconstruction | ✅ Declared surface | `deltin_rs::reconstruct` converts in-boundary WIR to canonical OSTW; boundary verified by `tests/reconstruction.rs` |
 
 Exact support state lives in the
 [machine-readable support matrix](docs/support-matrix.toml); see

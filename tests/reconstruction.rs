@@ -88,7 +88,7 @@ fn positive_fixtures_reconstruct_to_parseable_ostw() {
 }
 
 #[test]
-fn reject_fixtures_fail_with_structured_errors() {
+fn reject_fixtures_fail_with_declared_codes() {
     let b = boundary();
     let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
     let locale = workshop_rs::catalog::Locale::new("en-US");
@@ -100,15 +100,83 @@ fn reject_fixtures_fail_with_structured_errors() {
         let errors = reconstruct(&program, &catalog)
             .expect_err(&format!("{name}: fixture is declared reject"));
         assert!(!errors.is_empty(), "{name}: expected reject diagnostics");
+        let declared: std::collections::HashSet<&str> = b["rejected"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| e["code"].as_str().unwrap())
+            .collect();
         for error in &errors {
             assert!(
-                error.code.starts_with("reconstruct-"),
-                "{name}: error code must be a stable reconstruct id: {error:?}"
+                declared.contains(error.code),
+                "{name}: emitted code {} is not declared in rejected[]",
+                error.code
             );
             assert!(
                 !error.kind.is_empty(),
                 "{name}: error must name the WIR kind"
             );
         }
+    }
+}
+
+/// Every binding the manifest declares on the supported surface must resolve
+/// through the actual binding tables — a declared-but-unbound id is a manifest
+/// lie. The tables may bind more than declared (undeclared capability is fine;
+/// the notes record that explicitly).
+#[test]
+fn declared_bound_ids_resolve_in_binding_tables() {
+    let b = boundary();
+    let supported = &b["supported"];
+
+    let action_ids: std::collections::HashSet<&'static str> =
+        deltin_rs::reconstruct::bound_action_ids()
+            .iter()
+            .map(|(id, _)| *id)
+            .collect();
+    let value_ids: std::collections::HashSet<&'static str> =
+        deltin_rs::reconstruct::bound_value_ids()
+            .iter()
+            .map(|(id, _)| *id)
+            .collect();
+    let enum_domains = deltin_rs::reconstruct::bound_enum_domains();
+
+    for id in supported["boundActionIds"].as_array().unwrap() {
+        let id = id.as_str().unwrap();
+        assert!(
+            action_ids.contains(id),
+            "declared bound action id {id} has no binding"
+        );
+    }
+    for id in supported["boundValueIds"].as_array().unwrap() {
+        let id = id.as_str().unwrap();
+        assert!(
+            value_ids.contains(id),
+            "declared bound value id {id} has no binding"
+        );
+    }
+    for domain in supported["enumDomains"].as_array().unwrap() {
+        let domain = domain.as_str().unwrap();
+        assert!(
+            enum_domains.iter().any(|d| d.domain == domain),
+            "declared enum domain {domain} has no binding"
+        );
+    }
+    for member in supported["enumMembers"].as_array().unwrap() {
+        let member = member.as_str().unwrap();
+        let (domain, name) = member
+            .split_once('.')
+            .unwrap_or_else(|| panic!("enum member {member} must be Domain.MEMBER"));
+        let bound = enum_domains
+            .iter()
+            .find(|d| d.domain == domain)
+            .unwrap_or_else(|| panic!("enum member {member} names an unbound domain"));
+        assert!(
+            bound
+                .members
+                .iter()
+                .any(|(canonical, _)| *canonical == name),
+            "enum member {member} has no binding"
+        );
     }
 }
