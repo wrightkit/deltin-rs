@@ -1,6 +1,0 @@
-globalvar Number cMarker = 4;
-
-rule: "P1 rule in c only"
-{
-    BigMessage(AllPlayers(), cMarker);
-}

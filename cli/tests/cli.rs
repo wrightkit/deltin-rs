@@ -44,9 +44,9 @@ fn help_exposes_task_oriented_surface_and_classifications() {
     assert!(help.contains("inspect"));
     assert!(help.contains("support"));
     assert!(help.contains("dev"));
-    assert!(help.contains("maintainer"));
     assert!(!help.contains("parse <"));
     assert!(!help.contains("matrix <"));
+    assert!(!help.contains("compatibility"));
 }
 
 #[test]
@@ -210,32 +210,6 @@ fn support_is_stable_and_matrix_remains_a_compatibility_alias() {
     let matrix = run(&["matrix", "--check"]);
     assert_eq!(matrix.status.code(), Some(0));
     assert!(String::from_utf8_lossy(&matrix.stdout).contains("support matrix valid"));
-}
-
-#[test]
-fn maintainer_compatibility_and_legacy_alias_preserve_report_schema() {
-    for args in [
-        vec!["maintainer", "compatibility", "--json"],
-        vec!["compatibility", "--json"],
-    ] {
-        let out = run(&args);
-        assert_eq!(
-            out.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-        let doc = json(&out.stdout);
-        assert_eq!(doc["schema"], 1);
-        assert!(doc["summary"]["matched"].is_number());
-        assert!(doc["summary"]["unexpected_regressions"].is_number());
-        let expected_exit = if doc["summary"]["unexpected_regressions"] == 0 {
-            0
-        } else {
-            1
-        };
-        assert_eq!(out.status.code(), Some(expected_exit));
-    }
 }
 
 #[test]

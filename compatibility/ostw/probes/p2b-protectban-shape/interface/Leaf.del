@@ -1,3 +1,0 @@
-import "../OSTWUtils/OnScreenText.del";
-
-globalvar Number leafMarker = 2;

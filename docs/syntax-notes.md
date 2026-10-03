@@ -333,5 +333,5 @@ syntax-level split observable in the codebase is:
   syntax, parsed by the same lexer in `LexerContextKind.Workshop` mode.
 
 No other dialect differences are observable; any claim of an "OSTW vs DeltinScript" syntax
-split beyond this is unsupported by the pinned evidence and should be treated as a question for
+split beyond this is unsupported by the pinned reference and should be treated as a question for
 the architect before encoding it in the parser.

@@ -1,1 +1,0 @@
-main.ostw: Error at 0, 7: The file '/workspace/compatibility/ostw/probes/p2a-simple-missing/ghost.del' does not exist.

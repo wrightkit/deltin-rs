@@ -294,6 +294,38 @@ fn parser_interpolated_string_parts() {
 }
 
 #[test]
+fn parser_interpolated_string_keeps_full_post_hole_text() {
+    // Spans are half-open byte ranges: the byte after a hole's `}` starts the
+    // next text part. Resuming at `close.end + 1` dropped that first char and
+    // panicked outright on multi-byte characters.
+    let text = "rule: \"\" {\n    define x = $'p{a}｜q{b}r';\n}\n";
+    let (ast, diags) = parse(text);
+    assert!(errors(&diags).is_empty(), "{:?}", errors(&diags));
+    if let ItemKind::Rule(r) = &ast.items[0].kind {
+        let stmts = match &r.body.kind {
+            StmtKind::Block(b) => &b.stmts,
+            _ => panic!(),
+        };
+        let StmtKind::Var(v) = &stmts[0].kind else {
+            panic!()
+        };
+        let Some((_, init)) = &v.init else { panic!() };
+        let ExprKind::StrInterp { parts, args } = &init.kind else {
+            panic!()
+        };
+        let texts: Vec<&str> = parts
+            .iter()
+            .filter_map(|part| match part {
+                deltin_rs::syntax::ast::InterpPart::Text(text) => Some(text.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(texts, ["p", "｜q", "r"]);
+        assert_eq!(args.len(), 2);
+    }
+}
+
+#[test]
 fn parser_generic_calls_vs_comparisons() {
     let cases: &[(&str, bool)] = &[
         ("rule: \"\" {\n    define a = None<Number>();\n}\n", false),
@@ -342,7 +374,7 @@ fn parser_doc_comments_associated() {
     assert_eq!(ast.doc_comments.len(), 2);
     // Doc comment precedes the declared item ids.
     assert_eq!(ast.doc_comments[0].0.start, 0);
-    assert!(ast.doc_comments[0].1 .0 > 0);
+    assert!(ast.doc_comments[0].1.seq > 0);
 }
 
 #[test]

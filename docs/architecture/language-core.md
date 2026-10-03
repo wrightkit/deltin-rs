@@ -6,7 +6,7 @@
 
 For the declared DEL/OSTW core-language surface, the established DeltinScript / OSTW implementation is the executable specification. Core behavior is presumptively in scope unless explicitly excluded as editor/integration functionality or demonstrated to be a non-contractual implementation artifact.
 
-The compatibility inventory, support matrix, corpus, reference probes, and real projects verify implementation completeness and observable compatibility. They do not decide feature-by-feature whether established core language behavior belongs in `deltin-rs`.
+The compatibility inventory, support matrix, corpus, and real projects verify implementation completeness and observable compatibility. They do not decide feature-by-feature whether established core language behavior belongs in `deltin-rs`.
 
 Upstream architecture is not a mandate. Understand the source-language behavior and implement it directly in clear Rust rather than mechanically translating upstream internals.
 
@@ -29,9 +29,9 @@ The Workshop-independent semantic path must remain useful without requiring comp
 
 Use typed Rust to express source-language behavior and invariants, including type/assignability rules, dispatch, capture/reference semantics, runtime lifetime/storage meaning, overload and argument binding, project resolution, and lowering decisions.
 
-Machine-readable inventory/support data is appropriate for capability identity, evidence links, support state, provenance, and other declarative facts. It is not the semantic specification and must not become an interpreted language that defines source behavior.
+Machine-readable inventory/support data is appropriate for capability identity, reference links, support state, provenance, and other declarative facts. It is not the semantic specification and must not become an interpreted language that defines source behavior.
 
-A corpus entry or support-matrix row proves evidence/support status; it does not authorize a semantic design or narrow the upstream core scope.
+A corpus entry or support-matrix row proves verification/support status; it does not authorize a semantic design or narrow the upstream core scope.
 
 ## Feature locality
 

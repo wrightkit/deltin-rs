@@ -52,7 +52,10 @@ pub fn parse(tokens: &[Token], file: FileId, text: &str) -> (AstFile, Vec<Diagno
 
 impl Parser<'_> {
     fn node(&mut self) -> NodeId {
-        let id = NodeId(self.next_node);
+        let id = NodeId {
+            file: self.file,
+            seq: self.next_node,
+        };
         self.next_node += 1;
         id
     }
@@ -2220,7 +2223,7 @@ impl Parser<'_> {
                     ));
                 }
                 args.push(self.parse_hole_expr(hole));
-                cursor = hole.close.end as usize + 1;
+                cursor = hole.close.end as usize;
             }
             if cursor < interior_end {
                 parts.push(InterpPart::Text(

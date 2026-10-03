@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::path::Path;
 
 pub const MATRIX_TOML: &str = include_str!("../docs/support-matrix.toml");
 
@@ -69,6 +68,7 @@ impl State {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MatrixMeta {
     pub upstream_repo: String,
     pub upstream_pin: String,
@@ -76,26 +76,22 @@ pub struct MatrixMeta {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MatrixEntry {
     pub id: String,
     pub name: String,
     pub category: Category,
     pub state: State,
-    pub evidence: Vec<String>,
     #[serde(default)]
     pub notes: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SupportMatrix {
     pub meta: MatrixMeta,
     #[serde(rename = "features")]
     pub entries: Vec<MatrixEntry>,
-}
-
-/// Root directory of the repository (for evidence-path checks).
-pub fn repo_root() -> &'static Path {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
 }
 
 /// Load the embedded matrix.
@@ -112,22 +108,9 @@ pub fn load_and_validate() -> Result<SupportMatrix, Vec<String>> {
     };
     let mut problems = Vec::new();
     let mut seen = HashSet::new();
-    let root = repo_root();
     for entry in &matrix.entries {
         if !seen.insert(entry.id.as_str()) {
             problems.push(format!("duplicate id: {}", entry.id));
-        }
-        if entry.evidence.is_empty() {
-            problems.push(format!("entry {} has no evidence", entry.id));
-        }
-        for path in &entry.evidence {
-            let p = root.join(path);
-            if !p.exists() {
-                problems.push(format!(
-                    "entry {}: evidence path does not exist: {path}",
-                    entry.id
-                ));
-            }
         }
         let requires_notes = matches!(entry.state, State::LoweringDependent | State::OutOfScope);
         if requires_notes && entry.notes.is_none() {
@@ -170,18 +153,5 @@ mod tests {
         let matrix = load_and_validate().expect("matrix must validate");
         assert!(!matrix.entries.is_empty());
         assert!(!matrix.meta.upstream_repo.is_empty());
-    }
-
-    #[test]
-    fn every_evidence_path_relative() {
-        let matrix = load().unwrap();
-        for e in &matrix.entries {
-            for p in &e.evidence {
-                assert!(
-                    !Path::new(p).is_absolute(),
-                    "evidence path must be repo-relative: {p}"
-                );
-            }
-        }
     }
 }

@@ -1,8 +1,0 @@
-import "c.ostw";
-
-globalvar Number bMarker = 3;
-
-rule: "P1 rule in b"
-{
-    BigMessage(AllPlayers(), bMarker + cMarker);
-}

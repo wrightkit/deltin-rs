@@ -13,20 +13,11 @@ Pinned on **2026-08-16** (UTC-05:00 local). Shallow clones (`--depth 1`) live un
 | OSTW / DeltinScript implementation (repo: `ItsDeltin/Overwatch-Script-To-Workshop`) | https://github.com/ItsDeltin/Overwatch-Script-To-Workshop | `817c1db4bace52123f054ffe10d3d8a06052e687` | 2026-08-08 | MIT (see below) |
 | OSTW wiki (documentation) | https://github.com/ItsDeltin/Overwatch-Script-To-Workshop.wiki | `e8894b972fae3fa9fd81dab0bb3672cc740a771e` | 2026-08-16 (clone head) | wiki content; see licensing note |
 
-The executable identity used for recorded observations is canonicalized in
-[`compatibility/ostw/reference.json`](../compatibility/ostw/reference.json):
-release `v3.4.0`, tag commit
-`769ce7aab097178cfe905bf21f0326d8e0d12e6b`, Linux x64 asset
-`v3.4.0-linux-x64.zip`, SHA-256
-`1ae882898961eac8ac25234a18fa3b130a02836651f7f936b9ece85f181e3a88`.
-The JSON record is the source of truth for the asset fields; this document
-describes their provenance and does not define a second pin.
-
-The complete evidence package was migrated from
-`wrightkit/wright/compatibility/ostw/` with corpus file hashes, probe results,
-reference identities, and explicit roots preserved. The old Wright copy remains
-only until the owner-cutover follow-up `wrightkit/wright#182` removes any
-consumer-required residue.
+For maintainer differential workflows, the pinned upstream executable is
+release `v3.4.0` (tag commit `769ce7aab097178cfe905bf21f0326d8e0d12e6b`,
+Linux x64 asset `v3.4.0-linux-x64.zip`, SHA-256
+`1ae882898961eac8ac25234a18fa3b130a02836651f7f936b9ece85f181e3a88`). The
+binary is fetched on demand and is neither committed nor a dependency.
 
 ### License detail
 
@@ -55,15 +46,18 @@ No other upstream clone failures. Both clones succeeded; commit SHAs above were 
 
 ## Licensing rules for the corpus
 
-- All fixtures under `tests/corpus/` are **imported under the upstream MIT license** with
-  attribution. Every `.del` fixture carries a header block:
+- Third-party-derived fixtures under `tests/corpus/` are imported under the
+  upstream MIT license with attribution. Each carries
   `// source: https://github.com/ItsDeltin/Overwatch-Script-To-Workshop/blob/<commit>/<path>`
-  and `// license: MIT`, plus an `// expect:` line (see `docs/syntax-notes.md` / `docs/inventory.md`
-  for the corpus conventions).
+  and `// license: MIT` header lines (see `docs/compatibility.md` for the
+  corpus conventions).
 - `tests/corpus/projects/*/*.json` and `*.pathmap` have no comment syntax; their provenance is
   recorded in the per-project `.manifest.md` files.
+- Vendored real projects under `tests/real-projects/` keep their upstream
+  `LICENSE` files in-tree.
+- WrightKit-authored fixtures carry no provenance headers.
 - The `docs/` files themselves are original deltin-rs analysis and are not copied upstream content,
-  but they quote small upstream examples for evidence. Quotes retain their `path@commit`
+  but they quote small upstream examples. Quotes retain their `path@commit`
   references.
 - Do not import additional upstream files into the corpus without updating this file and the
   fixture headers.
@@ -79,6 +73,7 @@ git -C .upstream-refs/ostw rev-parse HEAD
 git -C .upstream-refs/ostw-wiki rev-parse HEAD
 ```
 
-Then update this file, every fixture header, and the `support-matrix.toml` evidence pointers.
+Then update this file, every `// source:` fixture header, and the
+`support-matrix.toml` `meta.upstream_pin`.
 A re-pin is a deliberate compatibility-contract decision owned by the architect/PM, not an
 implementation detail.

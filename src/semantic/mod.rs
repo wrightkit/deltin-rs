@@ -180,8 +180,8 @@ impl<'a> Builder<'a> {
             for item in &out.ast.items {
                 if std::env::var("DEL_DEBUG").is_ok() {
                     eprintln!(
-                        "collect item {} kind={:?}",
-                        item.id.0,
+                        "collect item {:?} kind={:?}",
+                        item.id,
                         std::mem::discriminant(&item.kind)
                     );
                 }
