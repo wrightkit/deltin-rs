@@ -642,7 +642,7 @@ impl<'a> Classifier<'a> {
                 {
                     self.error(ReconstructError::at(
                         "reconstruct-dangling-subroutine",
-                        "subroutine",
+                        "danglingSubroutine",
                         format!(
                             "subroutine call '{subroutine}' does not reference a declared subroutine"
                         ),
@@ -862,7 +862,7 @@ impl<'a> Classifier<'a> {
                 {
                     self.error(ReconstructError::at(
                         "reconstruct-dangling-subroutine",
-                        "subroutine",
+                        "danglingSubroutine",
                         format!(
                             "subroutine value '{subroutine}' does not reference a declared subroutine"
                         ),
