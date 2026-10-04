@@ -7,7 +7,7 @@
 
 use crate::diagnostics::{error, Diagnostic, Phase};
 use crate::span::{FileId, Span};
-use crate::syntax::token::{InterpHole, StrForm, Token, TokenKind};
+use crate::syntax::token::{keyword, InterpHole, StrForm, Token, TokenKind};
 
 pub const MAX_LEX_ERRORS: usize = 200;
 
@@ -245,55 +245,7 @@ impl Lexer<'_> {
             }
         }
         let text = &self.text[begin..end];
-        match text {
-            "rule" => TokenKind::KwRule,
-            "define" => TokenKind::KwDefine,
-            "globalvar" => TokenKind::KwGlobalVar,
-            "playervar" => TokenKind::KwPlayerVar,
-            "if" => TokenKind::KwIf,
-            "else" => TokenKind::KwElse,
-            "for" => TokenKind::KwFor,
-            "foreach" => TokenKind::KwForeach,
-            "while" => TokenKind::KwWhile,
-            "switch" => TokenKind::KwSwitch,
-            "case" => TokenKind::KwCase,
-            "default" => TokenKind::KwDefault,
-            "break" => TokenKind::KwBreak,
-            "continue" => TokenKind::KwContinue,
-            "return" => TokenKind::KwReturn,
-            "class" => TokenKind::KwClass,
-            "struct" => TokenKind::KwStruct,
-            "enum" => TokenKind::KwEnum,
-            "constructor" => TokenKind::KwConstructor,
-            "new" => TokenKind::KwNew,
-            "delete" => TokenKind::KwDelete,
-            "in" => TokenKind::KwIn,
-            "ref" => TokenKind::KwRef,
-            "recursive" => TokenKind::KwRecursive,
-            "async" => TokenKind::KwAsync,
-            "const" => TokenKind::KwConst,
-            "import" => TokenKind::KwImport,
-            "as" => TokenKind::KwAs,
-            "is" => TokenKind::KwIs,
-            "public" => TokenKind::KwPublic,
-            "private" => TokenKind::KwPrivate,
-            "protected" => TokenKind::KwProtected,
-            "static" => TokenKind::KwStatic,
-            "virtual" => TokenKind::KwVirtual,
-            "override" => TokenKind::KwOverride,
-            "single" => TokenKind::KwSingle,
-            "this" => TokenKind::KwThis,
-            "root" => TokenKind::KwRoot,
-            "true" => TokenKind::KwTrue,
-            "false" => TokenKind::KwFalse,
-            "null" => TokenKind::KwNull,
-            "type" => TokenKind::KwType,
-            "disabled" => TokenKind::KwDisabled,
-            "persist" => TokenKind::KwPersist,
-            "void" => TokenKind::KwVoid,
-            "json" => TokenKind::KwJson,
-            _ => TokenKind::Ident,
-        }
+        keyword(text).unwrap_or(TokenKind::Ident)
     }
 
     fn string(

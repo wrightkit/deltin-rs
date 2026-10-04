@@ -25,10 +25,10 @@ rule("Reconstruction surface: action calls")
         Abort If(Compare(Global Variable(g), ==, 0));
         Set Invisible(Event Player, All);
         Set Gravity(Event Player, 1);
-        Set Allowed Heroes(Event Player, Array(Hero(Ana), Hero(Ana)));
-        Force Player Hero(Event Player, Hero(Ana));
-        Stop Forcing Hero(Event Player);
-        Force Throttle(Event Player, 1, 1, 1, 1, 1, 1);
+        Set Player Allowed Heroes(Event Player, Array(Hero(Ana), Hero(Ana)));
+        Start Forcing Player To Be Hero(Event Player, Hero(Ana));
+        Stop Forcing Player To Be Hero(Event Player);
+        Start Forcing Throttle(Event Player, 1, 1, 1, 1, 1, 1);
         Stop Forcing Throttle(Event Player);
         Teleport(Event Player, Vector(0, 0, 0));
         Start Camera(Event Player, Vector(0, 0, 0), Vector(1, 0, 0), 0);
@@ -56,6 +56,6 @@ rule("Reconstruction surface: action calls")
         Destroy Effect(Last Created Entity);
         Destroy All Progress Bar HUD Text;
         Destroy All Progress Bar In-World Text;
-        Stop Chasing Variable(Global Variable(g));
+        Stop Chasing Global Variable(Global Variable(g));
     }
 }
