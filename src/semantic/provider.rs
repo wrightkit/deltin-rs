@@ -185,14 +185,13 @@ impl CatalogProvider {
     fn resolve_entry(&self, kind: Kind, name: &str) -> Option<&CatalogEntry> {
         let canonical_name = if kind == Kind::Action {
             match name {
-                "ChaseVariableAtRate" => "chaseAtRate",
+                // These chase spellings are unbound in signature.rs and
+                // resolve directly to the canonical chase entries;
+                // player targets are normalized through the Program
+                // value's PlayerVariable shape.
                 "ChaseVariableOverTime" => "chaseOverTime",
-                // Both DEL chase spellings use the canonical chase action
-                // entry; resolved target semantics are represented by the
-                // WIR value (GlobalVariable vs PlayerVariable).
                 "ChasePlayerVariableAtRate" => "chaseAtRate",
                 "ChasePlayerVariableOverTime" => "chaseOverTime",
-                "StopChasingVariable" => "stopChasingVariable",
                 _ => name,
             }
         } else {
@@ -336,7 +335,7 @@ impl WorkshopProvider for CatalogProvider {
             self.resolve_entry(*kind, &query.name)
                 .map(|entry| (*kind, entry))
         }) {
-            if query.arity > entry.param_count() {
+            if query.arity > entry.param_count() && !entry.is_variadic() {
                 return ExternalResolution::DefiniteError(format!(
                     "Workshop {} '{}' accepts at most {} arguments, got {}",
                     kind.as_str(),

@@ -180,3 +180,13 @@ fn every_declared_binding_resolves_against_the_canonical_catalog() {
     }
     assert!(failures.is_empty(), "stale bindings: {failures:?}");
 }
+
+#[test]
+fn variadic_catalog_entries_accept_any_arity() {
+    let provider = CatalogProvider::new().expect("built-in catalog");
+    let result = provider.resolve(&query(&[], "Array", ExternalPosition::Value, 4));
+    let ExternalResolution::Known(ExternalBinding::Value(value)) = result else {
+        panic!("expected catalog-backed value binding, got {result:?}");
+    };
+    assert_eq!(value.canonical_id, "array");
+}
