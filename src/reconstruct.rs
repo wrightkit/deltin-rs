@@ -18,10 +18,11 @@ use crate::signature;
 ///
 /// The `code` is a stable machine-readable identifier; `kind` names the
 /// Workshop construct that is not representable on the declared reconstruction
-/// surface (the machine-readable boundary manifest under
-/// `tests/reconstruction-fixtures/support-boundary.json` uses the same
-/// spellings); `span` is the offending source region when the program carries
-/// one.
+/// surface (static kinds match the `rejected[]` spellings in the boundary
+/// manifest under `tests/reconstruction-fixtures/support-boundary.json`;
+/// prefixed kinds like `action:*`, `value:*`, `enum:*`, `modifyOp:*`, and
+/// `localized-string:*` carry the specific failing id); `span` is the
+/// offending source region when the program carries one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReconstructError {
     /// A stable machine-readable code, e.g. `reconstruct-unsupported-action`.
@@ -336,7 +337,7 @@ impl<'a> Classifier<'a> {
             if !declared.insert(name) {
                 self.error(ReconstructError::at(
                     "reconstruct-name-collision",
-                    "name-collision",
+                    "nameCollision",
                     format!(
                         "name '{name}' is declared more than once across the variable and \
                          subroutine tables; every bare reference would resolve to a single \
@@ -349,7 +350,7 @@ impl<'a> Classifier<'a> {
             if name == "Event" {
                 self.error(ReconstructError::at(
                     "reconstruct-name-collision",
-                    "name-collision",
+                    "nameCollision",
                     "name 'Event' collides with the `Event.<kind>` pseudo-namespace the \
                      emitter writes for each-player rule events; member references would \
                      resolve against the decl instead",
@@ -359,7 +360,7 @@ impl<'a> Classifier<'a> {
             if signature::builtin(name).is_some() {
                 self.error(ReconstructError::at(
                     "reconstruct-name-collision",
-                    "name-collision",
+                    "nameCollision",
                     format!(
                         "name '{name}' collides with the OSTW source name of a Workshop \
                          builtin; variable/subroutine references would be shadowed by the \
@@ -371,7 +372,7 @@ impl<'a> Classifier<'a> {
             if signature::enum_domain(name).is_some() {
                 self.error(ReconstructError::at(
                     "reconstruct-name-collision",
-                    "name-collision",
+                    "nameCollision",
                     format!(
                         "name '{name}' collides with an OSTW enum domain source name; \
                          member references would be shadowed by the source implementation's enum resolution"
@@ -397,17 +398,22 @@ impl<'a> Classifier<'a> {
                 *body_counts.entry(name.as_str()).or_default() += 1;
             }
         }
-        for (name, count) in body_counts {
-            if count > 1 {
-                self.error(ReconstructError::new(
-                    "reconstruct-unsupported-subroutine",
-                    "subroutine",
-                    format!(
-                        "subroutine '{name}' has {count} body rules; the reconstructed \
-                         function can carry only one"
-                    ),
-                ));
-            }
+        let mut duplicates: Vec<&str> = body_counts
+            .iter()
+            .filter(|(_, count)| **count > 1)
+            .map(|(name, _)| *name)
+            .collect();
+        duplicates.sort();
+        for name in duplicates {
+            let count = body_counts[name];
+            self.error(ReconstructError::new(
+                "reconstruct-unsupported-subroutine",
+                "subroutine",
+                format!(
+                    "subroutine '{name}' has {count} body rules; the reconstructed \
+                     function can carry only one"
+                ),
+            ));
         }
         for (index, subroutine) in self.program.subroutines.iter().enumerate() {
             let span = self.program.subroutine_name_span(index);
@@ -494,6 +500,9 @@ impl<'a> Classifier<'a> {
     fn check_rule(&mut self, rule: usize) {
         self.check_event(rule);
         let rule_ref = &self.program.rules[rule];
+        // The rule name emits inside a `rule: "..."` (or `void s() "..."`)
+        // header string, so the same literal constraint applies.
+        self.check_string_literal(&rule_ref.name, self.program.rule_span(rule));
         // Rule conditions must be two-operand comparison calls: the shared
         // Workshop emitter renders comparison conditions infix and renders
         // every other condition as `value == True`, so only comparison
@@ -591,6 +600,11 @@ impl<'a> Classifier<'a> {
                 self.check_value(value, span);
             }
             Action::SetPlayerVariable { player, value, .. } => {
+                // A non-Event-Player receiver cannot round-trip: the
+                // source implementation's assignment only recognizes a
+                // bare player variable (`p = v`), not a `(receiver).p`
+                // member target.
+                self.check_player_receiver(player, span);
                 self.check_value(player, span);
                 self.check_value(value, span);
             }
@@ -598,22 +612,9 @@ impl<'a> Classifier<'a> {
                 player, op, value, ..
             } => {
                 self.check_modify_op(*op, span);
-                // A non-Event-Player receiver cannot round-trip: the
-                // source implementation's augmented assignment only recognizes the
-                // Event Player receiver as a modify target (`p += v`), so a
-                // `(receiver).p += v` would lower to a Set with a binary
-                // value.
-                if !matches!(player, Value::EventPlayer) {
-                    self.error(ReconstructError::at(
-                        "reconstruct-unsupported-player-receiver",
-                        "playerModifyReceiver",
-                        "a player-variable modify with a non-Event-Player receiver is not \
-                         representable on the declared surface (the source implementation's augmented \
-                         assignment only recognizes the Event Player receiver as a modify \
-                         target)",
-                        span,
-                    ));
-                }
+                // Same constraint for the augmented-assignment form
+                // (`p += v` / `p.append(v)`).
+                self.check_player_receiver(player, span);
                 self.check_value(player, span);
                 self.check_value(value, span);
             }
@@ -727,6 +728,42 @@ impl<'a> Classifier<'a> {
         }
     }
 
+    /// String content is emitted verbatim inside `"..."`; the source
+    /// implementation does not decode `\` escapes, so a value containing
+    /// `"`, `\`, or a line/tab break cannot round-trip (it would either
+    /// fail to re-parse or re-read with literal backslashes).
+    fn check_string_literal(&mut self, text: &str, span: Option<Span>) {
+        if text
+            .chars()
+            .any(|c| matches!(c, '"' | '\\' | '\n' | '\r' | '\t'))
+        {
+            self.error(ReconstructError::at(
+                "reconstruct-unsupported-string",
+                "escapedString",
+                "a string containing a quote, backslash, or line/tab break is not \
+                 representable on the declared surface (the source implementation does \
+                 not decode `\\` escapes)",
+                span,
+            ));
+        }
+    }
+
+    /// A player-variable receiver must be `Event Player` to round-trip:
+    /// the emitter's `(receiver).name` spelling has no source form the
+    /// frontend can lower (member receivers are unsupported).
+    fn check_player_receiver(&mut self, player: &Value, span: Option<Span>) {
+        if !matches!(player, Value::EventPlayer) {
+            self.error(ReconstructError::at(
+                "reconstruct-unsupported-player-receiver",
+                "playerReceiver",
+                "a player-variable access with a non-Event-Player receiver is not \
+                 representable on the declared surface (the source implementation only \
+                 recognizes a bare player variable or the Event Player receiver)",
+                span,
+            ));
+        }
+    }
+
     fn check_modify_op(&mut self, op: ModifyOp, span: Option<Span>) {
         match op {
             ModifyOp::Add
@@ -773,7 +810,8 @@ impl<'a> Classifier<'a> {
                     ));
                 }
             }
-            Value::String(_) | Value::Bool(_) | Value::Null | Value::EventPlayer => {}
+            Value::String(text) => self.check_string_literal(text, span),
+            Value::Bool(_) | Value::Null | Value::EventPlayer => {}
             Value::LocalizedString(value) => {
                 self.error(ReconstructError::at(
                     "reconstruct-unsupported-localized-string",
@@ -811,7 +849,10 @@ impl<'a> Classifier<'a> {
                 }
             }
             Value::GlobalVariable(_) => {}
-            Value::PlayerVariable { player, .. } => self.check_value(player, span),
+            Value::PlayerVariable { player, .. } => {
+                self.check_player_receiver(player, span);
+                self.check_value(player, span);
+            }
             Value::Subroutine(subroutine) => {
                 if !self
                     .program
@@ -872,6 +913,9 @@ impl<'a> Classifier<'a> {
             }
             "customString" | "format" => {
                 let literal = matches!(args.first(), Some(Value::String(_)));
+                if let Some(first) = args.first() {
+                    self.check_value(first, span);
+                }
                 if !literal {
                     self.error(ReconstructError::at(
                         "reconstruct-unsupported-format-text",
@@ -980,11 +1024,7 @@ impl<'a> Emitter<'a> {
             let rule = &self.program.rules[rule_index];
             self.line(
                 0,
-                &format!(
-                    "void {}() \"{}\" {{",
-                    subroutine.name,
-                    escape_string(&rule.name)
-                ),
+                &format!("void {}() \"{}\" {{", subroutine.name, rule.name),
             );
             self.emit_actions(&rule.actions, 1);
             self.line(0, "}");
@@ -1001,9 +1041,9 @@ impl<'a> Emitter<'a> {
 
     fn emit_rule(&mut self, rule: &workshop_rs::Rule) {
         let mut header = if rule.disabled {
-            format!("disabled rule: \"{}\"", escape_string(&rule.name))
+            format!("disabled rule: \"{}\"", rule.name)
         } else {
-            format!("rule: \"{}\"", escape_string(&rule.name))
+            format!("rule: \"{}\"", rule.name)
         };
         match &rule.event {
             Event::Global => {}
@@ -1184,7 +1224,7 @@ impl<'a> Emitter<'a> {
     fn value(&self, value: &Value) -> String {
         match value {
             Value::Number(number) => format_number(*number),
-            Value::String(value) => format!("\"{}\"", escape_string(value)),
+            Value::String(value) => format!("\"{value}\""),
             Value::LocalizedString(_) => unreachable!("classified"),
             Value::Bool(true) => "true".to_string(),
             Value::Bool(false) => "false".to_string(),
@@ -1266,14 +1306,14 @@ impl<'a> Emitter<'a> {
                     _ => String::new(),
                 };
                 if args.len() == 1 {
-                    format!("<\"{}\">", escape_string(&text))
+                    format!("<\"{text}\">")
                 } else {
                     let rest = args[1..]
                         .iter()
                         .map(|arg| self.value(arg))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    format!("<\"{}\", {rest}>", escape_string(&text))
+                    format!("<\"{text}\", {rest}>")
                 }
             }
             _ => {
@@ -1329,23 +1369,6 @@ fn assign_op_spelling(op: ModifyOp) -> &'static str {
         ModifyOp::Modulo => "%=",
         _ => unreachable!("classified"),
     }
-}
-
-/// Escape a string for an OSTW string literal (the source implementation decodes exactly
-/// these escapes).
-fn escape_string(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for ch in value.chars() {
-        match ch {
-            '\\' => out.push_str("\\\\"),
-            '"' => out.push_str("\\\""),
-            '\n' => out.push_str("\\n"),
-            '\t' => out.push_str("\\t"),
-            '\r' => out.push_str("\\r"),
-            other => out.push(other),
-        }
-    }
-    out
 }
 
 #[cfg(test)]
@@ -1436,9 +1459,9 @@ mod tests {
             ("x.y", "invalidName"),
             ("5pct", "invalidName"),
             ("for", "invalidName"),
-            ("Event", "name-collision"),
-            ("SmallMessage", "name-collision"),
-            ("Team", "name-collision"),
+            ("Event", "nameCollision"),
+            ("SmallMessage", "nameCollision"),
+            ("Team", "nameCollision"),
         ] {
             let mut program = Program::new();
             program.global_variable(Variable::new(name));
@@ -1458,7 +1481,55 @@ mod tests {
         program.subroutine(workshop_rs::Subroutine::new("x"));
         let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
         assert!(
-            errors.iter().filter(|e| e.kind == "name-collision").count() >= 2,
+            errors.iter().filter(|e| e.kind == "nameCollision").count() >= 2,
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn rejects_non_event_player_receivers() {
+        let call = Value::Call {
+            name: "teamOf".to_string(),
+            args: vec![Value::EventPlayer],
+        };
+        let mut program = Program::new();
+        program.player_variable(Variable::new("p"));
+        program.global_variable(Variable::new("g"));
+        let mut rule = Rule::new("main", Event::EachPlayer);
+        rule.actions.push(Action::SetPlayerVariable {
+            player: call.clone(),
+            variable: "p".to_string(),
+            value: Value::Number(1.0),
+        });
+        rule.actions.push(Action::SetGlobalVariable {
+            variable: "g".to_string(),
+            value: Value::PlayerVariable {
+                player: Box::new(call),
+                variable: "p".to_string(),
+            },
+        });
+        program.rule(rule);
+        let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
+        assert!(
+            errors.iter().filter(|e| e.kind == "playerReceiver").count() >= 2,
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn rejects_strings_that_cannot_round_trip() {
+        let mut program = Program::new();
+        program.global_variable(Variable::new("g"));
+        let mut rule = Rule::new("say \"hi\"", Event::Global);
+        rule.actions.push(Action::SetGlobalVariable {
+            variable: "g".to_string(),
+            value: Value::String("a\\b".to_string()),
+        });
+        program.rule(rule);
+        let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
+        assert_eq!(
+            errors.iter().filter(|e| e.kind == "escapedString").count(),
+            2,
             "{errors:?}"
         );
     }
