@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "surface": "deltin-rs-ostw-reconstruct-v1",
-  "declared": "The fixture-verified Workshop surface reconstructed by deltin_rs::reconstruct (#125). The reconstructor converts validated WIR whose constructs lie on this surface into deterministic canonical OSTW that the native deltin-rs source implementation accepts; constructs outside the surface fail explicitly with structured diagnostics and no partial output.",
+  "declared": "The fixture-verified Workshop surface reconstructed by deltin_rs::reconstruct (#125). The reconstructor converts a validated workshop_rs::Program whose constructs lie on this surface into deterministic canonical OSTW that the native deltin-rs source implementation accepts; constructs outside the surface fail explicitly with structured diagnostics and no partial output.",
   "supported": {
     "valueKinds": [
       "number", "string", "bool", "null", "array", "vector", "enum",
@@ -75,8 +75,8 @@
     { "kind": "modifyOp:RemoveFromArrayByIndex", "code": "reconstruct-unsupported-modify-op", "reason": "Remove From Array By Index has no OSTW augmented-assignment form on the declared surface." },
     { "kind": "condition", "code": "reconstruct-unsupported-condition", "reason": "A rule condition that is not a two-operand comparison call would render as `value == True` in the shared Workshop emitter and cannot round-trip." },
     { "kind": "arity", "code": "reconstruct-arity", "reason": "A bound call supplying fewer or more arguments than the canonical catalog arity would be re-resolved by the frontend with default filling or rejected; full canonical arity is required for a byte-stable round trip." },
-    { "kind": "nameCollision", "code": "reconstruct-name-collision", "reason": "Variable/subroutine names colliding with builtin source names, enum domain source names, or each other (global vs player) would be shadowed by the frontend's resolution." },
-    { "kind": "emptyName", "code": "reconstruct-name-collision", "reason": "An empty variable/subroutine name is not a valid OSTW identifier." },
+    { "kind": "nameCollision", "code": "reconstruct-name-collision", "reason": "Variable/subroutine names colliding with builtin source names, enum domain source names, the `Event` pseudo-namespace, or each other (duplicate or cross-table declarations) would be shadowed by the frontend's resolution." },
+    { "kind": "invalidName", "code": "reconstruct-name-collision", "reason": "A variable/subroutine name that is empty, not a plain `[A-Za-z_][A-Za-z0-9_]*` identifier, or an OSTW keyword would produce a declaration the native parser rejects." },
     { "kind": "subroutine", "code": "reconstruct-unsupported-subroutine", "reason": "A subroutine without its single non-empty, condition-free body rule cannot round-trip (the Workshop emitter drops empty-action rules)." },
     { "kind": "playerModifyReceiver", "code": "reconstruct-unsupported-player-receiver", "reason": "A player-variable modify with a non-Event-Player receiver would lower back as a Set with a binary value, not a Modify." },
     { "kind": "formatText", "code": "reconstruct-unsupported-format-text", "reason": "A customString/format value whose text argument is not a string literal cannot be emitted as a `<\"...\">` format string." },

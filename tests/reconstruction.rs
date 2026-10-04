@@ -1,9 +1,10 @@
 //! Workshop -> OSTW reconstruction boundary contract.
 //!
-//! `tests/reconstruction-fixtures/support-boundary.json` declares the WIR
-//! surface `deltin_rs::reconstruct` accepts and names the fixtures that
-//! verify it. Positive fixtures must reconstruct to OSTW that the native
-//! parser accepts; reject fixtures must fail with structured errors.
+//! `tests/reconstruction-fixtures/support-boundary.json` declares the
+//! `workshop_rs::Program` surface `deltin_rs::reconstruct` accepts and
+//! names the fixtures that verify it. Positive fixtures must reconstruct
+//! to OSTW that the native parser accepts; reject fixtures must fail with
+//! structured errors.
 
 use deltin_rs::reconstruct::reconstruct;
 use deltin_rs::syntax::parse_source;

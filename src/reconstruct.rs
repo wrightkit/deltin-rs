@@ -71,7 +71,10 @@ impl std::error::Error for ReconstructError {}
 ///
 /// Returns `Err` with **every** structured rejection when any program
 /// construct lies outside the declared reconstruction surface (never partial
-/// output). The input must be a validated [`Program`].
+/// output). The input must be a validated [`Program`]. The declared surface
+/// is the canonical, full-arity model produced by the Workshop parser;
+/// DEL-lowered programs may carry elided optional arguments or player events
+/// that lie outside it and are rejected with structured errors.
 pub fn reconstruct(program: &Program, catalog: &Catalog) -> Result<String, Vec<ReconstructError>> {
     let diagnostics = Classifier::new(program, catalog).classify();
     if !diagnostics.is_empty() {
@@ -211,6 +214,17 @@ enum Flow {
     For,
 }
 
+/// Declared subroutine name → body rule index (last rule wins).
+fn subroutine_rule_index(program: &Program) -> HashMap<&str, usize> {
+    let mut map = HashMap::new();
+    for (index, rule) in program.rules.iter().enumerate() {
+        if let Event::Subroutine(name) = &rule.event {
+            map.insert(name.as_str(), index);
+        }
+    }
+    map
+}
+
 struct Classifier<'a> {
     program: &'a Program,
     catalog: &'a Catalog,
@@ -221,17 +235,11 @@ struct Classifier<'a> {
 
 impl<'a> Classifier<'a> {
     fn new(program: &'a Program, catalog: &'a Catalog) -> Self {
-        let mut subroutine_rules = HashMap::new();
-        for (index, rule) in program.rules.iter().enumerate() {
-            if let Event::Subroutine(name) = &rule.event {
-                subroutine_rules.insert(name.as_str(), index);
-            }
-        }
         Classifier {
             program,
             catalog,
             errors: Vec::new(),
-            subroutine_rules,
+            subroutine_rules: subroutine_rule_index(program),
         }
     }
 
@@ -260,40 +268,93 @@ impl<'a> Classifier<'a> {
         }
     }
 
-    /// Variable/subroutine names must be unambiguous OSTW identifiers: a
-    /// name that collides with a builtin source binding or an enum domain
-    /// source name would be shadowed by the source implementation's resolution (a global
-    /// and a player variable sharing a name would resolve to the global),
-    /// producing misleading source instead of a rejection.
+    /// Variable/subroutine names must round-trip as plain OSTW
+    /// identifiers: the native lexer only accepts `[A-Za-z_][A-Za-z0-9_]*`,
+    /// keywords and the `Event` pseudo-namespace are not usable
+    /// identifiers, and a name colliding with a builtin source binding or
+    /// enum domain source name could make emitted references resolve
+    /// differently than intended. The three declaration tables must also
+    /// be disjoint, so no bare reference is shadowed (a global and a
+    /// player variable sharing a name resolve to the global).
     fn check_names(&mut self) {
-        let mut names: Vec<(String, Option<Span>)> = Vec::new();
-        for (index, variable) in self.program.global_variables.iter().enumerate() {
-            names.push((
-                variable.name.clone(),
-                self.program.global_variable_name_span(index),
-            ));
-        }
-        for (index, variable) in self.program.player_variables.iter().enumerate() {
-            names.push((
-                variable.name.clone(),
-                self.program.player_variable_name_span(index),
-            ));
-        }
-        for (index, subroutine) in self.program.subroutines.iter().enumerate() {
-            names.push((
-                subroutine.name.clone(),
-                self.program.subroutine_name_span(index),
-            ));
-        }
-        for (name, span) in &names {
-            if name.is_empty() {
+        let mut names: Vec<(&str, Option<Span>)> = Vec::new();
+        names.extend(
+            self.program
+                .global_variables
+                .iter()
+                .enumerate()
+                .map(|(index, variable)| {
+                    (
+                        variable.name.as_str(),
+                        self.program.global_variable_name_span(index),
+                    )
+                }),
+        );
+        names.extend(
+            self.program
+                .player_variables
+                .iter()
+                .enumerate()
+                .map(|(index, variable)| {
+                    (
+                        variable.name.as_str(),
+                        self.program.player_variable_name_span(index),
+                    )
+                }),
+        );
+        names.extend(
+            self.program
+                .subroutines
+                .iter()
+                .enumerate()
+                .map(|(index, subroutine)| {
+                    (
+                        subroutine.name.as_str(),
+                        self.program.subroutine_name_span(index),
+                    )
+                }),
+        );
+        let mut declared = HashSet::new();
+        for &(name, span) in &names {
+            let valid_ident = name
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+                && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+            if !valid_ident || crate::syntax::token::keyword(name).is_some() {
                 self.error(ReconstructError::at(
                     "reconstruct-name-collision",
-                    "empty-name",
-                    "a variable or subroutine with an empty name is not representable in OSTW",
-                    *span,
+                    "invalidName",
+                    format!(
+                        "name '{name}' is not a valid OSTW identifier; the reconstructed \
+                         declaration would not re-parse"
+                    ),
+                    span,
                 ));
                 continue;
+            }
+            if !declared.insert(name) {
+                self.error(ReconstructError::at(
+                    "reconstruct-name-collision",
+                    "name-collision",
+                    format!(
+                        "name '{name}' is declared more than once across the variable and \
+                         subroutine tables; every bare reference would resolve to a single \
+                         decl, so the reconstructed source would be misleading"
+                    ),
+                    span,
+                ));
+                continue;
+            }
+            if name == "Event" {
+                self.error(ReconstructError::at(
+                    "reconstruct-name-collision",
+                    "name-collision",
+                    "name 'Event' collides with the `Event.<kind>` pseudo-namespace the \
+                     emitter writes for each-player rule events; member references would \
+                     resolve against the decl instead",
+                    span,
+                ));
             }
             if signature::builtin(name).is_some() {
                 self.error(ReconstructError::at(
@@ -304,7 +365,7 @@ impl<'a> Classifier<'a> {
                          builtin; variable/subroutine references would be shadowed by the \
                          source implementation's builtin resolution"
                     ),
-                    *span,
+                    span,
                 ));
             }
             if signature::enum_domain(name).is_some() {
@@ -315,31 +376,7 @@ impl<'a> Classifier<'a> {
                         "name '{name}' collides with an OSTW enum domain source name; \
                          member references would be shadowed by the source implementation's enum resolution"
                     ),
-                    *span,
-                ));
-            }
-        }
-        // A global and a player variable sharing a name resolve to the
-        // global in the source implementation; reject instead of emitting misleading
-        // source.
-        let globals: HashSet<&str> = self
-            .program
-            .global_variables
-            .iter()
-            .map(|variable| variable.name.as_str())
-            .collect();
-        for (index, variable) in self.program.player_variables.iter().enumerate() {
-            if globals.contains(variable.name.as_str()) {
-                self.error(ReconstructError::at(
-                    "reconstruct-name-collision",
-                    "name-collision",
-                    format!(
-                        "player variable '{}' shares its name with a global variable; the \
-                         source implementation resolves the bare name to the global, so the reconstructed \
-                         source would be misleading",
-                        variable.name
-                    ),
-                    self.program.player_variable_name_span(index),
+                    span,
                 ));
             }
         }
@@ -351,6 +388,27 @@ impl<'a> Classifier<'a> {
     /// (or with an empty one) would be dropped by the Workshop emitter
     /// (empty-action rules emit nothing), so they cannot round-trip.
     fn check_subroutines(&mut self) {
+        // A subroutine is emitted once from its single body rule; a second
+        // `Subroutine`-event rule for the same name would silently drop its
+        // actions, so reject the ambiguity.
+        let mut body_counts: HashMap<&str, usize> = HashMap::new();
+        for rule in self.program.rules.iter() {
+            if let Event::Subroutine(name) = &rule.event {
+                *body_counts.entry(name.as_str()).or_default() += 1;
+            }
+        }
+        for (name, count) in body_counts {
+            if count > 1 {
+                self.error(ReconstructError::new(
+                    "reconstruct-unsupported-subroutine",
+                    "subroutine",
+                    format!(
+                        "subroutine '{name}' has {count} body rules; the reconstructed \
+                         function can carry only one"
+                    ),
+                ));
+            }
+        }
         for (index, subroutine) in self.program.subroutines.iter().enumerate() {
             let span = self.program.subroutine_name_span(index);
             let Some(rule_index) = self.subroutine_rules.get(subroutine.name.as_str()).copied()
@@ -894,17 +952,11 @@ struct Emitter<'a> {
 
 impl<'a> Emitter<'a> {
     fn new(program: &'a Program, catalog: &'a Catalog) -> Self {
-        let mut subroutine_rules = HashMap::new();
-        for (index, rule) in program.rules.iter().enumerate() {
-            if let Event::Subroutine(name) = &rule.event {
-                subroutine_rules.insert(name.as_str(), index);
-            }
-        }
         Emitter {
             program,
             catalog,
             out: String::new(),
-            subroutine_rules,
+            subroutine_rules: subroutine_rule_index(program),
         }
     }
 
@@ -1036,20 +1088,7 @@ impl<'a> Emitter<'a> {
                 variable,
                 op,
                 value,
-            } => {
-                if *op == ModifyOp::AppendToArray {
-                    self.line(level, &format!("{variable}.append({});", self.value(value)));
-                } else {
-                    self.line(
-                        level,
-                        &format!(
-                            "{variable} {} {};",
-                            assign_op_spelling(*op),
-                            self.value(value)
-                        ),
-                    );
-                }
-            }
+            } => self.emit_modify(level, variable, *op, value),
             Action::SetPlayerVariable {
                 player,
                 variable,
@@ -1067,16 +1106,7 @@ impl<'a> Emitter<'a> {
                 op,
                 value,
                 ..
-            } => {
-                self.line(
-                    level,
-                    &format!(
-                        "{variable} {} {};",
-                        assign_op_spelling(*op),
-                        self.value(value)
-                    ),
-                );
-            }
+            } => self.emit_modify(level, variable, *op, value),
             Action::CallSubroutine { subroutine } => {
                 self.line(level, &format!("{subroutine}();"));
             }
@@ -1111,6 +1141,23 @@ impl<'a> Emitter<'a> {
                     self.line(level, &format!("{ostw}({args});"));
                 }
             }
+        }
+    }
+
+    /// Emit one `x op= v` modify (`x.append(v)` for `AppendToArray`,
+    /// which has no augmented-assignment form on the declared surface).
+    fn emit_modify(&mut self, level: usize, variable: &str, op: ModifyOp, value: &Value) {
+        if op == ModifyOp::AppendToArray {
+            self.line(level, &format!("{variable}.append({});", self.value(value)));
+        } else {
+            self.line(
+                level,
+                &format!(
+                    "{variable} {} {};",
+                    assign_op_spelling(op),
+                    self.value(value)
+                ),
+            );
         }
     }
 
@@ -1364,5 +1411,77 @@ mod tests {
         assert!(errors
             .iter()
             .any(|e| e.code == "reconstruct-unsupported-action" && e.kind == "controlFlow"));
+    }
+
+    #[test]
+    fn player_variable_append_emits_method_form() {
+        let mut program = Program::new();
+        program.player_variable(Variable::new("p"));
+        let mut rule = Rule::new("main", Event::EachPlayer);
+        rule.actions.push(Action::ModifyPlayerVariable {
+            player: Value::EventPlayer,
+            variable: "p".to_string(),
+            op: ModifyOp::AppendToArray,
+            value: Value::Number(1.0),
+        });
+        program.rule(rule);
+        let source = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap();
+        assert!(source.contains("p.append(1);"), "{source}");
+    }
+
+    #[test]
+    fn rejects_names_that_cannot_round_trip() {
+        for (name, kind) in [
+            ("player score", "invalidName"),
+            ("x.y", "invalidName"),
+            ("5pct", "invalidName"),
+            ("for", "invalidName"),
+            ("Event", "name-collision"),
+            ("SmallMessage", "name-collision"),
+            ("Team", "name-collision"),
+        ] {
+            let mut program = Program::new();
+            program.global_variable(Variable::new(name));
+            let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
+            assert!(
+                errors.iter().any(|e| e.kind == kind),
+                "name {name:?}: expected kind {kind}, got {errors:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_duplicate_and_cross_category_names() {
+        let mut program = Program::new();
+        program.global_variable(Variable::new("x"));
+        program.player_variable(Variable::new("x"));
+        program.subroutine(workshop_rs::Subroutine::new("x"));
+        let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
+        assert!(
+            errors.iter().filter(|e| e.kind == "name-collision").count() >= 2,
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn rejects_multiple_body_rules_for_one_subroutine() {
+        let mut program = Program::new();
+        program.subroutine(workshop_rs::Subroutine::new("s"));
+        for name in ["a", "b"] {
+            let mut rule = Rule::new(name, Event::Subroutine("s".to_string()));
+            rule.actions.push(Action::SetGlobalVariable {
+                variable: "g".to_string(),
+                value: Value::Number(1.0),
+            });
+            program.rule(rule);
+        }
+        program.global_variable(Variable::new("g"));
+        let errors = reconstruct(&program, &Catalog::builtin().unwrap()).unwrap_err();
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.code == "reconstruct-unsupported-subroutine"),
+            "{errors:?}"
+        );
     }
 }
