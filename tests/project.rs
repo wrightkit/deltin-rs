@@ -118,6 +118,37 @@ fn invalid_ds_toml_is_a_project_diagnostic_with_config_provenance() {
 }
 
 #[test]
+fn unreadable_import_target_reports_the_read_failure_not_a_missing_target() {
+    // deltin-rs#124: `missing.del` is absent (PJ002) while `sub.del` exists as
+    // a directory, so reading it fails without `NotFound` (PJ003).
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/project-fixtures/import-read-failure");
+    let project = load_project(ProjectOptions {
+        root,
+        entry: None,
+        config: None,
+    });
+
+    let missing = project
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == "PJ002")
+        .expect("absent import must be PJ002");
+    assert!(missing.message.contains("missing.del"));
+    assert_eq!(
+        project.sources.span_text(missing.primary),
+        "\"missing.del\""
+    );
+    let unreadable = project
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == "PJ003")
+        .expect("unreadable import must be PJ003");
+    assert!(unreadable.message.contains("sub.del"));
+    assert_eq!(project.diagnostics.len(), 2);
+}
+
+#[test]
 fn unreadable_ds_toml_uses_a_registered_config_source() {
     let root =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/project-fixtures/non-file-ds-toml");
