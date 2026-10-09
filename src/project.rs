@@ -241,12 +241,21 @@ impl Loader<'_> {
                 Ok(t) => t,
                 Err(e) => {
                     let span = importer_span.unwrap_or_else(|| Span::new(FileId(0), 0, 0));
-                    self.diagnostics.push(error(
-                        Phase::Project,
-                        "PJ002",
-                        span,
-                        format!("missing import target: {} ({e})", abs.display()),
-                    ));
+                    // A genuinely absent target is PJ002; any other read
+                    // failure keeps its real category as PJ003 (#124).
+                    let (code, message) = if e.kind() == ErrorKind::NotFound {
+                        (
+                            "PJ002",
+                            format!("missing import target: {} ({e})", abs.display()),
+                        )
+                    } else {
+                        (
+                            "PJ003",
+                            format!("failed to read file: {} ({e})", abs.display()),
+                        )
+                    };
+                    self.diagnostics
+                        .push(error(Phase::Project, code, span, message));
                     let id = self.sources.add_file(name, String::new());
                     self.by_canonical.insert(canonical.clone(), id);
                     return id;
