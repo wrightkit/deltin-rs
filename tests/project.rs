@@ -145,6 +145,7 @@ fn unreadable_import_target_reports_the_read_failure_not_a_missing_target() {
         .find(|diagnostic| diagnostic.code == "PJ003")
         .expect("unreadable import must be PJ003");
     assert!(unreadable.message.contains("sub.del"));
+    assert_eq!(project.sources.span_text(unreadable.primary), "\"sub.del\"");
     assert_eq!(project.diagnostics.len(), 2);
 }
 
