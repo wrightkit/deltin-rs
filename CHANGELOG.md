@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6](https://github.com/wrightkit/deltin-rs/compare/v0.1.5...v0.1.6) - 2026-10-09
+
+### Added
+
+- *(workshop)* lower DEL through canonical Program API ([#108](https://github.com/wrightkit/deltin-rs/pull/108))
+- *(workshop)* lower localized strings ([#105](https://github.com/wrightkit/deltin-rs/pull/105))
+
+### Fixed
+
+- *(project)* report unreadable import targets as PJ003, not missing
+
+### Other
+
+- *(project)* pin the import-site span for PJ003 too
+- adopt structural convergence for DEL/OSTW compilation ([#116](https://github.com/wrightkit/deltin-rs/pull/116))
+- enforce documentation synchronization ([#114](https://github.com/wrightkit/deltin-rs/pull/114))
+- decouple source bridge from Workshop arena ([#113](https://github.com/wrightkit/deltin-rs/pull/113))
+- establish DEL architecture ADR history ([#110](https://github.com/wrightkit/deltin-rs/pull/110))
+
 ## [0.1.5](https://github.com/wrightkit/deltin-rs/compare/v0.1.4...v0.1.5) - 2026-09-09
 
 ### Other
