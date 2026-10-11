@@ -29,6 +29,7 @@ metadata, support evidence, and integrations establish current reality.
 - [ADR-0002: DEL/OSTW core semantics and feature locality](0002-language-core-semantics.md)
 - [ADR-0003: DEL HIR and canonical Workshop ownership](0003-hir-workshop-boundary.md)
 - [ADR-0004: Domain-local semantic checker responsibilities](0004-semantic-checker-locality.md)
+- [ADR-0005: DEL runtime semantic-lowering compatibility](0005-del-runtime-semantic-lowering.md) (`Proposed`)
 
 ## Backfill classification
 
@@ -38,10 +39,11 @@ metadata, support evidence, and integrations establish current reality.
 | Backfilled ADR | #2–#7 and #89 language-core decisions | ADR-0002 records the stable core-scope, typed-behavior, declarative-facts, and locality decisions. |
 | Backfilled ADR | #6, #29, #30, #91 HIR and Workshop boundary | ADR-0003 records source-owned semantics and DEL-owned lowering into canonical Workshop. |
 | Backfilled ADR | #90/#92 semantic checker extraction | ADR-0004 records responsibility locality; it does not freeze file decomposition. |
+| Proposed ADR | #104 DEL runtime semantic-lowering compatibility | ADR-0005 records the proposed compatibility, evidence, readiness, and physical-ABI boundaries; acceptance still requires independent design ablation. |
 | Historical-log-covered / non-ADR detail | Q1–Q16 and bounded #31 lowering slices in [`decisions.md`](../decisions.md) | Retain the historical pointer and Git provenance; do not create one ADR per language rule or lowering slice. |
 | Externally owned boundary | Canonical Workshop `Program` API and public operations | Authority: [workshop-rs ADR-0008](https://github.com/wrightkit/workshop-rs/blob/main/docs/adr/0008-canonical-public-program-boundary.md); [workshop-rs #179](https://github.com/wrightkit/workshop-rs/issues/179) and [PR #185](https://github.com/wrightkit/workshop-rs/pull/185) are historical evidence for the decision's emergence. |
 | Externally owned | Canonical Workshop catalog, WIR, settings, localization, validation, and emission | These decisions belong to `workshop-rs`. |
-| Separate decision boundary | DEL runtime ABI and complete provenance/source-attachment contract | ADR-0003 does not decide either contract; if adopted, record a separate material decision. Historical evidence: [deltin-rs #104](https://github.com/wrightkit/deltin-rs/issues/104) and [#107](https://github.com/wrightkit/deltin-rs/issues/107). |
+| Separate decision boundary | Complete provenance/source-attachment contract | ADR-0003 and ADR-0005 do not decide this contract; if adopted, record a separate material decision. Historical evidence: [deltin-rs #107](https://github.com/wrightkit/deltin-rs/issues/107). |
 
 The current architecture documents remain the authority for present invariants.
 The ADR registry does not replace those contracts or the repository's evidence
