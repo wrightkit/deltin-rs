@@ -2,19 +2,19 @@
 //!
 //! This module owns ONLY genuinely OSTW-specific source binding/alias
 //! metadata: the OSTW source name -> canonical catalog identity mapping for
-//! the exercised builtin surface, and the OSTW source member name -> canonical
-//! catalog member id mapping per exercised enum domain. All canonical
+//! the bound builtin surface, and the OSTW source member name -> canonical
+//! catalog member id mapping per bound enum domain. All canonical
 //! Workshop parameter/spelling and enum domain/member data lives in the
 //! canonical catalog (`workshop-rs`); the
 //! semantic phase
 //! resolves builtins and enum domains through that catalog at the consume
-//! sites. No OSTW `Elements.json` or upstream compiler table is copied;
-//! every binding is exercised by the protect-ban reachable closure or a
-//! committed pinned-reference probe under `compatibility/ostw/probes/`.
+//! sites. No OSTW `Elements.json` or upstream compiler table is copied. The
+//! declared Workshop→OSTW boundary (`tests/reconstruction-fixtures/`) is
+//! verified against these tables by `tests/reconstruction.rs`.
 
 use workshop_rs::catalog::Kind;
 
-/// One exercised builtin binding: OSTW source name -> (kind, canonical catalog id).
+/// One bound builtin: OSTW source name -> (kind, canonical catalog id).
 pub const BUILTIN_BINDINGS: &[(&str, (Kind, &str))] = &[
     (
         "WorkshopSettingInteger",
@@ -171,7 +171,7 @@ pub const BUILTIN_BINDINGS: &[(&str, (Kind, &str))] = &[
     ("Teleport", (Kind::Action, "teleport")),
 ];
 
-/// Resolve an exercised Workshop builtin by its OSTW source name.
+/// Resolve a bound Workshop builtin by its OSTW source name.
 pub fn builtin(name: &str) -> Option<(Kind, &'static str)> {
     BUILTIN_BINDINGS
         .iter()
@@ -179,7 +179,7 @@ pub fn builtin(name: &str) -> Option<(Kind, &'static str)> {
         .map(|(_, binding)| *binding)
 }
 
-/// One exercised enum domain binding: the canonical catalog domain plus the
+/// One bound enum domain: the canonical catalog domain plus the
 /// OSTW source member name -> canonical catalog member id mapping.
 pub struct EnumDomainBinding {
     /// The canonical catalog domain name.
@@ -522,7 +522,7 @@ pub const ENUM_DOMAIN_BINDINGS: &[(&str, EnumDomainBinding)] = &[
     ),
 ];
 
-/// Resolve an exercised builtin enum domain by its OSTW source name.
+/// Resolve a bound builtin enum domain by its OSTW source name.
 pub fn enum_domain(name: &str) -> Option<&'static EnumDomainBinding> {
     ENUM_DOMAIN_BINDINGS
         .iter()

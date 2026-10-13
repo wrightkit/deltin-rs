@@ -1,2 +1,0 @@
-main.ostw: Error at 1, 17: The id 127 is already reserved in the global collection.
-main.ostw: Error at 4, 17: The id 3 is already reserved in the player collection.

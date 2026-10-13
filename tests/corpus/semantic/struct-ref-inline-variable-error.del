@@ -1,7 +1,6 @@
 // source: https://github.com/ItsDeltin/Overwatch-Script-To-Workshop/blob/817c1db4bace52123f054ffe10d3d8a06052e687/Deltinteger/Deltinteger.Tests/Semantics/SemanticsTest.cs
 // license: MIT
-// expect: unknown
-// status: known-gap
+// expect: ok
 // note: reclassified: upstream rejection stems from unknown-type rejection (TestStruct undeclared); del-rs provider contract treats unknown types as external (docs/decisions.md Q8) — ref-receiver checks require known struct types. Originally expected error: 'Functions that directly modify structs requires a mutable variable as the source'
 rule: "Test" {
     TestStruct test: { X: 0 };

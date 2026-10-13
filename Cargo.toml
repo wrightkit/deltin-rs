@@ -6,7 +6,7 @@ rust-version = "1.85"
 license = "MIT"
 description = "Workshop-independent OSTW/DeltinScript implementation: lexer, recoverable parser, project model, semantic analysis, typed HIR, and tooling APIs"
 repository = "https://github.com/wrightkit/deltin-rs"
-exclude = ["cli", "tests/fixtures/cli,source:case.del"]
+exclude = ["cli", "tests/fixtures/cli,source-case.del"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

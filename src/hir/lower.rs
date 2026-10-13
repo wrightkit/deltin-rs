@@ -314,8 +314,14 @@ impl Lowerer<'_> {
                             let fields: Vec<Type> =
                                 e.fields.iter().map(|ft| self.sem_type(ft)).collect();
                             let disc = e.discriminant.as_ref().map(|d| self.expr(d));
-                            self.hir.enums[eid as usize].members[idx].discriminant = disc;
-                            self.hir.enums[eid as usize].members[idx].fields = fields;
+                            // A decl with errors can still reach lowering;
+                            // bound the write instead of indexing past the
+                            // member list.
+                            if let Some(member) = self.hir.enums[eid as usize].members.get_mut(idx)
+                            {
+                                member.discriminant = disc;
+                                member.fields = fields;
+                            }
                             idx += 1;
                         }
                     }

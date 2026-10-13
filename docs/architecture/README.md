@@ -2,11 +2,11 @@
 
 This directory routes the **current** architecture contracts for `deltin-rs`.
 
-Use it for substantive implementation preflight. Keep these evidence classes separate:
+Use it for substantive implementation preflight. Keep these record classes separate:
 
 - documents here state current durable language/ownership contracts;
 - source, Cargo metadata, tests, corpus, project fixtures, and integrations establish current implementation reality;
-- `support-matrix.toml` and compatibility evidence record current evidenced support, not the definition of the DEL/OSTW core language;
+- `support-matrix.toml` and compatibility verification record current declared support, not the definition of the DEL/OSTW core language;
 - `docs/architecture.md` and `docs/decisions.md` are retained only as compatibility/history entry points for the earlier implementation baseline.
 
 ## Routing
@@ -15,9 +15,9 @@ Use it for substantive implementation preflight. Keep these evidence classes sep
 | --- | --- |
 | DEL/OSTW core scope, project/semantic ownership, typed implementation model | [`language-core.md`](language-core.md) |
 | Runtime/lowering boundary with canonical Workshop | [`workshop-boundary.md`](workshop-boundary.md) |
-| Current support evidence/state | [`../support-matrix.toml`](../support-matrix.toml), [`../compatibility.md`](../compatibility.md), corpus/real-project evidence |
+| Current support state | [`../support-matrix.toml`](../support-matrix.toml), [`../compatibility.md`](../compatibility.md), corpus/real-project tests |
 | Pinned upstream identity/provenance | [`../provenance.md`](../provenance.md) |
-| Syntax observations | [`../syntax-notes.md`](../syntax-notes.md), when consistent with upstream/current evidence |
+| Syntax observations | [`../syntax-notes.md`](../syntax-notes.md), when consistent with the pinned reference and current tests |
 | CLI contract | [`../cli.md`](../cli.md) |
 
 ## Decision history

@@ -42,8 +42,8 @@ The reverse direction starts with Workshop parsed by `workshop-rs` and uses
 - Workshop code generation: lowers DEL HIR into the canonical `workshop-rs`
   `Program` model with
   explicit error reporting for unsupported runtime behavior.
-- Verified compatibility: validated against corpus fixtures, oracle snapshots,
-  and differential tests.
+- Verified compatibility: validated by the corpus harness, vendored
+  real-project runs, and the reconstruction boundary tests.
 
 ## Compatibility
 
@@ -56,18 +56,18 @@ observable DeltinScript / OSTW semantics, not upstream compiler architecture.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Syntax & parsing | ✅ Supported | Recoverable parser with source/trivia evidence |
+| Syntax & parsing | ✅ Supported | Recoverable parser with source/trivia fidelity |
 | Projects & imports | ✅ Supported | Multi-file import resolution; project/compiler surfaces continue to expand |
 | Type checking | ✅ Supported | Scoping, overload resolution, access control |
 | Classes, structs & enums | ✅ Semantic support | High-level semantics exist; some concrete Workshop runtime lowering remains incomplete |
 | Inheritance / virtual dispatch | ✅ Semantic support | Concrete runtime lowering is still being closed |
-| Generics / lambdas / pattern matching / recursion | ✅ Semantic support | End-to-end Workshop behavior remains evidence-gated where applicable |
+| Generics / lambdas / pattern matching / recursion | ✅ Semantic support | End-to-end Workshop behavior remains lowering-gated where applicable |
 | Embedded Workshop / lobby data | 🟡 Partial | Canonical Workshop contracts are still being integrated |
 | Workshop builtins | 🟡 Partial | Canonical catalog binding exists; breadth and lowering continue to expand |
 | DEL/OSTW → Workshop compilation | 🟡 Partial | Core HIR→Program lowering exists; advanced runtime/project surfaces are incomplete |
-| Workshop → DEL/OSTW reconstruction | ⏳ Not yet | Will consume canonical `workshop-rs` semantics and remain owned by `deltin-rs` |
+| Workshop → DEL/OSTW reconstruction | ✅ Declared surface | `deltin_rs::reconstruct` converts in-boundary WIR to canonical OSTW; boundary verified by `tests/reconstruction.rs` |
 
-Exact implementation evidence lives in the
+Exact support state lives in the
 [machine-readable support matrix](docs/support-matrix.toml); see
 [`docs/compatibility.md`](docs/compatibility.md) for methodology and state
 meanings. The matrix records current support; it does not define which
@@ -86,7 +86,6 @@ deltin-rs support [--check] [--json]
 deltin-rs dev parse <file> [--json]
 deltin-rs dev hir <file-or-dir> [--json]
 deltin-rs completion <bash|zsh|fish|powershell>
-deltin-rs maintainer compatibility [--json]
 ```
 
 The standalone semantic/tooling path does not require Wright. Workshop-dependent
@@ -119,7 +118,7 @@ unit-test counts alone.
 
 ## Documentation
 
-Current architecture, compatibility/evidence, interfaces, provenance,
+Current architecture, compatibility verification, interfaces, provenance,
 limitations, and maintainer references are indexed in
 [`docs/README.md`](docs/README.md).
 

@@ -18,7 +18,7 @@ use crate::signature;
 /// The `code` is a stable machine-readable identifier; `kind` names the WIR
 /// construct that is not representable on the declared reconstruction
 /// surface (the machine-readable boundary manifest under
-/// `compatibility/ostw/reconstruction/support-boundary.json` uses the same
+/// `tests/reconstruction-fixtures/support-boundary.json` uses the same
 /// spellings); `span` is the offending source region when the WIR carries
 /// one.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,8 +115,8 @@ pub fn enum_ostw(domain: &str, member: &str) -> Option<(&'static str, &'static s
 }
 
 /// Every canonical catalog action id with an OSTW binding, in binding order
-/// (first binding wins for duplicated ids). Used by the boundary manifest
-/// conformance test.
+/// (first binding wins for duplicated ids). Checked against the boundary
+/// manifest by `tests/reconstruction.rs`.
 pub fn bound_action_ids() -> Vec<(&'static str, &'static str)> {
     let mut seen = HashSet::new();
     signature::BUILTIN_BINDINGS
@@ -131,8 +131,8 @@ pub fn bound_action_ids() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Every canonical catalog value id with an OSTW binding, in binding order
-/// (first binding wins for duplicated ids). Used by the boundary manifest
-/// conformance test.
+/// (first binding wins for duplicated ids). Checked against the boundary
+/// manifest by `tests/reconstruction.rs`.
 pub fn bound_value_ids() -> Vec<(&'static str, &'static str)> {
     let mut seen = HashSet::new();
     signature::BUILTIN_BINDINGS
@@ -158,8 +158,8 @@ pub struct EnumDomainBindingRev {
 }
 
 /// Every canonical catalog enum domain with an OSTW binding, with the
-/// (canonical member, OSTW member) mapping. Used by the boundary manifest
-/// conformance test.
+/// (canonical member, OSTW member) mapping. Checked against the boundary
+/// manifest by `tests/reconstruction.rs`.
 pub fn bound_enum_domains() -> Vec<EnumDomainBindingRev> {
     signature::ENUM_DOMAIN_BINDINGS
         .iter()

@@ -1,7 +1,6 @@
 // source: https://github.com/ItsDeltin/Overwatch-Script-To-Workshop/blob/817c1db4bace52123f054ffe10d3d8a06052e687/Deltinteger/Deltinteger/Modules/Debug Camera.del
 // license: MIT
 // expect: ok
-// evidence: pinned-oracle
 // note: file name matches the upstream module name; content unchanged
 define CameraSpeed: IsButtonHeld(EventPlayer(), Button.Ability1) ? 30 : 10;
 define ToggleKey: IsCommunicating(EventPlayer(), Communication.VoiceLineDown);

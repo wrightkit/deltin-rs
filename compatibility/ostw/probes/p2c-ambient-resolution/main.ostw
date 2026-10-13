@@ -1,8 +1,0 @@
-import "sub/a.ostw";
-
-globalvar Number marker = 1;
-
-rule: "P2 ambient resolution"
-{
-    BigMessage(AllPlayers(), "p2c");
-}

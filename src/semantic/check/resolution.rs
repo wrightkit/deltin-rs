@@ -1022,7 +1022,7 @@ impl Checker<'_> {
         if std::env::var("DEL_DEBUG").is_ok() {
             eprintln!(
                 "param_info for symbol {sid} decl={:?} file={}",
-                self.program.tables.symbol(sid).decl.0,
+                self.program.tables.symbol(sid).decl,
                 self.program.project.files.len()
             );
         }

@@ -57,6 +57,48 @@ fn lowering_preserves_spans() {
 }
 
 #[test]
+fn cross_file_enum_decls_do_not_collide() {
+    // NodeIds are per-file counters: two files whose decls land on the same
+    // sequence positions resolve to the same key in project-wide tables. The
+    // file identity must disambiguate them — a real project previously
+    // resolved one enum's decl to another's members and panicked.
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("deltin-rs-hir-xf-{}-{n}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    // Identical leading structure in both files puts their enum-name nodes on
+    // the same per-file sequence id.
+    std::fs::write(
+        dir.join("main.del"),
+        "import \"a.del\";\nimport \"b.del\";\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("a.del"), "enum EA { A, B, C }\n").unwrap();
+    std::fs::write(dir.join("b.del"), "enum EB { X, Y }\n").unwrap();
+    let p = load_project(ProjectOptions {
+        root: dir,
+        entry: Some(PathBuf::from("main.del")),
+        config: None,
+    });
+    let program = check_project(&p, &NoopProvider::new());
+    let (hir, diags) = lower(&program);
+    assert!(
+        !diags.iter().any(|d| d.is_error()),
+        "unexpected diagnostics: {diags:?}"
+    );
+    let member_count = |name: &str| {
+        hir.enums
+            .iter()
+            .find(|e| e.name == name)
+            .unwrap_or_else(|| panic!("enum {name} exists"))
+            .members
+            .len()
+    };
+    assert_eq!(member_count("EA"), 3);
+    assert_eq!(member_count("EB"), 2);
+}
+
+#[test]
 fn validation_catches_bad_break() {
     let text = "rule: \"\" {\n    break;\n}\n";
     let (hir, _) = pipeline(text);

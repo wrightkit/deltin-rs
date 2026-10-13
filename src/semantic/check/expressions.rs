@@ -452,7 +452,10 @@ impl Checker<'_> {
             name: format!("<anonymous struct {id}>"),
             kind: SymbolKind::Struct,
             span: Span::new(FileId(0), 0, 0),
-            decl: NodeId(0),
+            decl: NodeId {
+                file: FileId(0),
+                seq: 0,
+            },
             visibility: Visibility::Public,
             ty: Type::Struct(id),
             owner: None,

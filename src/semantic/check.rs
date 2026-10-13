@@ -81,11 +81,11 @@ impl<'a> Checker<'a> {
             })
             .map(|(n, s)| (*n, *s))
             .collect();
-        bodies.sort_by_key(|(n, _)| n.0);
+        bodies.sort_by_key(|(n, _)| (n.file.0, n.seq));
         for (body_node, scope) in bodies {
             let kind = self.program.tables.scope(scope).kind;
             if std::env::var("DEL_DEBUG").is_ok() {
-                eprintln!("check body {} kind={:?}", body_node.0, kind);
+                eprintln!("check body {:?} kind={:?}", body_node, kind);
             }
             self.scopes.push(scope);
             match kind {

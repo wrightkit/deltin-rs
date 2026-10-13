@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "surface": "deltin-rs-ostw-reconstruct-v1",
-  "declared": "The fixture-evidenced Workshop surface reconstructed by deltin_rs::reconstruct (#125). The reconstructor converts validated WIR whose constructs lie on this surface into deterministic canonical OSTW that the native deltin-rs source implementation accepts; constructs outside the surface fail explicitly with structured diagnostics and no partial output.",
+  "declared": "The fixture-verified Workshop surface reconstructed by deltin_rs::reconstruct (#125). The reconstructor converts validated WIR whose constructs lie on this surface into deterministic canonical OSTW that the native deltin-rs source implementation accepts; constructs outside the surface fail explicitly with structured diagnostics and no partial output.",
   "supported": {
     "valueKinds": [
       "number", "string", "bool", "null", "array", "vector", "enum",
@@ -80,7 +80,9 @@
     { "kind": "playerModifyReceiver", "code": "reconstruct-unsupported-player-receiver", "reason": "A player-variable modify with a non-Event-Player receiver would lower back as a Set with a binary value, not a Modify." },
     { "kind": "formatText", "code": "reconstruct-unsupported-format-text", "reason": "A customString/format value whose text argument is not a string literal cannot be emitted as a `<\"...\">` format string." },
     { "kind": "formatArg", "code": "reconstruct-unsupported-format-arg", "reason": "A strict-greater comparison inside a reconstructed format string would terminate the OSTW `<\"...\"` string." },
-    { "kind": "number", "code": "reconstruct-unsupported-number", "reason": "A number spelling outside the OSTW lexer's `[0-9]+(\\.[0-9]+)?` form cannot round-trip." }
+    { "kind": "number", "code": "reconstruct-unsupported-number", "reason": "A number spelling outside the OSTW lexer's `[0-9]+(\\.[0-9]+)?` form cannot round-trip." },
+    { "kind": "danglingSubroutine", "code": "reconstruct-dangling-subroutine", "reason": "A subroutine value that does not reference a declared subroutine cannot be emitted." },
+    { "kind": "localizedString", "code": "reconstruct-unsupported-localized-string", "reason": "Localized Workshop preset strings have no OSTW source representation." }
   ],
   "fixtures": {
     "positive": ["surface-basic", "surface-actions", "surface-values"],
@@ -89,9 +91,9 @@
   "notes": [
     "Variable-table identity (names, slots, player-vs-global placement) is outside the declared semantic comparison (the #119 normalization contract); the reconstructor emits `Any`-typed declarations and never recovers original types, indexes, comments, classes, macros, functions, or project structure. `Any` is the permissive universal OSTW type: the WIR carries no type information, and both the native frontend and the pinned v3.4.0 reference accept it.",
     "Arithmetic values (catalog ids add/subtract/multiply/divide) are emitted as the real OSTW infix operators `+ - * /` (the reference rejects callable `Add(...)` forms); the shared Workshop emitter canonicalizes them back to the catalog spellings, so the round trip is byte-stable.",
-    "The reconstructed `.append(value)` form for the Workshop Modify-Append-To-Array action is accepted by the native deltin-rs source implementation (the declared acceptance bar) but the pinned v3.4.0 reference rejects member-call methods (documented divergence; recorded in the optional oracle cross-check under the reference-only contract).",
-    "The reverse binding table in src/signature.rs contains additional emittable catalog ids beyond the declared surface (e.g. skip, emptyArray, appendToArray, removeFromArray, currentArrayElement, currentArrayIndex, createEffect, modifyGlobalVariable, mappedArray, sortedArray); they are emittable through the same reverse bindings but are not fixture-evidenced on the reconstruction path and are not part of this declared surface.",
+    "The reconstructed `.append(value)` form for the Workshop Modify-Append-To-Array action is accepted by the native deltin-rs source implementation (the declared acceptance bar) but the pinned v3.4.0 reference rejects member-call methods (documented divergence).",
+    "The reverse binding table in src/signature.rs contains additional emittable catalog ids beyond the declared surface (e.g. skip, emptyArray, appendToArray, removeFromArray, currentArrayElement, currentArrayIndex, createEffect, modifyGlobalVariable, mappedArray, sortedArray); they are emittable through the same reverse bindings but are not exercised by the reconstruction fixtures and are not part of this declared surface.",
     "Reconstructed OSTW always targets a single generated project root (ds.toml with entry_point plus main.ostw) inside the native frontend; no CLI/driver integration is added by #125.",
-    "The reconstruction fixtures and boundary are retained as owner-side evidence for the declared surface; the native reconstruction implementation has focused coverage in src/reconstruct.rs."
+    "The reconstruction fixtures and this boundary are consumed by tests/reconstruction.rs; the native reconstruction implementation has additional focused coverage in src/reconstruct.rs."
   ]
 }

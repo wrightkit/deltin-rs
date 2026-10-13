@@ -1,6 +1,0 @@
-{
-  "files": {
-    "ds.toml": "entry_point=\"main.ostw\"\n",
-    "main.ostw": "globalvar Number i = 0;\nglobalvar Number[] arr = [1, 2, 3];\nNumber pick(Number n): n == 1 ? 10 : 20;\nrule: \"r\" { for (i = 0; i < 3; 1) { i = i + 1; } }\nrule: \"f\" { foreach (Number x in arr) { i = x; } }\nrule: \"s\" { switch (i) { case 1: i = 5; break; case 2: case 3: i = 6; default: i = 7; } }\nrule: \"fn\" { i = pick(1); }\n"
-  }
-}
