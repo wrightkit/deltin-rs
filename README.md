@@ -2,8 +2,8 @@
 
 `deltin-rs` is a standalone Rust library and CLI for the DeltinScript / OSTW
 language for Overwatch Workshop. It parses and type-checks DeltinScript
-projects with no .NET runtime required, and is working toward full compilation
-to Workshop code.
+projects with no .NET runtime required, with partial compilation to Workshop
+code.
 
 ## Features
 
@@ -23,6 +23,11 @@ to Workshop code.
 
 Compiled output is intended to match the upstream OSTW compiler structurally.
 Per-feature evidence is in [`docs/support-matrix.toml`](docs/support-matrix.toml).
+
+Active DEL/OSTW feature development, including the remaining compilation and
+reconstruction work, is paused and is not on the current WrightKit execution
+lane; see the
+[planning decision on #1](https://github.com/wrightkit/deltin-rs/issues/1#issuecomment-5606584680).
 
 ## Install
 
