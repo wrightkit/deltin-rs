@@ -105,6 +105,61 @@ pub enum TokenKind {
     Eof,
 }
 
+/// The keyword token kind for a lexeme, or `None` when the lexeme is an
+/// ordinary identifier. Shared by the lexer and the OSTW reconstructor's
+/// name validation.
+pub(crate) fn keyword(text: &str) -> Option<TokenKind> {
+    Some(match text {
+        "rule" => TokenKind::KwRule,
+        "define" => TokenKind::KwDefine,
+        "globalvar" => TokenKind::KwGlobalVar,
+        "playervar" => TokenKind::KwPlayerVar,
+        "if" => TokenKind::KwIf,
+        "else" => TokenKind::KwElse,
+        "for" => TokenKind::KwFor,
+        "foreach" => TokenKind::KwForeach,
+        "while" => TokenKind::KwWhile,
+        "switch" => TokenKind::KwSwitch,
+        "case" => TokenKind::KwCase,
+        "default" => TokenKind::KwDefault,
+        "break" => TokenKind::KwBreak,
+        "continue" => TokenKind::KwContinue,
+        "return" => TokenKind::KwReturn,
+        "class" => TokenKind::KwClass,
+        "struct" => TokenKind::KwStruct,
+        "enum" => TokenKind::KwEnum,
+        "constructor" => TokenKind::KwConstructor,
+        "new" => TokenKind::KwNew,
+        "delete" => TokenKind::KwDelete,
+        "in" => TokenKind::KwIn,
+        "ref" => TokenKind::KwRef,
+        "recursive" => TokenKind::KwRecursive,
+        "async" => TokenKind::KwAsync,
+        "const" => TokenKind::KwConst,
+        "import" => TokenKind::KwImport,
+        "as" => TokenKind::KwAs,
+        "is" => TokenKind::KwIs,
+        "public" => TokenKind::KwPublic,
+        "private" => TokenKind::KwPrivate,
+        "protected" => TokenKind::KwProtected,
+        "static" => TokenKind::KwStatic,
+        "virtual" => TokenKind::KwVirtual,
+        "override" => TokenKind::KwOverride,
+        "single" => TokenKind::KwSingle,
+        "this" => TokenKind::KwThis,
+        "root" => TokenKind::KwRoot,
+        "true" => TokenKind::KwTrue,
+        "false" => TokenKind::KwFalse,
+        "null" => TokenKind::KwNull,
+        "type" => TokenKind::KwType,
+        "disabled" => TokenKind::KwDisabled,
+        "persist" => TokenKind::KwPersist,
+        "void" => TokenKind::KwVoid,
+        "json" => TokenKind::KwJson,
+        _ => return None,
+    })
+}
+
 impl TokenKind {
     pub fn is_trivia(&self) -> bool {
         matches!(

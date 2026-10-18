@@ -95,6 +95,7 @@ rule("Player variable surface")
     {
         Set Player Variable(Event Player, health, Add(Global Variable(counter), 1));
         Modify Player Variable(Event Player, health, Add, 1);
+        Modify Player Variable(Event Player, health, Append To Array, 7);
         Set Global Variable(g, Team Of(Event Player));
         Set Global Variable(g, Add((Event Player).health, 1));
         Abort;

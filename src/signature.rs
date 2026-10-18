@@ -108,9 +108,9 @@ pub const BUILTIN_BINDINGS: &[(&str, (Kind, &str))] = &[
     ("SetInvisible", (Kind::Action, "setInvisibility")),
     ("SetGravity", (Kind::Action, "setGravity")),
     ("SetAllowedHeroes", (Kind::Action, "setAllowedHeroes")),
-    ("ForcePlayerHero", (Kind::Action, "forcePlayerHero")),
-    ("StopForcingHero", (Kind::Action, "stopForcingHero")),
-    ("ForceThrottle", (Kind::Action, "forceThrottle")),
+    ("ForcePlayerHero", (Kind::Action, "startForcingHero")),
+    ("StopForcingHero", (Kind::Action, "stopForcingCurrentHero")),
+    ("ForceThrottle", (Kind::Action, "startForcingThrottle")),
     ("StopForcingThrottle", (Kind::Action, "stopForcingThrottle")),
     ("DisableGameModeHud", (Kind::Action, "disableGameModeHud")),
     (
@@ -163,7 +163,10 @@ pub const BUILTIN_BINDINGS: &[(&str, (Kind, &str))] = &[
         "DestroyAllProgressBarInWorldText",
         (Kind::Action, "destroyAllProgressBarInWorldText"),
     ),
-    ("StopChasingVariable", (Kind::Action, "stopChasingVariable")),
+    (
+        "StopChasingVariable",
+        (Kind::Action, "stopChasingGlobalVariable"),
+    ),
     // The generic OSTW chase spelling is lowered to the canonical chase
     // family; workshop-rs emits the global/player spelling from the variable
     // value shape.

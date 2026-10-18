@@ -287,22 +287,14 @@ impl<'a> Lowerer<'a> {
             }
         }
         if !global_actions.is_empty() {
-            self.out.rule(Rule {
-                name: "Initialize Global Variables".to_string(),
-                disabled: false,
-                event: Event::Global,
-                conditions: Vec::new(),
-                actions: global_actions,
-            });
+            let mut init = Rule::new("Initialize Global Variables", Event::Global);
+            init.actions = global_actions;
+            self.out.rule(init);
         }
         if !player_actions.is_empty() {
-            self.out.rule(Rule {
-                name: "Initialize Player Variables".to_string(),
-                disabled: false,
-                event: Event::EachPlayer,
-                conditions: Vec::new(),
-                actions: player_actions,
-            });
+            let mut init = Rule::new("Initialize Player Variables", Event::EachPlayer);
+            init.actions = player_actions;
+            self.out.rule(init);
         }
     }
 
@@ -345,13 +337,11 @@ impl<'a> Lowerer<'a> {
             self.rule_local_globals.clear();
             return;
         }
-        self.out.rule(Rule {
-            name: rule.name.clone().unwrap_or_default(),
-            disabled: rule.disabled,
-            event,
-            conditions,
-            actions,
-        });
+        let mut lowered = Rule::new(rule.name.clone().unwrap_or_default(), event);
+        lowered.disabled = rule.disabled;
+        lowered.conditions = conditions;
+        lowered.actions = actions;
+        self.out.rule(lowered);
         self.player_context = previous_player_context;
         self.rule_local_globals.clear();
     }
@@ -384,16 +374,14 @@ impl<'a> Lowerer<'a> {
             self.subroutine_context = previous_subroutine_context;
             return;
         };
-        self.out.rule(Rule {
-            name: func
-                .subroutine_name
+        let mut lowered = Rule::new(
+            func.subroutine_name
                 .clone()
                 .unwrap_or_else(|| func.name.clone()),
-            disabled: false,
-            event: Event::Subroutine(subroutine),
-            conditions: Vec::new(),
-            actions,
-        });
+            Event::Subroutine(subroutine),
+        );
+        lowered.actions = actions;
+        self.out.rule(lowered);
         self.player_context = previous_player_context;
         self.recursive_context = previous_recursive_context;
         self.subroutine_context = previous_subroutine_context;
@@ -1782,18 +1770,21 @@ impl<'a> Lowerer<'a> {
             );
             return None;
         }
-        if player && matches!(name, "StopChasingVariable" | "StopChasingPlayerVariable") {
-            self.unsupported(
-                span,
-                "canonical player stop-chase action is unavailable in the released Workshop catalog",
-            );
-            return None;
-        }
         let mut info = info;
         info.canonical_id = match name {
+            // The canonical chase actions normalize player-variable targets
+            // through the argument's `PlayerVariable` value shape, so both
+            // spellings lower to the same ids.
             "ChaseVariableAtRate" | "ChasePlayerVariableAtRate" => "chaseAtRate",
             "ChaseVariableOverTime" | "ChasePlayerVariableOverTime" => "chaseOverTime",
-            "StopChasingVariable" | "StopChasingPlayerVariable" => "stopChasingVariable",
+            // The canonical catalog splits stop-chase by variable kind.
+            "StopChasingVariable" | "StopChasingPlayerVariable" => {
+                if player {
+                    "stopChasingPlayerVariable"
+                } else {
+                    "stopChasingGlobalVariable"
+                }
+            }
             _ => info.canonical_id.as_str(),
         }
         .to_string();
@@ -2209,10 +2200,9 @@ impl<'a> Lowerer<'a> {
                 );
                 return Err(());
             };
-            let mut args = Vec::with_capacity(entry.params.len());
-            for (index, parameter) in entry.params.iter().enumerate() {
-                let Some(default) = entry.param_defaults.get(index).and_then(Option::as_deref)
-                else {
+            let mut args = Vec::with_capacity(entry.param_count());
+            for (index, parameter) in entry.params().iter().enumerate() {
+                let Some(default) = entry.param_default(index) else {
                     self.unsupported(
                         span,
                         format!(

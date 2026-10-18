@@ -1022,7 +1022,7 @@ rule: "player-target" Event.OngoingPlayer {
         .find(|rule| rule.name == "player-target")
         .unwrap();
     for (rule, expected) in [
-        (global, ["chaseAtRate", "stopChasingVariable"]),
+        (global, ["chaseAtRate", "stopChasingGlobalVariable"]),
         (player, ["chaseAtRate", ""]),
     ] {
         assert_eq!(
@@ -1069,21 +1069,33 @@ rule: "dynamic-target" Event.OngoingGlobal {
 }
 
 #[test]
-fn player_stop_chase_remains_a_canonical_catalog_gap() {
+fn player_stop_chase_lowers_to_the_canonical_player_form() {
     let (program, diagnostics) = lower(
         r#"
 playervar Number target;
 rule: "player-stop" Event.OngoingPlayer { StopChasingVariable(target); }
 "#,
     );
-    assert!(program.rules.is_empty());
     assert!(
-        diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == "HI018"
-                && diagnostic
-                    .message
-                    .contains("player stop-chase action is unavailable")
-        }),
+        diagnostics.iter().all(|diagnostic| !diagnostic.is_error()),
         "{diagnostics:?}"
     );
+    let rule = program
+        .rules
+        .iter()
+        .find(|rule| rule.name == "player-stop")
+        .unwrap();
+    let workshop_rs::Action::Call { name, args } = &rule.actions[0] else {
+        panic!("expected canonical action")
+    };
+    assert_eq!(name, "stopChasingPlayerVariable");
+    assert!(matches!(
+        args.as_slice(),
+        [workshop_rs::Value::PlayerVariable { .. }]
+    ));
+    let catalog = workshop_rs::catalog::Catalog::builtin().unwrap();
+    let locale = workshop_rs::catalog::Locale::new("en-US");
+    let emitted = workshop_rs::emitter::emit(&program, &catalog, &locale).unwrap();
+    let reparsed = workshop_rs::parser::parse(&emitted, &catalog, &locale).unwrap();
+    assert!(workshop_rs::roundtrip::equivalent(&program, &reparsed));
 }
