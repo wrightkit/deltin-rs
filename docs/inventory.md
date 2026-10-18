@@ -1,15 +1,18 @@
 # OSTW / DeltinScript feature inventory
 
-This inventory defines the declared compatibility surface of `deltin-rs` as of the pinned
-upstream references (see [provenance.md](provenance.md)):
+This inventory records feature observations from the pinned upstream references
+(see [provenance.md](provenance.md)). It is investigation/reference material, not
+the declared DEL/OSTW compatibility scope or a database of current support:
 
 - **ostw** = `.upstream-refs/ostw` @ `817c1db4bace52123f054ffe10d3d8a06052e687`
   (https://github.com/ItsDeltin/Overwatch-Script-To-Workshop)
 - **wiki** = `.upstream-refs/ostw-wiki` @ `e8894b972fae3fa9fd81dab0bb3672cc740a771e`
 
-Every entry names its upstream evidence location (`path@commit`, `wiki/<page>`). Entries are
-the contract: anything not listed here is not a deltin-rs compatibility requirement. Upstream
-internals are only relevant where observable behavior requires them (per issue #2 non-goals).
+Every entry names the upstream location that motivated the observation
+(`path@commit`, `wiki/<page>`). Current language scope is defined by the
+architecture contract, while implementation support is established by executable
+tests and current code. Upstream internals are relevant only where observable
+behavior requires them.
 
 File extensions accepted as OSTW source upstream: `.del`, `.ostw`, `.workshop`
 (`wiki/Getting-Started`).
