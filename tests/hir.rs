@@ -51,7 +51,6 @@ fn lowering_preserves_spans() {
     let (hir, diags) = pipeline(text);
     assert!(!diags.iter().any(|d| d.is_error()));
     for e in &hir.exprs {
-        // Spans must be within a plausible range for this file.
         assert!(e.span.end <= 1000);
     }
 }

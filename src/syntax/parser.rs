@@ -2252,7 +2252,6 @@ impl Parser<'_> {
         e
     }
 
-    /// Wrap a string token into an `Expr` (for rule names, import paths, ...).
     fn str_expr(&mut self, t: Token) -> Expr {
         let id = self.node();
         let span = t.span;

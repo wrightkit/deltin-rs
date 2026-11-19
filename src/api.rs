@@ -95,7 +95,6 @@ pub fn resolution_at(program: &SemanticProgram, file: FileId, offset: u32) -> Op
     program.resolution.get(&node).cloned()
 }
 
-/// Innermost expression node covering the offset (deepest span wins).
 fn expr_node_at(
     program: &SemanticProgram,
     file: FileId,

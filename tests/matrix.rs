@@ -10,8 +10,6 @@ fn matrix_validates() {
         matrix.meta.upstream_pin.len() >= 7,
         "upstream pin must be a commit"
     );
-    // Sanity: no duplicate ids and every id non-empty (validated upstream, but
-    // keep the check here as a belt-and-suspenders for CI output clarity).
     let mut seen = std::collections::HashSet::new();
     for e in &matrix.entries {
         assert!(seen.insert(&e.id), "duplicate matrix id {}", e.id);
