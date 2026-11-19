@@ -58,9 +58,7 @@ fn lexer_recovery_codes() {
             "expected {code} for {text:?}, got {:?}",
             diags.iter().map(|d| d.code.clone()).collect::<Vec<_>>()
         );
-        // Recovery never panics and always terminates with Eof.
         assert_eq!(tokens.last().unwrap().kind, deltin_rs::TokenKind::Eof);
-        // Error tokens are never merged into valid ones (LX001/LX004 cases).
         if code == "LX001" || code == "LX004" {
             assert!(tokens.iter().any(|t| t.kind == deltin_rs::TokenKind::Error));
         }
@@ -240,7 +238,6 @@ fn parser_recovers_on_garbage() {
     let text = "rule: \"x\" {\n    define a = ;;;;\n    junk @ here\n    define b = 1;\n}\n";
     let (ast, diags) = parse(text);
     assert!(!errors(&diags).is_empty());
-    // Partial tree survives; zero panics is the contract.
     assert!(!ast.items.is_empty());
 }
 
@@ -340,7 +337,6 @@ fn parser_doc_comments_associated() {
     let (ast, diags) = parse(text);
     assert!(errors(&diags).is_empty());
     assert_eq!(ast.doc_comments.len(), 2);
-    // Doc comment precedes the declared item ids.
     assert_eq!(ast.doc_comments[0].0.start, 0);
     assert!(ast.doc_comments[0].1 .0 > 0);
 }

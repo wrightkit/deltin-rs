@@ -112,7 +112,6 @@ impl<'a> Checker<'a> {
                     .map(|sid| self.program.tables.symbol(*sid).ty.clone())
                     .unwrap_or(Type::Any);
                 self.check_expr_with_hint(&init_expr, declared);
-                // `define` inference for top-level variables.
                 if let Some(&sid) = self.program.init_symbols.get(&nid) {
                     let sym = self.program.tables.symbol(sid);
                     if sym.ty == Type::Any {

@@ -363,7 +363,6 @@ impl Parser<'_> {
         };
         let name = self.str_expr(name_tok);
 
-        // Optional sort order: [Number] or [- Number].
         let mut sort_order = None;
         if self.at(TokenKind::Int)
             || self.at(TokenKind::Real)
@@ -386,7 +385,6 @@ impl Parser<'_> {
             }
         }
 
-        // Conditions: [disabled] if (expr)
         let mut conditions = Vec::new();
         loop {
             let disabled_cond = self.at(TokenKind::KwDisabled);
@@ -483,7 +481,6 @@ impl Parser<'_> {
     }
 
     fn parse_hook_item(&mut self) -> ItemKind {
-        // Parse the target without consuming the '=' as an assignment.
         let target = self.parse_binary(2);
         self.expect(TokenKind::Eq, "'='");
         let value = self.parse_expr();
@@ -629,7 +626,6 @@ impl Parser<'_> {
             self.consume();
             let params = self.parse_params();
             self.expect(TokenKind::RParen, "')'");
-            // Optional subroutine name: [Str] or [playervar/globalvar Str].
             let mut subroutine = None;
             if self.at(TokenKind::Str) {
                 let t = self.consume();
@@ -725,12 +721,10 @@ impl Parser<'_> {
         } else if self.at(TokenKind::Bang) {
             self.consume();
             extended = true;
-            // Vanilla target: !"a" / !{"a", "b"}
             if self.at(TokenKind::Str) || self.at(TokenKind::LBrace) {
                 target = Some(self.capture_target_span());
             }
         } else if self.at(TokenKind::LBrace) {
-            // Vanilla target: {'checkpoint_reached'}
             target = Some(self.capture_target_span());
         }
         (var_id, extended, target)
@@ -1384,7 +1378,6 @@ impl Parser<'_> {
         if self.at(TokenKind::LBracket) {
             self.consume();
             if self.at(TokenKind::DotDot) {
-                // [..] spread indexer — opaque.
                 self.consume();
                 self.expect(TokenKind::RBracket, "']'");
             } else {
@@ -1559,7 +1552,6 @@ impl Parser<'_> {
     }
 
     fn parse_single_struct_value(&mut self) -> Expr {
-        // `single { value }` — single-valued struct literal.
         let single_tok = self.at(TokenKind::KwSingle);
         if single_tok {
             self.consume();

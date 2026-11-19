@@ -136,7 +136,6 @@ Number classify(Number v) {
     let (hir, diags) = pipeline(text);
     assert!(!diags.iter().any(|d| d.is_error()), "{:?}", diags);
     let fid = find_func(&hir, "classify");
-    // Fallthrough: case 1 runs then falls into case 2 (out = 3).
     let result = run_oracle(
         &hir,
         OracleEntry {

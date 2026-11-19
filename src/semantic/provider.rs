@@ -321,9 +321,6 @@ impl WorkshopProvider for CatalogProvider {
         }
 
         let kinds: &[Kind] = match query.position {
-            // Type queries return from the enum-domain branch above; this
-            // arm only keeps the match exhaustive without consulting
-            // `Kind::Enum` entries.
             ExternalPosition::Type => &[],
             ExternalPosition::Action => &[Kind::Action],
             ExternalPosition::Event => &[Kind::Event],
