@@ -74,7 +74,6 @@ fn run_case(path: &Path, text: &str, expect: Expect) -> CaseResult {
     let out = parse_source(id, text);
     let parse_errors = out.diagnostics.iter().filter(|d| d.is_error()).count();
 
-    // Semantic + HIR stages.
     let mut semantic_errors = 0usize;
     let mut hir_errors = 0usize;
     if parse_errors == 0 {
@@ -202,7 +201,6 @@ fn corpus_parse_harness() {
 
 #[test]
 fn project_fixtures_load() {
-    // The projects/ fixtures are exercised as projects: entry loads imports.
     for (name, entry) in [
         ("modules", "PathfindEditor.del"),
         ("pathfinding", "Pathfinding.del"),

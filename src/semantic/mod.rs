@@ -745,7 +745,6 @@ impl<'a> Builder<'a> {
         }
     }
 
-    /// Project-wide lookup for a function/macro by name.
     fn project_function(&self, name: &str) -> Option<SymbolId> {
         for scope in &self.tables.scopes {
             if matches!(scope.kind, ScopeKind::File | ScopeKind::Project) {
@@ -887,7 +886,6 @@ impl<'a> Builder<'a> {
         self.node_scopes.get(&nid).copied().unwrap_or(fallback)
     }
 
-    /// The scope of a type symbol (its type-parameter scope).
     fn type_scope_of(&self, tid: SymbolId) -> ScopeId {
         let decl = self.tables.symbol(tid).decl;
         self.node_scopes

@@ -46,7 +46,6 @@ fn basic_program_resolves() {
     let (diags, program) =
         check("globalvar Number x = 5;\nrule: \"\" {\n    define y = x + 1;\n}\n");
     assert!(codes(&diags).is_empty(), "{:?}", codes(&diags));
-    // x and y resolve as symbols with Number types.
     let x = program
         .tables
         .symbols
@@ -148,7 +147,6 @@ fn this_outside_class_sm004() {
 
 #[test]
 fn diagnostics_have_provenance() {
-    // `this` outside an instance context is a definite semantic error.
     let (diags, _) = check("rule: \"\" {\n    define x = this;\n}\n");
     assert!(!diags.is_empty());
     assert!(has_code(&diags, "SM004"));

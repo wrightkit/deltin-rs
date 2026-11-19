@@ -1037,7 +1037,6 @@ impl<'a> Emitter<'a> {
         self.value(value)
     }
 
-    /// Render one value as an OSTW expression.
     fn value(&self, id: ValueId) -> String {
         let node = self.program.values.get(id).expect("classified");
         match &node.value {
@@ -1083,8 +1082,6 @@ impl<'a> Emitter<'a> {
         }
     }
 
-    /// Render a value call using the OSTW source form that re-lowers to the
-    /// same canonical catalog identity.
     fn value_call(&self, name: &str, args: &[ValueId]) -> String {
         if is_comparison_op(name) {
             return format!("{} {name} {}", self.operand(args[0]), self.operand(args[1]));
@@ -1146,8 +1143,6 @@ impl<'a> Emitter<'a> {
         }
     }
 
-    /// Render an operand of an infix/ternary operator: parenthesized when it
-    /// is itself an operator expression, so the parsed tree is unambiguous.
     fn operand(&self, id: ValueId) -> String {
         let text = self.value(id);
         let needs_parens = matches!(
@@ -1220,8 +1215,6 @@ fn assign_op_spelling(op: ModifyOp) -> &'static str {
     }
 }
 
-/// Escape a string for an OSTW string literal (the source implementation decodes exactly
-/// these escapes).
 fn escape_string(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for ch in value.chars() {

@@ -185,7 +185,6 @@ mod tests {
         assert_eq!(map.get(id).line_col(4), LineCol { line: 2, col: 1 });
         assert_eq!(map.get(id).line_col(6), LineCol { line: 2, col: 3 });
         assert_eq!(map.get(id).line_col(8), LineCol { line: 3, col: 1 });
-        // Out-of-range clamps to EOF.
         assert_eq!(map.get(id).line_col(99), LineCol { line: 3, col: 2 });
     }
 

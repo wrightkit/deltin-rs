@@ -203,7 +203,6 @@ rule: "" {
 
 #[test]
 fn struct_ref_method_rules() {
-    // ref method requires a mutable variable receiver.
     let text = r#"
 struct S { public Number x; public ref void Modify() { x = 1; } }
 rule: "" {

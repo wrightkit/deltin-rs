@@ -195,7 +195,6 @@ impl Lexer<'_> {
                 }
             }
         }
-        // Malformed trailing form: "1.2.3" or "5abc" -> Error over the run.
         if self.peek(0) == Some('.') || self.peek(0).is_some_and(|c| c.is_ascii_alphabetic()) {
             while self
                 .peek(0)
@@ -342,9 +341,6 @@ impl Lexer<'_> {
                         while in_hole {
                             match self.peek(0) {
                                 None | Some('\n') => {
-                                    // Unterminated hole: treat the rest of the
-                                    // line as string content (the outer string
-                                    // will report LX002 at its end).
                                     in_hole = false;
                                 }
                                 Some('{') => {
@@ -389,7 +385,6 @@ impl Lexer<'_> {
                     }
                 }
                 Some('}') if form == StrForm::Interpolated => {
-                    // "}}" escape outside a hole.
                     self.advance();
                 }
                 Some(_) => {
